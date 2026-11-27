@@ -22,7 +22,6 @@ The fourth Options page, **Plugins**, lists installed plugins with settings. Ope
 - **Texture filtering** sharpens world textures seen at an angle (anisotropic filtering, up to 16x).
 - **Gameplay FOV** uses 1.0 as neutral and limits widening to 150 degrees across. Aiming and scripted camera shots retain their own projection.
 - **Cutscene borders** — Off fills the screen; Letterbox keeps the original top and bottom bars; Pillarbox keeps the 4:3 framing on wider screens; Both combines them.
-- **Movies** — Original shows them as the game does, whole inside its centred 4:3 frame with black bars around them; Fill fits the whole movie to the screen. Nothing is cut off or stretched.
 - **HUD width** moves the health, charge and interaction indicators to the screen edge or a centered aspect-ratio box. Other interface elements retain their centered layout.
 - **Pause in background** pauses gameplay while the game window is inactive.
 - **Confine cursor** keeps the pointer inside the active game window and releases it on focus loss, window dragging or system menus.

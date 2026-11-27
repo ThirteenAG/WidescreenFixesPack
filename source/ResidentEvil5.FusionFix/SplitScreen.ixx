@@ -77,32 +77,41 @@ namespace
     // The 2D transform of the screen's 2D (slot 31) in the current view: pixel x = x * scaleX + offsetX * width / 2,
     // pixel y = y * scaleY - offsetY * height / 2 (xmm3, xmm0, xmm4, xmm2). A view narrower than the screen in split
     // screen is a player's half.
+    // A player's view and the HUD box in it, from the last split HUD drawn: the box's width in pixels and pixels per
+    // layout unit
+    std::atomic<float> ViewWidth{ 0.0f }, ViewHeight{ 0.0f }, BoxPixels{ 0.0f }, BoxScale{ 0.0f };
+
     void FitSplitHud(SafetyHookContext& regs)
     {
         const auto slot = *reinterpret_cast<int32_t*>(regs.ebp + 0x0C);
-        if (slot != 31 || !SideBySideSetting() || !SplitActive())
+        if (slot != 31 || !SplitActive())
             return;
 
         const auto device = *reinterpret_cast<uintptr_t*>(regs.esi + 8);
         const int32_t viewW = Field<int32_t>(device, 0x208) - Field<int32_t>(device, 0x200);
         const int32_t viewH = Field<int32_t>(device, 0x20C) - Field<int32_t>(device, 0x204);
-        if (viewW <= 0 || viewH <= 0 || viewW >= Field<int32_t>(Screen, 0x50))
-            return;
-
         const float boxX = Field<float>(Cameras, 0x307C);
         const float boxW = Field<float>(Cameras, 0x3078) * 1280.0f;
         const float boxH = 360.0f;
-        if (boxW <= 0.0f)
+        if (viewW <= 0 || viewH <= 0 || boxW <= 0.0f)
             return;
 
-        const float scale = std::min(float(viewW) / boxW, float(viewH) / boxH);
-        const float left = (float(viewW) - boxW * scale) / 2.0f - boxX * scale;
-        const float top = (float(viewH) - boxH * scale) / 2.0f;
+        float scale = regs.xmm3.f32[0];
+        if (SideBySideSetting() && viewW < Field<int32_t>(Screen, 0x50))
+        {
+            scale = std::min(float(viewW) / boxW, float(viewH) / boxH);
+            const float left = (float(viewW) - boxW * scale) / 2.0f - boxX * scale;
+            const float top = (float(viewH) - boxH * scale) / 2.0f;
 
-        regs.xmm3.f32[0] = scale;
-        regs.xmm0.f32[0] = scale;
-        regs.xmm4.f32[0] = 2.0f * left / float(viewW);
-        regs.xmm2.f32[0] = -2.0f * top / float(viewH);
+            regs.xmm3.f32[0] = scale;
+            regs.xmm0.f32[0] = scale;
+            regs.xmm4.f32[0] = 2.0f * left / float(viewW);
+            regs.xmm2.f32[0] = -2.0f * top / float(viewH);
+        }
+        ViewWidth = float(viewW);
+        ViewHeight = float(viewH);
+        BoxPixels = boxW * scale;
+        BoxScale = scale;
     }
 }
 
@@ -116,6 +125,28 @@ export namespace SplitScreen
     bool IsSideBySide()
     {
         return IsActive() && SideBySideSetting();
+    }
+
+    // The y of the pause menu's title in the 2D layout: in split screen the game places it in the player's box
+    int PauseMenuTop()
+    {
+        if (!IsActive())
+            return 180;
+        const auto top = int(float(int(Field<float>(Cameras, 0x3070) * 144.0f)) + Field<float>(Cameras, 0x3080));
+        return int16_t(top);
+    }
+
+    // How far the HUD elements at the sides of a player's HUD box move outwards (layout units) so that they sit at the
+    // edges of the box of the given aspect in the player's view (0 = the whole view)
+    float HudShift(float aspect)
+    {
+        const float scale = BoxScale.load();
+        if (!IsActive() || !(scale > 0.0f))
+            return 0.0f;
+        float target = ViewWidth.load();
+        if (aspect > 0.0f)
+            target = std::min(target, ViewHeight.load() * aspect);
+        return (target - BoxPixels.load()) / (2.0f * scale);
     }
 
     void Init()

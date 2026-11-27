@@ -32,8 +32,10 @@
   "FPSLimit.monitor": "Monitor",
   "FPSLimit.unlimited": "Ilimitado",
   "CutsceneBorders": "Bordes de las cinemáticas",
-  "CutsceneBorders.description": "Conserva el encuadre original de las escenas con bandas laterales. Desactivados amplía la vista. Se aplica inmediatamente.",
+  "CutsceneBorders.description": "La opción Horizontales conserva las bandas originales de arriba y abajo. Laterales añade bandas a los lados en pantallas más anchas que 4:3. Ambos combina las dos opciones. Se aplica inmediatamente.",
   "CutsceneBorders.0": "Desactivados",
+  "CutsceneBorders.1": "Horizontales",
+  "CutsceneBorders.2": "Laterales",
   "CutsceneBorders.3": "Ambos",
   "CheckForUpdates": "Buscar actualizaciones",
   "CheckForUpdates.description": "Si se activa, busca una versión más reciente. Avisa en el menú principal. FusionFixHub abre la página al salir si está instalado en la carpeta del juego. Desactivado por defecto.",
@@ -45,7 +47,7 @@
   "SkipPressStart": "Omitir « Pulsa Start »",
   "SkipPressStart.description": "Continúa automáticamente tras la pantalla inicial « Pulsa Start ». Reinicia el juego para aplicar.",
   "FMVWidescreenMode": "Encuadre de los vídeos",
-  "FMVWidescreenMode.description": "Original ajusta el vídeo completo al marco 4:3 original. Rellenar conserva la imagen y omite las bandas negras codificadas de los vídeos de introducción y de nueva partida.",
+  "FMVWidescreenMode.description": "Original ajusta el vídeo completo al marco 4:3 original. Rellenar conserva la imagen y omite las bandas negras codificadas del vídeo de introducción.",
   "FMVWidescreenMode.original": "Original",
   "FMVWidescreenMode.fill": "Rellenar"
 }

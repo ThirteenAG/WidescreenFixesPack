@@ -17,6 +17,7 @@ import Camera;
 import Runtime;
 import Updates;
 import Focus;
+import Gamepad;
 import UiFrame;
 import PostFX;
 
@@ -360,10 +361,6 @@ export void InitXRenderD3D9()
                 return;
             }
 
-            // binoculars compass strip (Binoculars.lua), drawn every frame while the binoculars are up
-            if (x1 == 401.0f && y1 == 185.0f && x2 == 60.0f && y2 == 16.0f)
-                Screen.bBinocularsActive = true;
-
             void* ret = *(void**)(regs.esp + 0x2C);
             void* ret2 = nullptr;
             void* ret3 = nullptr;
@@ -487,10 +484,6 @@ export void InitXRenderD3D9()
 
         if (FarCryCinematics::StockBar(x1, y1, x2, y2))
             return 0;
-
-        // binoculars compass strip (Binoculars.lua), drawn every frame while the binoculars are up
-        if (x1 == 401.0f && y1 == 185.0f && x2 == 60.0f && y2 == 16.0f)
-            Screen.bBinocularsActive = true;
 
         void* ret = stack[2];
         void* ret2 = stack[3];
@@ -833,12 +826,9 @@ export void InitCryGame()
 SafetyHookInline shSetCamera = {};
 void __fastcall SetCamera(void* engine, void* edx, float* cam, char bToTheScreen)
 {
-    // Hor+ everywhere: script screen positions (motion tracker, rocket lock) come from the renderer's
-    // projection, so they follow it. The binoculars keep their own lens: no FOV factor while they are up.
+    // Script screen positions follow the renderer projection. Native zoom action maps keep their own lens.
     if (bToTheScreen && Screen.fHudScale > 0.0f)
-        FarCryCamera::Apply(cam, Screen.fAspectRatio, Screen.bBinocularsActive ? 1.0f : Screen.fIniFOV);
-    if (bToTheScreen)
-        Screen.bBinocularsActive = false;
+        FarCryCamera::Apply(cam, Screen.fAspectRatio, FarCryPad::ZoomActive() ? 1.0f : Screen.fIniFOV);
 
     shSetCamera.unsafe_fastcall(engine, edx, cam, bToTheScreen);
 }
@@ -846,12 +836,9 @@ void __fastcall SetCamera(void* engine, void* edx, float* cam, char bToTheScreen
 SafetyHookInline shSetCamera = {};
 void __fastcall SetCamera(void* engine, float* cam, char bToTheScreen)
 {
-    // Hor+ everywhere: script screen positions (motion tracker, rocket lock) come from the renderer's
-    // projection, so they follow it. The binoculars keep their own lens: no FOV factor while they are up.
+    // Script screen positions follow the renderer projection. Native zoom action maps keep their own lens.
     if (bToTheScreen && Screen.fHudScale > 0.0f)
-        FarCryCamera::Apply(cam, Screen.fAspectRatio, Screen.bBinocularsActive ? 1.0f : Screen.fIniFOV);
-    if (bToTheScreen)
-        Screen.bBinocularsActive = false;
+        FarCryCamera::Apply(cam, Screen.fAspectRatio, FarCryPad::ZoomActive() ? 1.0f : Screen.fIniFOV);
 
     shSetCamera.unsafe_fastcall(engine, cam, bToTheScreen);
 }

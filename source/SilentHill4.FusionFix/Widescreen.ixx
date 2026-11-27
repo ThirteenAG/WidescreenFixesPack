@@ -23,7 +23,7 @@ import Camera;
 // sides, so the world doesn't show beside them (#556). The mouse hit areas follow the 4:3 menus (#554).
 //
 // The 3D view widens (Hor+). Cutscene borders preserve the original shot; turning them off fills the screen Hor+.
-// Movies keep their shape and are fitted whole into the game's 4:3 area or the whole screen.
+// Movies (all 4:3) keep their shape and are fitted whole into the screen.
 
 namespace
 {
@@ -339,7 +339,7 @@ namespace
         return ProjectionHook.ccall<int>();
     }
 
-    // Movies at their own aspect, fitted into the game's 4:3 area (Original) or the whole screen (Fill)
+    // Movies at their own aspect, fitted whole into the screen
     void(__cdecl* Quad2D)(float, float, float, float, float, float, float, float, int, int) = nullptr;
     void __cdecl MovieQuad(float x0, float y0, float x1, float y1, float u0, float v0, float u1, float v1, int top, int bottom)
     {
@@ -347,16 +347,12 @@ namespace
         const float height = (y1 - y0) * float(Screen.Height) / 480.0f * InterfaceY();
         if (width > 0.0f && height > 0.0f && std::isfinite(width) && std::isfinite(height))
         {
-            const auto mode = FixSettingNumber("MAIN.FMVWidescreenMode", 1);
-            const float areaWidth = mode == 0 ? std::min(float(Screen.Width), float(Screen.Height) * 4.0f / 3.0f) : float(Screen.Width);
-            const float areaHeight = mode == 0 ? std::min(float(Screen.Height), float(Screen.Width) * 3.0f / 4.0f) : float(Screen.Height);
-            float scaleX = areaWidth / width, scaleY = areaHeight / height;
-            scaleX = scaleY = std::min(scaleX, scaleY);
-            const float halfX = (x1 - x0) * scaleX * 0.5f, halfY = (y1 - y0) * scaleY * 0.5f;
+            const float scale = std::min(float(Screen.Width) / width, float(Screen.Height) / height);
+            const float halfX = (x1 - x0) * scale * 0.5f, halfY = (y1 - y0) * scale * 0.5f;
             x0 = 320.0f - halfX; x1 = 320.0f + halfX;
             y0 = 240.0f - halfY; y1 = 240.0f + halfY;
-            ClearOutside((float(Screen.Width) - width * scaleX) * 0.5f, (float(Screen.Height) - height * scaleY) * 0.5f,
-                (float(Screen.Width) + width * scaleX) * 0.5f, (float(Screen.Height) + height * scaleY) * 0.5f);
+            ClearOutside((float(Screen.Width) - width * scale) * 0.5f, (float(Screen.Height) - height * scale) * 0.5f,
+                (float(Screen.Width) + width * scale) * 0.5f, (float(Screen.Height) + height * scale) * 0.5f);
         }
         Quad2D(x0, y0, x1, y1, u0, v0, u1, v1, top, bottom);
     }

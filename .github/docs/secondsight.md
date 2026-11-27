@@ -20,14 +20,14 @@
 
 ## Options
 
-- **Window mode** — Fullscreen, Windowed or Borderless, then restart. Windowed gives a centred window whose picture area is exactly the chosen resolution; a window as big as the monitor puts its frame outside the screen. Borderless covers the monitor and shows the chosen resolution scaled to it.
+- **Window mode** — Fullscreen, Windowed or Borderless, then restart. Windowed gives a centred window whose picture area is exactly the chosen resolution. A window as big as the monitor puts its frame outside the screen. Borderless covers the monitor and renders at its resolution. The selected game resolution applies again in Windowed or Fullscreen mode.
 - **Frame rate limit** — The monitor's refresh rate (default), off, or a number of frames per second; applies at once.
 - **HUD aspect ratio** — Auto keeps the HUD at the screen edges; a ratio such as 16:9 keeps it in a centred box of that shape, the left part at the box's left edge and the right part at its right edge. Applies at once.
 - **Cutscene borders** — Letterbox keeps the game's bars above and below cutscenes; Pillarbox keeps the picture at 4:3 between side bars on wider screens; Both (default) does both and shows the original framing; Off fills the screen. Applies at once.
 - **Movie framing** — How the logo videos at the start are shown on wider screens: the whole video inside the game's centred 4:3 frame (Original) or fitted to the screen (Fill, default); nothing is cut off.
 - **Field of view** — A multiplier (0.5–2.0, default 1.0) on the gameplay camera, limited to 150 degrees horizontally; applies at once. Cutscenes keep their own.
 - **Skip intro** — On by default: the game starts at the title screen, past the logo videos and the copyright screen. Needs a restart.
-- **Pause in background** — On by default: in a window mode the game pauses while another window is active, as it always has. Off keeps it running.
+- **Pause in background** — In a window mode, On pauses the game while another window is active. Off keeps it running. Applies at once.
 - **Confine cursor** — Keeps the mouse cursor inside the game window while the game is active.
 - **Check for updates** — Off by default. When on, the fix asks fusionfix.io once per start whether a newer version is out and names it in one line under the game's logo on the title screen; FusionFixHub opens when you close the game.
 - **Resolution width / height** — Only in the cfg and FusionFixHub's text editor: override the resolution chosen in the game. 0 uses the game's choice.

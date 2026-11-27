@@ -753,34 +753,11 @@ public:
             // A new screen resolution (CMenuManager::ProcessPCMenuOptions) centred the cursor and selected the sixth
             // row of Advanced Display Setup (Mip Mapping). The selection stays on Resolution, and the menu doesn't
             // take the centred cursor or the resized window for a mouse movement until the cursor really moves.
-            static POINT resolutionCursor{};
-            static bool resolutionCursorHeld = false;
             pattern = hook::pattern("88 9E B8 00 00 00 C7 46 54 05 00 00 00 E8");
             injector::MakeNOP(pattern.get_first(6), 7, true);
             static auto ResolutionAppliedHook = safetyhook::create_mid(pattern.get_first(6), [](SafetyHookContext&)
             {
-                resolutionCursorHeld = GetCursorPos(&resolutionCursor) != FALSE;
-            });
-
-            // CMenuManager::UserInput's mouse movement checks (previous mouse position at +1AF8h/+1AFCh, current
-            // at +BCh/+C0h, the window's mouse position at +E0h/+E4h)
-            pattern = hook::pattern("8A 86 B8 00 00 00 84 C0 C6 44 24 0C 00 C6 44 24 08 00");
-            static auto MouseMovedHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-            {
-                if (!resolutionCursorHeld)
-                    return;
-                POINT cursor{};
-                if (!GetCursorPos(&cursor) || cursor.x != resolutionCursor.x || cursor.y != resolutionCursor.y)
-                {
-                    resolutionCursorHeld = false;
-                    return;
-                }
-                auto manager = reinterpret_cast<uint8_t*>(regs.esi);
-                auto field = [manager](size_t offset) -> int32_t& { return *reinterpret_cast<int32_t*>(manager + offset); };
-                const int32_t x = std::clamp(field(0xE0), 0, std::max(0, RsGlobal->width));
-                const int32_t y = std::clamp(field(0xE4), 0, std::max(0, RsGlobal->height));
-                field(0xBC) = field(0x1AF8) = x;
-                field(0xC0) = field(0x1AFC) = y;
+                FixOptions::RememberResolutionCursor();
             });
 
             pattern = hook::pattern("75 ? 80 3D ? ? ? ? ? 74 ? B9");

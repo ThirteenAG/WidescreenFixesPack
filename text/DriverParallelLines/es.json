@@ -77,7 +77,7 @@
   "menu.restoredefaultshelp": "Restablece los ajustes de esta página.",
   "menu.restartwarning": "Reinicia el juego para aplicar algunos ajustes.",
   "WindowMode": "Modo de ventana",
-  "WindowMode.description": "Pantalla completa, ventana centrada a la resolución elegida o sin bordes a la resolución del monitor. Requiere reiniciar. Alt+Intro alterna pantalla completa y el último modo de ventana.",
+  "WindowMode.description": "Pantalla completa, ventana ajustable que se abre centrada a la resolución elegida o sin bordes a la resolución del monitor. Requiere reiniciar. Alt+Intro alterna pantalla completa y el último modo de ventana.",
   "WindowMode.0": "Pantalla completa",
   "WindowMode.1": "Ventana",
   "WindowMode.2": "Sin bordes",

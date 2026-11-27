@@ -52,7 +52,7 @@ FOV Factor changes the normal gameplay camera’s field of view. The default is 
 
 
 
-Frame Limit changes presentation: 0 is unlimited, -1 follows the monitor refresh rate, or choose 30–1000 FPS. The game’s simulation keeps its original 60 updates per second. Recommended uses 60 FPS; Enhanced removes the presentation cap.
+Frame Limit accepts 0 for unlimited presentation, -1 for the monitor refresh rate, or a limit of 30–1000 FPS. The game’s simulation keeps its original 60 updates per second. Vanilla and Recommended use 60 FPS. Enhanced removes the presentation cap.
 
 XInput controllers use the bundled Xidi with the supplied Onimusha 3 layout. A interacts, B absorbs souls or cancels, X attacks and Y uses magic. LB guards, RB readies the weapon, LT opens the map and RT turns around. Start pauses, Back opens inventory, LS transforms and RS performs the firefly jump. PlayStation controllers can use Steam Input or DS4Windows; select PlayStation icons or Nintendo letters in the settings.
 
@@ -62,7 +62,7 @@ Game Language selects the game’s own text and fonts after a restart. Text Lang
 
 
 
-- Window-mode and startup-skip changes require a restart.
+- Startup skip options require a restart.
 
 - Backgrounds and menus retain their centered 4:3 design.
 

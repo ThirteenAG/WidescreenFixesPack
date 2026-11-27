@@ -33,6 +33,6 @@
   "update.availablehub": "Une nouvelle version de {name} est disponible. Mettez-la à jour dans FusionFixHub après avoir fermé le jeu.",
   "update.availablesite": "Une nouvelle version de {name} est disponible sur {page}",
   "MAIN.TextLanguage": "Langue du texte",
-  "MAIN.TextLanguage.description": "Langue des réglages du correctif dans les éditeurs compatibles. Auto suit la langue de l’éditeur.",
+  "MAIN.TextLanguage.description": "Langue des réglages du correctif et des avis de mise à jour. Auto utilise la langue de l’éditeur pour les réglages et la langue d’affichage de Windows pour les avis.",
   "menu.auto": "Auto"
 }

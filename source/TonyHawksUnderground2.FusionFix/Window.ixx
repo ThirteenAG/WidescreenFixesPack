@@ -19,6 +19,9 @@ export namespace THUG2Device
 {
     inline asi_overlay::D3D9Overlay Overlay;
     inline SafetyHookInline CreateHook, PresentHook, ResetHook, WindowHook, KeyboardHook;
+    inline std::array<SafetyHookMid, 2> ReleaseResourcesHooks, RestoreResourcesHooks;
+    inline std::array<uintptr_t, 2> ResetAddresses{};
+    inline bool ResetResourcesReleased = false;
     inline std::atomic<HWND> Window{ nullptr };
     inline UINT PauseSettingChanged = 0;
     inline bool HotkeyDown = false;
@@ -235,8 +238,34 @@ export namespace THUG2Device
         TonyPad::KeysRead(KeyBuffer.get().data(), PreviousKeys.get().data());
     }
 
+    template<size_t Index>
+    void ReleaseResetResources(SafetyHookContext& regs)
+    {
+        if (std::exchange(ResetResourcesReleased, true))
+            regs.eip = ResetAddresses[Index];
+    }
+
     inline void Install()
     {
+        // The recovery routine and main loop both retry Reset. The native cleanup retains buffer
+        // identities for the rebuild, so only release once until a successful reset rebuilds them.
+        auto recovery = hook::pattern(
+            "E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? A1 ? ? ? ? 8B 10 68 ? ? ? ? 50 FF 52 40 "
+            "85 C0 7C 16 E8 ? ? ? ? E8 ? ? ? ? E8 ? ? ? ? C6 05 ? ? ? ? 00").count(2);
+        constexpr std::array release{ &ReleaseResetResources<0>, &ReleaseResetResources<1> };
+        for (size_t i = 0; i < ReleaseResourcesHooks.size(); ++i)
+        {
+            const auto site = recovery.get(i);
+            ResetAddresses[i] = reinterpret_cast<uintptr_t>(site.get<void>(15));
+            ReleaseResourcesHooks[i] = safetyhook::create_mid(site.get<void>(), release[i]);
+            RestoreResourcesHooks[i] = safetyhook::create_mid(site.get<void>(50), [](SafetyHookContext&)
+            {
+                ResetResourcesReleased = false;
+            });
+            if (!ReleaseResourcesHooks[i] || !RestoreResourcesHooks[i])
+                std::terminate();
+        }
+
         UpdateFrameLimit(Window);
         FixSettings().OnChange("MAIN.FPSLimit", []() { UpdateFrameLimit(Window); });
         PauseSettingChanged = RegisterWindowMessageW(L"THUG2.FusionFix.PauseSettingChanged");

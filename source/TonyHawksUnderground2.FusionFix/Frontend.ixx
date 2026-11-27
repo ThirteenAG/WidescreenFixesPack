@@ -14,7 +14,6 @@ module;
 #include <functional>
 #include <map>
 #include <memory>
-#include <set>
 #include "Shared/RWGTA/UpdateCheck.hpp"
 
 export module Frontend;
@@ -99,7 +98,6 @@ namespace THUG2Menu
         Parameters(Parameters&&) = delete;
         Parameters& operator=(Parameters&&) = delete;
 
-        void Integer(const char* name, uint32_t data) { Add(1, Checksum(name), data); }
         void Number(const char* name, float data)
         {
             static_assert(sizeof(data) == sizeof(uint32_t));
@@ -165,7 +163,7 @@ namespace THUG2Menu
 
     struct Addresses
     {
-        uintptr_t registerFunctions, symbol, run, spawn, findWeak, setProps, unlinkWeak, create, destroy, fire, getInteger,
+        uintptr_t symbol, run, spawn, findWeak, setProps, unlinkWeak, destroy, fire,
             getFont, measure, elementDestroyed, scriptCall, task;
         uintptr_t menuTable, fontTable;
     };
@@ -176,17 +174,14 @@ namespace THUG2Menu
             auto at = [](const char* bytes) { return reinterpret_cast<uintptr_t>(hook::pattern(bytes).get_first()); };
             auto operand = [](const char* bytes, ptrdiff_t offset) { return *hook::pattern(bytes).get_first<uintptr_t>(offset); };
             Addresses a{};
-            a.registerFunctions = at("53 8B 5C 24 0C 56 33 F6 85 DB 76 38");
             a.symbol = at("8B 4C 24 04 8B C1 56 8B 35 ? ? ? ? 25");
             a.run = at("6A FF 68 ? ? ? ? 64 A1 00 00 00 00 50 64 89 25 00 00 00 00 51 55 8B 6C 24 18 56 55");
             a.spawn = at("6A FF 68 ? ? ? ? 64 A1 00 00 00 00 50 64 89 25 00 00 00 00 51 55 8B 6C 24 18 56 57");
             a.findWeak = at("6A FF 68 ? ? ? ? 64 A1 00 00 00 00 50 64 89 25 00 00 00 00 83 EC 10 8B 44 24 24 8B");
             a.setProps = at("6A FF 68 ? ? ? ? 64 A1 00 00 00 00 50 64 89 25 00 00 00 00 83 EC 0C 8B 0D ? ? ? ? 56 8B 74 24 20 6A 01 68 AF 98 C6 40 56 8D 44 24 10 50 E8 ? ? ? ? 8B 4C 24 04 85");
             a.unlinkWeak = at("8B 44 24 04 8B 50 04 56 33 F6 3B D6");
-            a.create = at("6A FF 68 ? ? ? ? 64 A1 00 00 00 00 50 64 89 25 00 00 00 00 83 EC 1C 53 55 56 57 33");
             a.destroy = at("51 53 8B 1D ? ? ? ? 57 8B 7C 24");
             a.fire = at("83 EC 20 53 55 56 8B 74 24 30 57 8B");
-            a.getInteger = at("56 8D 44 24 08 50 8B F1 8B 4C 24 0C 6A 01 51 8B CE E8 ? ? ? ? 84 C0 74 10 8B 44 24 08 8B 54 24 0C 89 02 B0 01 5E C2 0C 00 8B");
             a.getFont = at("8B 0D ? ? ? ? 8B 15 ? ? ? ? B8 01 00 00 00 D3 E0 8B 4C 24 04 48 23 C1 8D 04 40 8D 04 82 85 C0 74 12 39 08 75 07 8B 50 04 85 D2 75 0A 8B 40 08 85 C0 75 EE 33 C0 C3 8B 40 04 85");
             a.measure = at("8B 01 FF 60 20 CC CC CC CC CC CC CC");
             a.elementDestroyed = at("6A FF 68 ? ? ? ? 64 A1 00 00 00 00 50 64 89 25 00 00 00 00 83 EC 10 53 56 8B F1");
@@ -194,7 +189,6 @@ namespace THUG2Menu
             a.task = at("8B 0D ? ? ? ? 8B 81 1C 01 00 00 50 E8 ? ? ? ? 8B 4C");
             NativeLanguage.SetAddress(operand("A1 ? ? ? ? 83 C0 FD 83 F8 03 8D", 1));
             NativeSymbols.SetAddress(operand("89 3D ? ? ? ? B9 00 10 00 00 33", 2));
-            NativeManager.SetAddress(operand("8B 0D ? ? ? ? 56 6A 00 68 0F 78", 2));
             a.menuTable = operand("C7 06 ? ? ? ? 89 8E 78 01 00 00", 2);
             a.fontTable = operand("C7 06 ? ? ? ? C7 46 08 00 00 00 00 8B", 2);
             return a;
@@ -205,13 +199,6 @@ namespace THUG2Menu
 
 namespace THUG2Menu
 {
-    struct Registration { const char* name; bool (__cdecl* callback)(Structure*, void*); };
-    static_assert(sizeof(Registration) == 8);
-
-    inline void Register(const Registration* table, uint32_t count)
-    {
-        reinterpret_cast<void (__cdecl*)(const Registration*, uint32_t)>(Game().registerFunctions)(table, count);
-    }
     inline void* Symbol(uint32_t name)
     {
         if (!NativeSymbols.get()) return nullptr;
@@ -222,14 +209,10 @@ namespace THUG2Menu
         auto* symbol = Symbol(Checksum(name));
         return symbol && Read<uint8_t>(symbol, 1) == 7 && Read<uintptr_t>(symbol, 12) != 0;
     }
-    inline bool Run(const char* name, const Parameters& parameters)
+    inline void Run(const char* name, const Parameters& parameters)
     {
-        if (!ScriptAvailable(name)) return false;
-        // The type7 dispatcher returns cleanup's AL, not helper success. True
-        // means issued only; callers must validate created weak identities and
-        // geometry before exposing or continuing a native page.
+        // The dispatcher returns its cleanup result. Callers check the controls it creates.
         reinterpret_cast<bool (__cdecl*)(uint32_t, const Structure*, void*, char, const char*)>(Game().run)(Checksum(name), &parameters.value, nullptr, 0, name);
-        return true;
     }
     // A native script function (symbol type 8), called as a script would call it
     inline bool Function(const char* name, const Parameters& parameters)
@@ -244,36 +227,8 @@ namespace THUG2Menu
     {
         // Parent menus may wait for native animation/gameframes. Queue them in
         // the engine's VM; the synchronous dispatcher must never run these.
-        if (!ScriptAvailable(name)) return false;
         return reinterpret_cast<void* (__cdecl*)(uint32_t, const Structure*, uint32_t, const Structure*, uint32_t, uint32_t, char, char, char, char)>(Game().spawn)(Checksum(name), &parameters.value, 0, nullptr, 0, id, 0, 0, 0, 0) != nullptr;
     }
-    inline bool Properties(const Parameters& parameters)
-    {
-        // SetProps' native wrapper assumes that the supplied id exists. Check
-        // its identity through a temporary weak slot before calling it.
-        auto* component = parameters.value.head;
-        uint32_t id = 0;
-        bool found = false;
-        for (size_t n = 0; component && n < 256; ++n)
-        {
-            if (component->name == Checksum("id") && (component->encodedType >> 1) == 13)
-            {
-                id = component->value;
-                found = true;
-                break;
-            }
-            component = component->next;
-        }
-        if (!found) return false;
-        WeakSlot slot;
-        reinterpret_cast<WeakSlot* (__stdcall*)(WeakSlot*, uint32_t, int)>(Game().findWeak)(&slot, id, 0);
-        if (!slot.element) return false;
-        auto result = reinterpret_cast<bool (__cdecl*)(const Structure*)>(Game().setProps)(&parameters.value);
-        if (slot.element)
-            reinterpret_cast<void (__thiscall*)(void*, WeakSlot*)>(Game().unlinkWeak)(slot.element, &slot);
-        return result;
-    }
-
     class Weak
     {
     public:
@@ -298,17 +253,11 @@ namespace THUG2Menu
         void* Get() const { return slot.element; }
     };
 
-    inline bool Create(uint32_t type, uint32_t id, const Parameters& parameters)
+    inline bool SetProperties(const Parameters& parameters)
     {
-        auto* manager = NativeManager.get();
-        if (!manager || (type != Checksum("TextElement") && type != Checksum("ContainerElement"))) return false;
-        WeakSlot slot;
-        reinterpret_cast<WeakSlot* (__thiscall*)(void*, WeakSlot*, uint32_t, uint32_t, const Structure*)>(Game().create)(manager, &slot, type, id, &parameters.value);
-        auto result = slot.element && Read<uint32_t>(slot.element, 20) == id && Read<uint32_t>(slot.element, 24) == type;
-        if (slot.element)
-            reinterpret_cast<void (__thiscall*)(void*, WeakSlot*)>(Game().unlinkWeak)(slot.element, &slot);
-        return result;
+        return reinterpret_cast<bool (__cdecl*)(const Structure*)>(Game().setProps)(&parameters.value);
     }
+
     inline bool Destroy(uint32_t id)
     {
         Weak target;
@@ -329,11 +278,6 @@ namespace THUG2Menu
         parameters.Name("source", target);
         if (data) parameters.Nested("data", data);
         return reinterpret_cast<bool (__cdecl*)(const Structure*, void*)>(Game().fire)(&parameters.value, nullptr);
-    }
-
-    inline bool Integer(const Structure* parameters, const char* name, int& result)
-    {
-        return parameters && reinterpret_cast<bool (__thiscall*)(const Structure*, uint32_t, int*, int)>(Game().getInteger)(parameters, Checksum(name), &result, 0);
     }
 
     struct Extent { float width = 0, height = 0; };
@@ -365,16 +309,9 @@ namespace THUG2Menu
     constexpr uint32_t privateAnchor = Checksum("wfp_thug2_anchor");
     constexpr uint32_t privateMenu = Checksum("wfp_thug2_vmenu");
     constexpr uint32_t entryId = Checksum("wfp_thug2_entry");
-    constexpr uint32_t titleId = Checksum("wfp_thug2_title");
     inline std::string notice;                  // the update notice, shown on the Plugins list
     inline std::function<void()> updateFrame;
 
-    inline void LogOnce(const std::string& message)
-    {
-        static std::set<std::string> seen;
-        if (seen.size() >= 32 || !seen.insert(message).second) return;
-        OutputDebugStringA(("THUG2 native menu: " + message + "\n").c_str());
-    }
     inline uint32_t Serial()
     {
         nextSerial = (nextSerial + 1) & 0x7FFFFFFF;
@@ -395,9 +332,7 @@ namespace THUG2Menu
             case 6: return "it";
             case 7: return "nl";
             case 8: return "pt";
-            default:
-                LogOnce("native language has no verified tag; auto falls back to English");
-                return "en";
+            default: return "en";
         }
     }
     inline std::string NativeText(const std::string& utf8)
@@ -550,13 +485,16 @@ namespace THUG2Menu
     }
     inline void Color(uint32_t id, bool selected, bool enabled)
     {
+        Weak target;
+        target.Find(id);
+        if (!target.Get()) return;
         // Native skutils do_scale_up/down palette, without their spawned blur
         // loop. These remain the game's own text-control colors and renderer.
         ArrayView rgba(1, enabled ? selected ? std::vector<uint32_t>{127,102,0,100} : std::vector<uint32_t>{88,105,112,128} : std::vector<uint32_t>{70,70,70,120});
         Parameters parameters;
         parameters.Name("id", id);
         parameters.List("rgba", &rgba.value);
-        Properties(parameters);
+        SetProperties(parameters);
     }
 
     inline void Retire(const std::shared_ptr<Context>& owner)
@@ -607,7 +545,8 @@ namespace THUG2Menu
         ArrayView lines(10, { Parameters::Pointer(&line.value) });
         Parameters parameters;
         parameters.List("helper_text_elements", &lines.value);
-        return Run("create_helper_text", parameters) && Current(owner);
+        Run("create_helper_text", parameters);
+        return Current(owner);
     }
     // The help runs line by line in the helper text bar, a line every three seconds, repeated
     inline bool Help(const std::shared_ptr<Context>& owner, const std::string& text)
@@ -654,10 +593,7 @@ namespace THUG2Menu
     inline bool Build(const std::shared_ptr<Context>& owner)
     {
         if (!Current(owner))
-        {
-            LogOnce("private page lost native focus");
             return false;
-        }
         RWGTAMenu::Model::Changed().exchange(false);
         std::vector<Item> items;
         std::string heading = owner->model.Text("menu.plugins");
@@ -686,26 +622,17 @@ namespace THUG2Menu
             heading = owner->model.Pages()[owner->page].title;
             auto rows = owner->model.VisibleRows(owner->page);
             if (!Current(owner))
-            {
-                LogOnce("private page lost native focus");
                 return false;
-            }
             for (size_t i = 0; i < rows.size(); ++i)
             {
                 auto row = *rows[i];
                 auto enabled = owner->model.Enabled(row, owner->pause);
                 if (!Current(owner))
-                {
-                    LogOnce("private page lost native focus");
                     return false;
-                }
                 auto label = owner->model.Label(row);
                 auto value = enabled ? owner->model.Value(row) : owner->model.Text("menu.unavailable");
                 if (!Current(owner))
-                {
-                    LogOnce("private page lost native focus");
                     return false;
-                }
                 auto description = owner->model.Help(row);
                 items.push_back({ Kind::Row, i, enabled, std::move(label), std::move(value), std::move(description) });
                 items.back().displayedRow = rows[i];
@@ -714,24 +641,17 @@ namespace THUG2Menu
                 items.push_back({ Kind::Info, 0, false, owner->model.Text("menu.restartwarning") });
         }
         items.push_back({ Kind::Back, 0, true, owner->model.Text("menu.back") });
-        if (!Current(owner) || items.empty() || items.size() > 8) return false;
+        if (!Current(owner) || items.size() > 8) return false;
         owner->serial = Serial(); // Row-pool generation rejects queued old-page input.
         owner->rebuilding = true;
         owner->constructing = true;
         auto oldAnchor = Read<uint32_t>(owner->anchor.Get(), 20);
         Destroy(oldAnchor);
-        if (context != owner || owner->retired || !owner->window.Get() || Modal())
-        {
-            owner->rebuilding = false;
-            LogOnce("private page anchor cleanup rejected");
-            return false;
-        }
         Weak replacement;
         replacement.Find(Checksum("current_menu_anchor"));
-        if (replacement.Get())
+        if (context != owner || owner->retired || !owner->window.Get() || Modal() || replacement.Get())
         {
             owner->rebuilding = false;
-            LogOnce("private page anchor cleanup rejected");
             return false;
         }
         Parameters root;
@@ -751,17 +671,14 @@ namespace THUG2Menu
             root.Number("title_scale", std::min(2.0f, 44.0f / std::max(1.0f, static_cast<float>(escapedTitle.size()))));
             root.XY("dims", 300, 252);
         }
-        auto issued = Run(owner->pause ? "make_new_roundbar_menu" : "make_new_themed_sub_menu", root);
+        Run(owner->pause ? "make_new_roundbar_menu" : "make_new_themed_sub_menu", root);
         // The themed title script owns a parts container outside the menu itself.
         // Its current anchor alias is the lifetime/cleanup root for both styles.
         owner->anchor.Find(Checksum("current_menu_anchor"));
         owner->menu.Find(privateMenu);
         owner->rebuilding = false;
-        if (!issued || !Current(owner) || Read<uint32_t>(owner->menu.Get(), 24) != Checksum("VMenu") || Read<uintptr_t>(owner->menu.Get()) != Game().menuTable)
-        {
-            LogOnce(!issued ? "private page factory unavailable" : !owner->anchor.Get() ? "private page anchor missing" : !owner->menu.Get() ? "private page menu missing" : !Current(owner) ? "private page aliases mismatch" : "private page menu type mismatch");
+        if (!Current(owner) || Read<uint32_t>(owner->menu.Get(), 24) != Checksum("VMenu") || Read<uintptr_t>(owner->menu.Get()) != Game().menuTable)
             return false;
-        }
         if (owner->pause)
         {
             // Keep the right-aligned title inside the frame as settings rebuild the page.
@@ -771,7 +688,8 @@ namespace THUG2Menu
             Parameters subtitle;
             subtitle.Text("title", escapedTitle);
             subtitle.Number("title_scale", std::min(1.9f, 560.0f / std::max(1.0f, extent.width)));
-            if (!Run("build_theme_sub_title", subtitle) || !Current(owner))
+            Run("build_theme_sub_title", subtitle);
+            if (!Current(owner))
                 return false;
             Parameters position;
             position.Name("id", "title_text");
@@ -794,10 +712,7 @@ namespace THUG2Menu
                 fitted += ": " + NativeText(item.value);
             Extent extent;
             if (!Measure(fitted, extent))
-            {
-                LogOnce("private row metrics unavailable");
                 return false;
-            }
             const auto rowScale = extent.width > width ? width / extent.width : 1.0f;
             // The stock row keeps its own focus visuals; input is taken in Intercept
             Parameters row;
@@ -812,60 +727,40 @@ namespace THUG2Menu
                 row.Flag("no_bg");
             }
             if (!item.enabled) row.Flag("not_focusable");
-            if (!Run(owner->pause ? "add_roundbar_menu_item" : "theme_menu_add_item", row) || !Current(owner))
-            {
-                LogOnce("private row factory rejected");
+            Run(owner->pause ? "add_roundbar_menu_item" : "theme_menu_add_item", row);
+            if (!Current(owner))
                 return false;
-            }
             Weak created;
             created.Find(item.id);
             if (!created.Get() || Read<uint32_t>(created.Get(), 24) != Checksum("ContainerElement"))
-            {
-                LogOnce("private row type mismatch");
                 return false;
-            }
             Parameters scale;
             scale.Name("id", item.id);
             scale.XY("scale", rowScale, rowScale);
-            if (!Properties(scale))
-            {
-                LogOnce("private row scale rejected");
+            if (!SetProperties(scale))
                 return false;
-            }
         }
         if (owner->items[owner->selected].kind == Kind::Info) owner->selected = owner->items.size() - 1;
         if (!Help(owner, ItemHelp(owner, owner->items[owner->selected])))
-        {
-            LogOnce("native helper text creation rejected");
             return false;
-        }
         Parameters finish;
         finish.Name("menu", privateAnchor);
         if (!Spawn(owner->pause ? "roundbar_menu_finish" : "finish_themed_sub_menu", finish, Checksum("wfp_thug2_finish")))
-        {
-            LogOnce("private menu finish rejected");
             return false;
-        }
         if (!Current(owner))
-        {
-            LogOnce("private page lost native focus");
             return false;
-        }
         owner->focused = owner->items[owner->selected].id;
         Parameters focus;
         focus.Name("child_id", owner->items[owner->selected].id);
         if (!Fire("focus", privateMenu, &focus.value) || !Current(owner))
-        {
-            LogOnce("private initial focus rejected");
             return false;
-        }
         owner->constructing = false;
         return true;
     }
 
     inline bool Active(const std::shared_ptr<Context>& owner, size_t index)
     {
-        return Current(owner) && !Modal() && index < owner->items.size()
+        return Current(owner) && index < owner->items.size()
             && Read<uint8_t>(owner->menu.Get(), 384) != 0
             && Read<uint32_t>(owner->menu.Get(), 380) == owner->items[index].id;
     }
@@ -887,10 +782,7 @@ namespace THUG2Menu
         if (!source->menu.Get() || !source->anchor.Get() || !source->window.Get()
             || Read<uint32_t>(source->menu.Get(), 24) != Checksum("VMenu")
             || Read<uintptr_t>(source->menu.Get()) != Game().menuTable || Modal())
-        {
-            LogOnce("stock Options root contract rejected");
             return;
-        }
         source->serial = Serial();
         source->pause = pause;
         Parameters row;
@@ -898,13 +790,10 @@ namespace THUG2Menu
         row.Text("text", EscapeNativeText(NativeText(RWGTAMenu::PluginText(FixSettings(), Language(), "menu.plugins")), true));
         // These are the installed roots' own row factories, before their native
         // finish/layout/focus call. Stock options and action handlers stay intact.
-        auto issued = Run(pause ? "add_roundbar_menu_item" : "theme_menu_add_item", row);
+        Run(pause ? "add_roundbar_menu_item" : "theme_menu_add_item", row);
         existing.Find(entryId);
-        if (!issued || !existing.Get() || !source->menu.Get() || !source->anchor.Get())
-        {
-            LogOnce("native Plugins row creation rejected");
+        if (!existing.Get() || !source->menu.Get() || !source->anchor.Get())
             return;
-        }
         host = std::move(source);
     }
     inline char __fastcall ScriptCall(void* script, void*, uint32_t name, void* code, Structure* parameters, void* object, char flag)
@@ -937,7 +826,6 @@ namespace THUG2Menu
             Parameters parameters;
             if (!Spawn(owner->pause ? "create_options_menu" : "create_gamesettings_menu", parameters, Checksum("wfp_thug2_return")))
             {
-                LogOnce("stock Options asynchronous return rejected");
                 owner->returnPending = true;
                 return; // Retain context/Back and retry after the next outer task.
             }
@@ -970,7 +858,8 @@ namespace THUG2Menu
         window.Find(Checksum("root_window"));
         if (current.Get() != host->menu.Get() || anchor.Get() != host->anchor.Get() || window.Get() != host->window.Get()
             || Read<uint8_t>(host->menu.Get(), 384) == 0 || Read<uint32_t>(host->menu.Get(), 380) != entryId
-            || !ScriptAvailable(host->pause ? "create_options_menu" : "create_gamesettings_menu")) return;
+            || !ScriptAvailable("create_helper_text")
+            || (host->pause && !ScriptAvailable("build_theme_sub_title"))) return;
         auto sourceMenu = host->menu.Get();
         auto sourceAnchor = host->anchor.Get();
         auto sourceWindow = host->window.Get();
@@ -992,12 +881,7 @@ namespace THUG2Menu
         owner->menu.Find(Read<uint32_t>(sourceMenu, 20));
         owner->window.Find(Checksum("root_window"));
         context = owner;
-        if (!Build(owner))
-        {
-            LogOnce("private page commit rejected");
-            Cleanup(owner, true);
-            return;
-        }
+        if (!Build(owner)) Cleanup(owner, true);
     }
     inline void Act(const Pending& action)
     {
@@ -1007,7 +891,7 @@ namespace THUG2Menu
         if (action.action == Action::Back)
         {
             if (owner->retired) { Cleanup(owner, true); return; }
-            if (!Current(owner) || Modal() || Read<uint8_t>(owner->menu.Get(), 384) == 0) return;
+            if (!Current(owner) || Read<uint8_t>(owner->menu.Get(), 384) == 0) return;
             if (owner->page != SIZE_MAX)
             {
                 owner->page = SIZE_MAX;
@@ -1017,9 +901,8 @@ namespace THUG2Menu
             else Cleanup(owner, true);
             return;
         }
-        if (!Current(owner) || Modal() || action.index >= owner->items.size()) return;
-        auto item = owner->items[action.index];
         if (!Active(owner, action.index)) return;
+        auto item = owner->items[action.index];
         owner->selected = action.index;
         if (action.action == Action::Focus)
         {
@@ -1074,6 +957,8 @@ namespace THUG2Menu
         if (!nativeThread) nativeThread = GetCurrentThreadId();
         if (nativeThread != GetCurrentThreadId()) return taskHook.call<int>(task);
         ++taskDepth;
+        // The two menu styles share the same loaded script library. The stock
+        // parent scripts are observed running in Entry before a page can open.
         if (ready && !registered && ScriptAvailable("make_new_themed_sub_menu") && ScriptAvailable("make_new_roundbar_menu")
             && ScriptAvailable("finish_themed_sub_menu") && ScriptAvailable("roundbar_menu_finish")
             && ScriptAvailable("theme_menu_add_item") && ScriptAvailable("add_roundbar_menu_item")) registered = true;

@@ -58,7 +58,7 @@
   "SkipIntro": "Saltar introducción",
   "SkipIntro.description": "Salta los avisos legales y los vídeos de logotipos del editor y del motor al iniciar. Los vídeos de la historia y las comprobaciones normales de opciones y perfil se mantienen.",
   "WindowMode": "Modo de ventana",
-  "WindowMode.description": "Pantalla completa, ventana con marco o sin bordes del tamaño del monitor. Los cambios usan el reinicio de pantalla del juego en el siguiente fotograma en primer plano. Alt+Intro alterna entre pantalla completa y el último modo de ventana.",
+  "WindowMode.description": "Pantalla completa, ventana ajustable o sin bordes del tamaño del monitor. Arrastra el marco para cambiar el tamaño de la ventana. Alt+Intro alterna entre pantalla completa y el último modo de ventana.",
   "Fullscreen": "Pantalla completa",
   "Windowed": "Ventana",
   "Borderless": "Sin bordes",

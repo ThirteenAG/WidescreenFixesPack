@@ -7,7 +7,6 @@ export module ComVars;
 
 export GameRef<uint32_t> NativeLanguage;
 export GameRef<void*> NativeSymbols;
-export GameRef<void*> NativeManager;
 
 export GameRef<int> NativeWindowed;
 export GameRef<uint8_t> AppActive;

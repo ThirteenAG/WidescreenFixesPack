@@ -18,6 +18,7 @@ export namespace ParadiseHud
     inline SafetyHookMid ConstructHook, DestructHook, PlaceHook;
     inline std::atomic<float> Constraint{ 0.0f };
     inline std::unordered_map<uint8_t*, std::unordered_map<uint8_t*, int>> Applied; // interface -> panel -> offset
+    inline bool NeedsRestore = false;
 
     struct TreeNode
     {
@@ -72,9 +73,8 @@ export namespace ParadiseHud
 
     // layout: right after the interface's first layout pass (panels at their native places). Panels the game adds or
     // places later are put next to panels that already follow the box, so they are only recorded.
-    inline void Adjust(uint8_t* root, std::unordered_map<uint8_t*, int>& applied, bool layout)
+    inline void Adjust(uint8_t* root, std::unordered_map<uint8_t*, int>& applied, bool layout, int offset)
     {
-        const int offset = Offset();
         const int width = ParadiseDisplay::Logical.get_ptr()[0];
         std::unordered_map<uint8_t*, int> anchors;
         const auto header = *reinterpret_cast<TreeNode**>(root + 64);
@@ -138,14 +138,20 @@ export namespace ParadiseHud
     {
         LayoutHook.thiscall<void>(root);
         const bool first = !Applied.contains(root);
-        Adjust(root, Applied[root], first);
+        const int offset = Offset();
+        Adjust(root, Applied[root], first, offset);
+        NeedsRestore |= offset != 0;
     }
 
     // On the game thread, every frame: the setting, resolution changes and panels sliding out
     inline void Frame()
     {
+        const int offset = Offset();
+        if (offset == 0 && !NeedsRestore)
+            return;
         for (auto& [root, applied] : Applied)
-            Adjust(root, applied, false);
+            Adjust(root, applied, false, offset);
+        NeedsRestore = offset != 0;
     }
 
     inline void Init()

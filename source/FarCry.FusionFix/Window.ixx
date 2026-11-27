@@ -4,6 +4,7 @@ module;
 #include <d3d9.h>
 #include "FixSettings.hpp"
 #include "Shared/CursorConfinement.hpp"
+#include "include/WindowStyle.hpp"
 
 export module Window;
 
@@ -34,8 +35,9 @@ export namespace FarCryWindow
     inline void* Renderer = nullptr;
     inline bool Created = false, Initializing = false, Applying = false, Changing = false;
     inline HMONITOR TargetMonitor = nullptr;
-    inline RECT FramedRect{};
-    inline SIZE FramedSize{}, SavedResolution{};
+    inline RECT FramedRect{}, ResizeRollbackRect{};
+    inline SIZE FramedSize{}, SavedResolution{}, RequestedClient{};
+    inline bool Sizing = false, ResizeInProgress = false;
     inline bool HaveFramedRect = false, RestorePlacement = false;
     inline std::map<HMONITOR, SIZE> Desktops;
     inline std::function<void(int)> OnModeChanged;
@@ -146,7 +148,10 @@ export namespace FarCryWindow
         SquareCorners(Window);
         const auto mode = Mode.load();
         if (!mode)
+        {
+            WindowStyle::Unplace(Window);
             return;
+        }
         const auto monitor = CurrentMonitor();
         const auto info = Monitor(monitor);
         const auto width = Field<int>(renderer, Fields.width);
@@ -155,13 +160,15 @@ export namespace FarCryWindow
             return;
         const auto previousStyle = GetWindowLongW(Window, GWL_STYLE);
         const DWORD style = (previousStyle & (WS_VISIBLE | WS_DISABLED | WS_CLIPCHILDREN | WS_CLIPSIBLINGS)) |
-            (mode == 1 ? WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX : WS_POPUP);
+            (mode == 1 ? WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_THICKFRAME : WS_POPUP);
         RECT rect{ 0, 0, width, height };
         WindowedModeWrapper::GameHWND = Window;
         WindowedModeWrapper::AdjustFrame(&rect, style, FALSE, GetWindowLongW(Window, GWL_EXSTYLE));
         auto x = info.rcMonitor.left + (info.rcMonitor.right - info.rcMonitor.left - width) / 2 + rect.left;
         auto y = info.rcMonitor.top + (info.rcMonitor.bottom - info.rcMonitor.top - height) / 2 + rect.top;
-        if (mode == 1 && HaveFramedRect && FramedSize.cx == width && FramedSize.cy == height)
+        const auto coversMonitor = width == info.rcMonitor.right - info.rcMonitor.left &&
+            height == info.rcMonitor.bottom - info.rcMonitor.top;
+        if (mode == 1 && !coversMonitor && HaveFramedRect && FramedSize.cx == width && FramedSize.cy == height)
         {
             x = FramedRect.left;
             y = FramedRect.top;
@@ -174,8 +181,18 @@ export namespace FarCryWindow
         Applying = true;
         SetWindowLongW(Window, GWL_STYLE, style);
         injector::WriteMemory<LONG>(&Field<LONG>(renderer, Fields.savedStyle), static_cast<LONG>(style), true);
-        SetWindowPos(Window, HWND_NOTOPMOST, x, y, rect.right - rect.left, rect.bottom - rect.top,
-            SWP_NOACTIVATE | SWP_FRAMECHANGED | SWP_NOSENDCHANGING);
+        if (coversMonitor)
+        {
+            SetWindowPos(Window, HWND_NOTOPMOST, 0, 0, 0, 0,
+                SWP_NOACTIVATE | SWP_NOSIZE | SWP_NOMOVE | SWP_FRAMECHANGED);
+            WindowStyle::Place(Window, width, height, TRUE, monitor);
+        }
+        else
+        {
+            WindowStyle::Unplace(Window);
+            SetWindowPos(Window, HWND_NOTOPMOST, x, y, rect.right - rect.left, rect.bottom - rect.top,
+                SWP_NOACTIVATE | SWP_FRAMECHANGED | SWP_NOSENDCHANGING);
+        }
         RECT windowRect{}, clientRect{};
         GetWindowRect(Window, &windowRect);
         GetClientRect(Window, &clientRect);
@@ -184,6 +201,16 @@ export namespace FarCryWindow
         Applying = false;
         const auto size = SIZE{ info.rcMonitor.right - info.rcMonitor.left, info.rcMonitor.bottom - info.rcMonitor.top };
         Desktops[monitor] = size;
+    }
+
+    inline void QueueClientResize(HWND window)
+    {
+        RECT client{};
+        if (GetClientRect(window, &client) && client.right >= 640 && client.bottom >= 480 &&
+            client.right <= 16384 && client.bottom <= 16384)
+            RequestedClient = { client.right, client.bottom };
+        else
+            RequestedClient = {};
     }
 
     inline LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
@@ -214,6 +241,49 @@ export namespace FarCryWindow
         if ((Applying || Changing) && (message == WM_SIZE || message == WM_ACTIVATE || message == WM_ACTIVATEAPP ||
             message == WM_KILLFOCUS || message == WM_SETFOCUS))
             return DefWindowProcW(window, message, wParam, lParam);
+        if (Mode.load() == 1 && message == WM_GETMINMAXINFO && lParam)
+        {
+            const auto result = forward();
+            const auto frame = WindowStyle::FrameOf(window);
+            const auto monitor = WindowStyle::MonitorRect(window, TargetMonitor);
+            auto& limits = *reinterpret_cast<MINMAXINFO*>(lParam);
+            limits.ptMinTrackSize.x = std::max(limits.ptMinTrackSize.x, 640 + frame.Width());
+            limits.ptMinTrackSize.y = std::max(limits.ptMinTrackSize.y, 480 + frame.Height());
+            limits.ptMaxTrackSize.x = std::max(limits.ptMaxTrackSize.x,
+                monitor.right - monitor.left + frame.Width());
+            limits.ptMaxTrackSize.y = std::max(limits.ptMaxTrackSize.y,
+                monitor.bottom - monitor.top + frame.Height());
+            return result;
+        }
+        if (Mode.load() == 1 && !Applying && !Changing)
+        {
+            if (message == WM_ENTERSIZEMOVE)
+                Sizing = true;
+            else if (message == WM_EXITSIZEMOVE)
+            {
+                Sizing = false;
+                QueueClientResize(window);
+            }
+            else if (message == WM_SIZE)
+            {
+                if (wParam == SIZE_MINIMIZED)
+                    RequestedClient = {};
+                else
+                {
+                    if (!Sizing)
+                        QueueClientResize(window);
+                    // The native handler changes the viewport and cached size without resizing the backbuffer.
+                    return DefWindowProcW(window, message, wParam, lParam);
+                }
+            }
+            else if (message == WM_MOVE && !Sizing)
+            {
+                RECT client{};
+                if (GetClientRect(window, &client) &&
+                    WindowStyle::CoversMonitor(WindowStyle::MonitorRect(window), client.right, client.bottom))
+                    RestorePlacement = true;
+            }
+        }
         if (!Applying && !Changing && (message == WM_DISPLAYCHANGE || message == DpiChangedMessage))
         {
             if (Mode.load() == 2)
@@ -233,6 +303,8 @@ export namespace FarCryWindow
             }
             Pending.store(-1);
             Transition = -1;
+            Sizing = ResizeInProgress = false;
+            RequestedClient = {};
             const auto result = forward();
             OriginalProcs.erase(window);
             return result;
@@ -335,6 +407,13 @@ export namespace FarCryWindow
         else if (!actual)
             actual = LastWindowMode;
         Publish(actual);
+        if (actual == 1 && ResizeInProgress)
+        {
+            if (!result)
+                FramedRect = ResizeRollbackRect;
+            FramedSize = { Field<int>(renderer, Fields.width), Field<int>(renderer, Fields.height) };
+        }
+        ResizeInProgress = false;
         ApplyWindow(renderer);
         // Native context changes can apply their cached placement after this call returns.
         RestorePlacement = actual == 1 && HaveFramedRect;
@@ -352,21 +431,32 @@ export namespace FarCryWindow
             OnFrame(Field<IDirect3DDevice9*>(renderer, Fields.device));
         CursorConfinement::Update(Window);
         CursorConfinement::Bind();
-        if (renderer != Renderer || Transition >= 0 || Pending.load() < 0 || !Window || GetForegroundWindow() != Window)
+        const bool clientResize = !Sizing && RequestedClient.cx > 0 && Mode.load() == 1;
+        if (renderer != Renderer || Transition >= 0 || (Pending.load() < 0 && !clientResize) ||
+            !Window || IsIconic(Window) || GetForegroundWindow() != Window)
             return;
         const auto device = Field<IDirect3DDevice9*>(renderer, Fields.device);
         if (!device || device->TestCooperativeLevel() != D3D_OK)
             return;
         const auto request = Pending.exchange(-1);
+        const auto desiredClient = std::exchange(RequestedClient, {});
         const auto previous = Mode.load();
-        const auto target = request == 3 ? (previous ? 0 : LastWindowMode) : std::clamp(request, 0, 2);
+        const auto target = request < 0 ? previous :
+            request == 3 ? (previous ? 0 : LastWindowMode) : std::clamp(request, 0, 2);
+        if (request < 0)
+            ResizeRollbackRect = FramedRect;
         Remember();
         TargetMonitor = MonitorFromWindow(Window, MONITOR_DEFAULTTOPRIMARY);
         auto width = Field<int>(renderer, Fields.width);
         auto height = Field<int>(renderer, Fields.height);
         if (previous != 2)
             SavedResolution = { width, height };
-        if (target == 2)
+        if (request < 0)
+        {
+            width = desiredClient.cx;
+            height = desiredClient.cy;
+        }
+        else if (target == 2)
         {
             const auto desktop = Desktop(TargetMonitor);
             width = desktop.cx;
@@ -385,6 +475,7 @@ export namespace FarCryWindow
             return;
         }
         PreviousMode = previous;
+        ResizeInProgress = request < 0;
         Transition = target;
         Mode.store(target);
         SetVariable(renderer, Fields.cvarWidth, width);
@@ -394,6 +485,7 @@ export namespace FarCryWindow
             (target == 0) == bool(Field<uint8_t>(renderer, Fields.fullscreen)))
         {
             Publish(target);
+            ResizeInProgress = false;
             ApplyWindow(renderer);
             TargetMonitor = nullptr;
             Transition = -1;
@@ -405,21 +497,32 @@ export namespace FarCryWindow
         if (renderer != Renderer || !Window || !IsWindow(Window))
             return;
         Initializing = false;
-        if (RestorePlacement && Mode.load() == 1 && !IsIconic(Window))
+        const auto mode = Mode.load();
+        if (!mode || Sizing || RequestedClient.cx || ResizeInProgress || IsIconic(Window) || Transition >= 0)
+            return;
+        if (mode == 1 && RestorePlacement)
         {
             ApplyWindow(renderer);
             RestorePlacement = false;
+            return;
         }
-        else if (Mode.load() == 1 && !Field<uint8_t>(renderer, Fields.fullscreen) && Transition < 0)
-            Remember();
-        if (Mode.load() && !IsIconic(Window))
+        RECT client{};
+        if (!GetClientRect(Window, &client))
+            return;
+        const auto caption = GetWindowLongW(Window, GWL_STYLE) & WS_CAPTION;
+        const auto framed = mode == 1 && !Field<uint8_t>(renderer, Fields.fullscreen);
+        if (mode == 1 ? caption != WS_CAPTION : caption != 0)
+            ApplyWindow(renderer);
+        else if (client.right != Field<int>(renderer, Fields.width) || client.bottom != Field<int>(renderer, Fields.height))
         {
-            RECT client{};
-            const auto caption = GetWindowLongW(Window, GWL_STYLE) & WS_CAPTION;
-            if (GetClientRect(Window, &client) && (client.right != Field<int>(renderer, Fields.width) ||
-                client.bottom != Field<int>(renderer, Fields.height) || (Mode.load() == 1 ? caption != WS_CAPTION : caption != 0)))
+            // Some native window moves change the client rectangle without issuing WM_SIZE.
+            if (framed)
+                QueueClientResize(Window);
+            if (!RequestedClient.cx)
                 ApplyWindow(renderer);
         }
+        else if (framed)
+            Remember();
     }
 
 #ifndef _WIN64

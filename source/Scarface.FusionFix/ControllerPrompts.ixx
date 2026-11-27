@@ -432,9 +432,9 @@ export namespace ControllerPrompts
     bool IsEnabled(){return enabled;}
     void OnMessage(HWND window,UINT message,WPARAM,LPARAM param)
     {
-        if (!enabled || GetForegroundWindow() != window)
-            return;
         bool activity = message == WM_KEYDOWN || message == WM_SYSKEYDOWN;
+        if (!enabled || (!activity && message != WM_INPUT) || GetForegroundWindow() != window)
+            return;
         if (message == WM_INPUT)
         {
             RAWINPUT raw{};

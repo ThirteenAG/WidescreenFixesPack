@@ -217,8 +217,6 @@ export namespace PsiOpsMenu
         const auto glyph = Pointer(*(glyphs + character - 32));
         if (!glyph)
             return false;
-        if (!glyph)
-            return true;
         const auto record = reinterpret_cast<uint16_t*>(glyph);
         return *(reinterpret_cast<uint8_t*>(glyph)) != 0
             && *(record + 4) > *(record + 2)
@@ -1027,16 +1025,22 @@ export namespace PsiOpsMenu
     {
         Prune();
         const bool refreshLanguage = languageChanged.exchange(false);
+        const auto language = refreshLanguage ? Language() : std::string{};
         for (auto& [resource, screen] : screens)
         {
-            if (screen->open && refreshLanguage)
+            if (refreshLanguage)
             {
-                screen->language = Language();
-                screen->model.OpenPlugins(host, screen->language, 32, {}, true);
-                screen->view = {};
-                screen->selected = 0;
-                Build(*screen);
-                Focus(*screen, screen->selected);
+                screen->language = language;
+                if (screen->open)
+                {
+                    screen->model.OpenPlugins(host, language, 32, {}, true);
+                    screen->view = {};
+                    screen->selected = 0;
+                    Build(*screen);
+                    Focus(*screen, screen->selected);
+                }
+                else
+                    screen->labels[screen->stockRows] = RWGTAMenu::PluginText(FixSettings(), language, "menu.plugins");
             }
             if (screen->open && screen->helpRoot && !(screen->helpRoot[3] & 1))
                 screen->helpRoot[3] = screen->helpRoot[3] | 1;
@@ -1052,6 +1056,14 @@ export namespace PsiOpsMenu
         }
         for (auto& [resource, screen] : joinedScreens)
         {
+            if (refreshLanguage)
+            {
+                screen->language = language;
+                screen->model.OpenPlugins(host, language, 3, { "MAIN.FOVFactor" });
+                screen->settings = screen->model.JoinedRows();
+                if (!screen->helpText.empty() && !screen->settings.empty())
+                    screen->helpText = Help(screen->model, screen->settings.front());
+            }
             for (size_t i = 0; i < screen->settings.size(); ++i)
                 if (screen->texts[i] && screen->texts[i][2] == reinterpret_cast<uint32_t>(self))
                 {

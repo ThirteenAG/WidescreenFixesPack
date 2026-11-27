@@ -68,7 +68,7 @@
   "gamefoldersaves": "Salvataggi nella cartella del gioco",
   "gamefoldersaves.description": "Tiene i salvataggi nella cartella savegames del gioco.",
   "settingsfile": "Impostazioni portatili",
-  "settingsfile.cfg.description": "Salva le opzioni di gioco in MaxPayne.FusionFix.cfg. Le sezioni mancanti vengono inizializzate dal registro. Richiede un riavvio.",
+  "settingsfile.cfg.description": "Salva le opzioni di gioco nel file .cfg del fix. Le sezioni mancanti vengono inizializzate dal registro. Richiede un riavvio.",
   "settingsfile.description": "Salva le opzioni del gioco in settings.ini accanto ai salvataggi invece che nel registro. Attiva i salvataggi nella cartella del gioco per usare la sottocartella savegames. Le impostazioni del registro vengono copiate al primo utilizzo. Richiede un riavvio.",
   "savestringformat": "Formato data dei salvataggi",
   "savestringformat.description": "Come i nomi dei salvataggi mostrano data e ora (strftime).",

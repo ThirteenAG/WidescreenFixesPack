@@ -26,8 +26,8 @@ export namespace KnightRiderHud
 
     inline float BoxWidth(float width, float height)
     {
-        if (CockpitActive || (KnightRiderCamera::Cinematic && KnightRiderCamera::Borders.load(std::memory_order_relaxed) != 0))
-            return std::min(width, height * (4.0f / 3.0f));
+        if (CockpitActive || KnightRiderCamera::UseCinematicViewport(width / height))
+            return std::min(width, height * KnightRiderCamera::NativeAspect);
         const auto ratio = Constraint.load(std::memory_order_relaxed);
         return ratio > 0.0f ? std::min(width, height * ratio) : width;
     }

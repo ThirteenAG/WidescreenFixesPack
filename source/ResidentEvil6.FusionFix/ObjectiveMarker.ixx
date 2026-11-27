@@ -32,7 +32,7 @@ namespace
         const float offsetY = height > 0.0f ? (float)viewport[1] / height : 0.0f;
 
         constexpr float HalfHeight = 1097.0f;
-        out[0] = HalfHeight * aspect * (screen[0] + offsetX - GetCockpitProjectionShift());
+        out[0] = HalfHeight * aspect * (screen[0] + offsetX - GetCockpitProjectionShift(player));
         out[1] = HalfHeight * (screen[1] - offsetY);
         out[2] = -2650.0f;
         out[3] = 0.0f;

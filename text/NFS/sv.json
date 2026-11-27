@@ -149,7 +149,7 @@
   "WFP_DESC_ANTIALIASING": "SMAA jämnar ut kanter.",
   "WFP_DESC_HIDEAABUG": "Döljer MSAA-felet vid kanterna med en pixel breda linjer.",
   "WFP_DESC_LANGUAGE": "Spelets språk. Endast installerade språk är tillgängliga.",
-  "WFP_DESC_RAINDROPLETS": "Storleken på regndropparna på skärmen. Ingen effekt med Xbox Rain Droplets.",
+  "WFP_DESC_RAINDROPLETS": "Storleken på regndropparna på skärmen. Ingen effekt med Fusion Rain Droplets.",
   "WFP_DESC_SUBTITLES": "Visar undertexter i filmer på alla språk.",
   "WFP_WRITESETTINGS": "Inställningar i en fil",
   "WFP_DESC_WRITESETTINGS": "Sparar registerinställningar i Settings.ini i profilmappen. Ange din CD-nyckel där.",

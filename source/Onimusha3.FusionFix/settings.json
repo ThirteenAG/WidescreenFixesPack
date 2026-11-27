@@ -330,12 +330,17 @@
       "id": "MAIN.FPSLimit",
       "type": "int",
       "default": 60,
+      "presets": {
+        "vanilla": 60,
+        "recommended": 60,
+        "enhanced": 0
+      },
       "label": "@FPSLimit",
       "description": "@FPSLimit.description",
       "page": "display",
       "visibility": "menu",
       "apply": "live",
-      "min": -1,
+      "min": 30,
       "max": 1000,
       "step": 1,
       "unit": "fps",

@@ -66,6 +66,15 @@ function ffPlaceCinemaBar(index, x, y, width, height)
         bar._height = height;
     }
 }
+function ffSetCinemaProperty(clip, property, value)
+{
+    var previous = clip[property];
+    if(previous != value)
+    {
+        clip[property] = value;
+        ffCinemaSaved.push([clip, property, previous, clip[property]]);
+    }
+}
 _global.FFCinemaBegin = function(mode, animated, active, requested, left, top, width, height)
 {
     var original = ffHudRoot.dialogLetterbox;
@@ -98,28 +107,25 @@ _global.FFCinemaBegin = function(mode, animated, active, requested, left, top, w
         ffCinemaBars[2]._visible = false;
         ffCinemaBars[3]._visible = false;
     }
+    var showLetterbox = (mode & 1) != 0;
+    if(showLetterbox && active)
+    {
+        // Resize the parent so the four authored reflections stay in their original matrices.
+        ffSetCinemaProperty(original, "_xscale", original._xscale * frameWidth / 1280);
+        ffSetCinemaProperty(original, "_yscale", original._yscale * frameHeight / 720);
+    }
     for(var i = 0; i < 4; i++)
     {
         var part = original["q" + (i + 1)];
-        var saved = [part, part._visible, part._x, part._y, part._xscale, part._yscale];
-        if(!(mode & 1))
-            part._visible = false;
+        if(!showLetterbox)
+            ffSetCinemaProperty(part, "_visible", false);
         else
         {
             if(!animated)
                 part.gotoAndStop(requested ? 65 : 1);
             if(active)
-            {
-                var right = i == 1 || i == 3;
-                var bottom = i >= 2;
-                part._x = (right ? 322 : -324) * frameWidth / 1280;
-                part._y = (bottom ? 200 : -200) * frameHeight / 720;
-                part._xscale = (right ? -100 : 100) * frameWidth / 1280;
-                part._yscale = (bottom ? -100 : 100) * frameHeight / 720;
-            }
+                ffSetCinemaProperty(part, "_y", i >= 2 ? 200 : -200);
         }
-        saved.push(part._visible, part._x, part._y, part._xscale, part._yscale);
-        ffCinemaSaved.push(saved);
     }
 };
 _global.FFCinemaEnd = function()
@@ -129,13 +135,10 @@ _global.FFCinemaEnd = function()
         for(var i = 0; i < ffCinemaSaved.length; i++)
         {
             var saved = ffCinemaSaved[i];
-            var part = saved[0];
-            var properties = ["_visible", "_x", "_y", "_xscale", "_yscale"];
-            for(var p = 0; p < properties.length; p++)
-            {
-                if(part[properties[p]] == saved[p + 6])
-                    part[properties[p]] = saved[p + 1];
-            }
+            var clip = saved[0];
+            var property = saved[1];
+            if(clip[property] == saved[3])
+                clip[property] = saved[2];
         }
         ffCinemaSaved = null;
     }

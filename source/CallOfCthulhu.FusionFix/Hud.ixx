@@ -51,8 +51,11 @@ public:
                     Screen.fWidth = static_cast<float>(Screen.Width);
                     Screen.fHeight = static_cast<float>(Screen.Height);
                     Screen.fAspectRatio = Screen.fWidth / Screen.fHeight;
-                    Screen.fHudScale = ((1.0f / Screen.fAspectRatio) * (4.0f / 3.0f));
-                    Screen.fHudOffset = ((Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f);
+                    constexpr float layoutAspect = 4.0f / 3.0f;
+                    Screen.fHudScale = std::min(1.0f, layoutAspect / Screen.fAspectRatio);
+                    Screen.fHudOffset = std::max(0.0f, (Screen.fWidth - Screen.fHeight * layoutAspect) * 0.5f);
+                    Screen.fHudScaleY = std::min(1.0f, Screen.fAspectRatio / layoutAspect);
+                    Screen.fHudOffsetY = (1.0f - Screen.fHudScaleY) * Screen.fHeight * 0.5f;
                     Screen.fTextOffset = -(Screen.fHudOffset / Screen.fHudScale);
                     Screen.fFMVOffset = ((Screen.fWidth - Screen.fHeight * (4.0f / 3.0f)) / 2.0f);
                     // Room for quads a third beyond the screen's edges (the inventory places some there)
@@ -130,8 +133,8 @@ public:
                     const float TinyBoxWidth = (HealMenuCursorXMax - HealMenuCursorXMin) / 24.0f; // 24 tiny boxes wide
                     heal[0] = HealMenuBoxWidth / Screen.fHudScale;
                     heal[1] = ((HealMenuCursorXMin + TinyBoxWidth - 0.5f) * Screen.fHudScale) + 0.5f;
-                    heal[2] = HealMenuCursorYMax - TinyBoxWidth;
-                    heal[3] = HealMenuCursorYMin - TinyBoxWidth;
+                    heal[2] = (HealMenuCursorYMax - TinyBoxWidth - 0.5f) * Screen.fHudScaleY + 0.5f;
+                    heal[3] = (HealMenuCursorYMin - TinyBoxWidth - 0.5f) * Screen.fHudScaleY + 0.5f;
                     heal[4] = ((HealMenuCursorXMax + TinyBoxWidth - 0.5f) * Screen.fHudScale) + 0.5f;
                 }
             };
@@ -145,7 +148,7 @@ public:
                 uint32_t texture, colour;
             } Quad{};
             // Quad corners are stored as 16-bit numbers of tenths of a pixel, too few past 3276 pixels: the quads use fewer
-            // steps per pixel on wider screens (and the hook below scales by the same)
+            // steps per pixel at higher resolutions (and the hook below scales by the same)
             static float& quadUnits = Screen.fQuadUnits;
             quadUnits = 10.0f;
             auto quadEntry = hook::pattern("83 EC 1C 53 8B 5C 24 28 85 DB 55 75");
@@ -182,44 +185,47 @@ public:
                     const auto colour = Quad.colour;
 
                     // The 2D layout is 4:3, centred. Plain and see-through layers across the whole width (fades, dimming
-                    // behind menus, subtitle and tip panels) cover the whole screen; full screen artwork keeps its shape
-                    // with black at its sides.
+                    // behind menus, subtitle and tip panels) cover the whole width; full screen artwork keeps its shape
+                    // with black outside the picture.
                     const bool fullWidth = rect && rect[0] <= 0.0f && rect[2] >= x;
-                    if (fullWidth && (!texture || (colour >> 24) < 0xF0))
-                    {
-                        *(float*)(regs.esp + 0x2C) = 1.0f / (units * x);
-                        *(float*)(regs.esp + 0x34) = -0.5f / x;
-                    }
-                    else
-                    {
-                        *(float*)(regs.esp + 0x2C) = Screen.fHudScale / (units * x);
-                        *(float*)(regs.esp + 0x34) = Screen.fHudOffset / x;
-                        if (fullWidth && rect[1] <= 0.0f && rect[3] >= y && Screen.fHudOffset >= 1.0f && renderer)
-                        {
-                            auto device = *reinterpret_cast<IDirect3DDevice9**>(renderer + 104);
-                            const LONG side = LONG(Screen.fHudOffset);
-                            const D3DRECT sides[] = { { 0, 0, side, LONG(y) }, { LONG(x) - side, 0, LONG(x), LONG(y) } };
-                            if (device)
-                                device->Clear(2, sides, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 0, 0), 1.0f, 0);
-                        }
-                    }
+                    const bool fullScreen = fullWidth && rect[1] <= 0.0f && rect[3] >= y;
+                    const bool spanWidth = fullWidth && (!texture || (colour >> 24) < 0xF0);
+                    const bool spanHeight = spanWidth && fullScreen;
+                    *(float*)(regs.esp + 0x2C) = (spanWidth ? 1.0f : Screen.fHudScale) / (units * x);
+                    *(float*)(regs.esp + 0x34) = (spanWidth ? -0.5f : Screen.fHudOffset) / x;
+                    if (!spanHeight)
+                        *(float*)(regs.esp + 0x30) *= Screen.fHudScaleY;
+                    *(float*)(regs.esp + 0x38) = ((spanHeight ? 0.0f : Screen.fHudOffsetY) - 0.5f) / y;
 
-                    float fneg05 = -0.5f;
-                    _asm fld ds : fneg05
+                    const LONG side = LONG(Screen.fHudOffset);
+                    const LONG top = LONG(Screen.fHudOffsetY);
+                    if (!spanWidth && fullScreen && (side || top) && renderer)
+                    {
+                        auto device = *reinterpret_cast<IDirect3DDevice9**>(renderer + 104);
+                        const D3DRECT bars[2] = {
+                            { 0, 0, side ? side : LONG(x), side ? LONG(y) : top },
+                            { side ? LONG(x) - side : 0, side ? 0 : LONG(y) - top, LONG(x), LONG(y) }
+                        };
+                        if (device)
+                            device->Clear(2, bars, D3DCLEAR_TARGET, D3DCOLOR_XRGB(0, 0, 0), 1.0f, 0);
+                    }
                 }
             };
-            injector::MakeInline<HudHook>(pattern.get_first<uintptr_t>(0), pattern.get_first<uintptr_t>(6));
+            injector::MakeInline<HudHook>(pattern.get_first<uintptr_t>(0), pattern.get_first<uintptr_t>(12));
 
             pattern = hook::pattern("89 4C 24 08 8B 48 08 89 54 24 0C 8B 50 0C 8D 44 24 04"); //0x4239B1
             struct ClickableAreaHook
             {
                 void operator()(injector::reg_pack& regs)
                 {
-                    *(float*)(regs.esp + 8) = (*(float*)&regs.ecx * Screen.fHudScale) + Screen.fHudOffset;
-                    *(float*)&regs.ecx = (*(float*)(regs.eax + 0x8) * Screen.fHudScale);
+                    const auto rect = reinterpret_cast<const float*>(regs.eax);
+                    *(float*)(regs.esp + 8) = rect[0] * Screen.fHudScale + Screen.fHudOffset;
+                    *(float*)(regs.esp + 12) = rect[1] * Screen.fHudScaleY + Screen.fHudOffsetY;
+                    *(float*)&regs.ecx = rect[2] * Screen.fHudScale;
+                    *(float*)&regs.edx = rect[3] * Screen.fHudScaleY;
                 }
             };
-            injector::MakeInline<ClickableAreaHook>(pattern.get_first<uintptr_t>(0), pattern.get_first<uintptr_t>(7));
+            injector::MakeInline<ClickableAreaHook>(pattern.get_first<uintptr_t>(0), pattern.get_first<uintptr_t>(14));
 
             pattern = hook::pattern("D8 25 ? ? ? ? D8 F2 D9 5C 24 2C D9"); //0x4E0BC4
             injector::WriteMemory<float*>(pattern.get_first<float*>(2), &Screen.fTextOffset, true);
@@ -236,6 +242,9 @@ public:
 
                     *(float*)(regs.esp + 0x24) *= Screen.fHudScale;
                     *(float*)(regs.esp + 0x2C) *= Screen.fHudScale;
+                    *(float*)(regs.esp + 0x28) *= Screen.fHudScaleY;
+                    auto& y = *(float*)(regs.esp + 0x44);
+                    y = y * Screen.fHudScaleY + Screen.fHudOffsetY;
                 }
             };
             injector::MakeInline<TextHook>(pattern.get_first<uintptr_t>(0), pattern.get_first<uintptr_t>(6));

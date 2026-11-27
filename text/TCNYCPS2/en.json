@@ -20,6 +20,8 @@
   "SkipIntro": "Skip intro",
   "SkipIntro.description": "Skips the Activision and Luxoflux logo video at startup. Restart the game to apply.",
   "FPSLimit": "Frame rate",
+  "SkipPressStart": "Skip Press Start",
+  "SkipPressStart.description": "Opens the main menu automatically at startup. Restart the game to apply.",
   "FPSLimit.description": "Runs the game at 60 frames per second instead of 30. The one mission that needs the original speed keeps 30. Restart the game to apply.",
   "UnthrottleEmuDuringLoading": "Faster loading",
   "UnthrottleEmuDuringLoading.description": "Runs the emulator at full speed during startup and loading screens and returns to normal speed afterwards. Restart the game to apply."

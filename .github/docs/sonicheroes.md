@@ -37,7 +37,7 @@
 - **Confine cursor** — Keeps the cursor inside the active game window; released on focus loss, while moving the window, in system menus and immediately when turned off.
 - **Check for updates** — Off by default. When on, the game shows a notice at the title and main menu when a newer version of the fix is available.
 
-Settings are on fusionfix.io or in FusionFixHub (English, French, German, Italian and Spanish), with the Vanilla, Recommended and Enhanced presets. HUD aspect ratio, field of view, confine cursor and update check apply at once, the rest at the next start. Resolution, minimum aspect ratio, clip range, save folder and object-distance tuning are on the advanced pages.
+Settings are on fusionfix.io or in FusionFixHub (English, French, German, Italian and Spanish), with the Vanilla, Recommended and Enhanced presets. HUD aspect ratio, field of view, confine cursor and update check apply at once. Text Language also updates the notice while the menu is open. Restart the game for the other options. Resolution, minimum aspect ratio, clip range, save folder and object-distance tuning are on the advanced pages.
 
 ## Controller
 

@@ -91,7 +91,7 @@
   "menu.restartwarning": "Redémarrage requis",
   "menu.presethelp": "Choisissez un préréglage et validez deux fois pour l'appliquer à ce plugin.",
   "MAIN.WindowMode": "Mode fenêtre",
-  "MAIN.WindowMode.description": "Plein écran, fenêtre centrée à la résolution choisie, ou sans bordure à la résolution de l'écran. Redémarrage requis. Alt+Entrée alterne entre le plein écran et le dernier mode fenêtré.",
+  "MAIN.WindowMode.description": "Plein écran, fenêtre redimensionnable qui s’ouvre centrée à la résolution choisie, ou sans bordure à la résolution de l'écran. Redémarrage requis. Alt+Entrée alterne entre le plein écran et le dernier mode fenêtré.",
   "MAIN.WindowMode.0": "Plein écran",
   "MAIN.WindowMode.1": "Fenêtré",
   "MAIN.WindowMode.2": "Sans bordure",

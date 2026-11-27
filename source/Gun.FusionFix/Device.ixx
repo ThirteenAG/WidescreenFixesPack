@@ -3,6 +3,7 @@ module;
 #include <stdafx.h>
 #include "Shared/CursorConfinement.hpp"
 #include <d3d9.h>
+#include <dinput.h>
 #include "FixSettings.hpp"
 #include "overlay/OverlayD3D9.hpp"
 #include "Shared/TonyHawk/PadIconArt.hpp"
@@ -445,9 +446,58 @@ export namespace GunDevice
         }
     }
 
+    // The game keeps its pad by the device GUID saved in the registry and, whenever the controls are applied (start,
+    // every controls option change), puts that GUID back into the pad slot before it enumerates the controllers. A
+    // saved GUID of a controller DirectInput no longer lists (the physical pad, which the bundled Xidi presents as a
+    // virtual controller instead) makes the game release the pad it was using: the pad stops while the keyboard works.
+    // Such a GUID is replaced by the first attached controller, the one the game picks itself when nothing is saved.
+    namespace PadSlot
+    {
+        inline SafetyHookInline Hook;
+        constexpr size_t InputOffset = 10220, GuidsOffset = 10224;
+
+        struct Search
+        {
+            GUID wanted;
+            GUID first;
+            bool found, any;
+        };
+
+        inline BOOL CALLBACK Found(LPCDIDEVICEINSTANCEA instance, LPVOID context)
+        {
+            auto& search = *static_cast<Search*>(context);
+            if (!search.any)
+                search.first = instance->guidInstance;
+            search.any = true;
+            search.found = search.found || instance->guidInstance == search.wanted;
+            return search.found ? DIENUM_STOP : DIENUM_CONTINUE;
+        }
+
+        inline int __fastcall SetGuid(uint8_t* input, void*, int slot, const char* text)
+        {
+            const auto result = Hook.unsafe_thiscall<int>(input, slot, text);
+            auto& guid = *reinterpret_cast<GUID*>(input + GuidsOffset + sizeof(GUID) * slot);
+            auto* directInput = *reinterpret_cast<IDirectInput8A**>(input + InputOffset);
+            if (!directInput || guid == GUID{})
+                return result;
+            Search search{ guid };
+            if (SUCCEEDED(directInput->EnumDevices(DI8DEVCLASS_GAMECTRL, Found, &search, DIEDFL_ATTACHEDONLY)) &&
+                !search.found && search.any)
+                guid = search.first;
+            return result;
+        }
+
+        inline void Install()
+        {
+            auto set = hook::pattern("83 EC 18 53 55 56 8B 74 24 2C 8B E9 33 C9 8B C6 57 89 4C 24 24 8B F9");
+            Hook = safetyhook::create_inline(set.get_first(), SetGuid);
+        }
+    }
+
     inline void Init()
     {
         BindLiveSetting("MAIN.GamepadIcons", IconFamily);
+        PadSlot::Install();
         GunMovie::Init();
         Prompts::Install();
 

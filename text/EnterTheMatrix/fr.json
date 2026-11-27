@@ -11,7 +11,7 @@
   "page.game": "Jeu",
   "page.compatibility": "Compatibilité",
   "WindowMode": "Mode d'affichage",
-  "WindowMode.description": "Plein écran, fenêtre, ou fenêtre sans bordure couvrant l'écran. Fenêtré utilise la résolution choisie dans MatrixOptions ; Sans bordure celle de l'écran. Nécessite un redémarrage.",
+  "WindowMode.description": "Plein écran, fenêtre ou fenêtre sans bordure couvrant le moniteur. Le mode fenêtré démarre avec la résolution choisie dans MatrixOptions. Faites glisser le cadre pour redimensionner la fenêtre. Nécessite un redémarrage.",
   "WindowMode.fullscreen": "Plein écran",
   "WindowMode.windowed": "Fenêtré",
   "WindowMode.borderless": "Sans bordure",

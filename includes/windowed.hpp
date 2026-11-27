@@ -247,9 +247,10 @@ namespace WindowedModeWrapper
             if (parent && parent != GetDesktopWindow())
                 return create(exStyle, className, windowName, style, x, y, width, height, parent, menu, instance, param);
             const auto [placeX, placeY, placeWidth, placeHeight] = beforeCreateWindow(width, height);
-            GameHWND = create(exStyle, className, windowName, style, placeX, placeY, placeWidth, placeHeight, parent, menu, instance, param);
+            const HWND window = create(exStyle, className, windowName, style, placeX, placeY, placeWidth, placeHeight, parent, menu, instance, param);
+            GameHWND = window;
             afterCreateWindow();
-            return GameHWND;
+            return window;
         }
 
         // The game changing its window's style: borderless keeps its own style (and position); windowed keeps the frame

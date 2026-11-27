@@ -150,6 +150,20 @@ namespace
     uint32_t* pIntroCheck = nullptr;
     uint32_t nIntroValue = 0;
 
+    // Resident Evil 2's start-up screens (+0x1C state, +0x2C frame counter): the warning (state 1) and the licence
+    // notice (state 5) may already be counting their 120 frames when the code is patched; they end at the next frame
+    uint32_t* pStartupScreens = nullptr;
+
+    void EndStartupScreen()
+    {
+        if (!pStartupScreens || !Dolphin::MemoryAddrValid(pStartupScreens))
+            return;
+        const auto state = Word(pStartupScreens + 0x1C / 4);
+        auto counter = pStartupScreens + 0x2C / 4;
+        if ((state == 1 || state == 5) && int32_t(Word(counter)) > 1)
+            SetWord(counter, 1);
+    }
+
     // True once the start-up patches are in place for the running disc
     bool SkipIntro(GameVersion gameVersion)
     {
@@ -161,22 +175,32 @@ namespace
             auto warning = hook::pattern(Dolphin::GameMemoryStart, Dolphin::GameMemoryEnd, "38 00 00 78 3c 60 ? ? 38 63 ? ? 90 03 00 2c");
             // The title movie stops when START is pressed: it stops at once
             auto movie = hook::pattern(Dolphin::GameMemoryStart, Dolphin::GameMemoryEnd, "54 00 04 e6 28 00 00 00 41 82 00 08 3b e0 00 00 2c 1f 00 00 40 82");
-            if (warning.empty() || movie.empty())
-                return false;
-            warning.for_each_result([](hook::pattern_match match)
+            // The warning's code runs before the title's is loaded: it is patched as soon as it is there
+            if (!warning.empty())
             {
-                auto w = match.get<uint32_t>(0);
-                SetImmediate(w, 0x38000078, 1);
-                // The screen fades in and out by 0x400 of 0x8000 per frame (li r4 of the fade call): two frames each
-                bool fadeIn = false, fadeOut = false;
-                for (int i = 1; i < 48; ++i)
+                warning.for_each_result([](hook::pattern_match match)
                 {
-                    if (!fadeIn)
-                        fadeIn = SetImmediate(w + i, 0x3880FC00, -0x4000);
-                    else if (!fadeOut)
-                        fadeOut = SetImmediate(w + i, 0x38800400, 0x4000);
-                }
-            });
+                    auto w = match.get<uint32_t>(0);
+                    SetImmediate(w, 0x38000078, 1);
+                    // The screen fades in and out by 0x400 of 0x8000 per frame (li r4 of the fade call): two frames each
+                    bool fadeIn = false, fadeOut = false;
+                    for (int i = 1; i < 48; ++i)
+                    {
+                        if (!fadeIn)
+                            fadeIn = SetImmediate(w + i, 0x3880FC00, -0x4000);
+                        else if (!fadeOut)
+                            fadeOut = SetImmediate(w + i, 0x38800400, 0x4000);
+                    }
+                });
+                // lis r3, hi / addi r3, r3, lo: the start-up screens' state
+                const uint16_t hi = swap16(*warning.get_first<uint16_t>(6));
+                const uint16_t lo = swap16(*warning.get_first<uint16_t>(10));
+                pStartupScreens = (uint32_t*)(((uint32_t(hi) << 16) + int32_t(int16_t(lo))) - Dolphin::ImageBase + Dolphin::GameMemoryStart);
+                Dolphin::MenuBarClearCache();
+            }
+            EndStartupScreen();
+            if (!pStartupScreens || movie.empty())
+                return false;
             pIntroCheck = movie.get_first<uint32_t>(8);
             SetWord(pIntroCheck, 0x60000000);
             nIntroValue = Word(pIntroCheck);
@@ -229,6 +253,7 @@ namespace
         uint32_t bytes = 0;
         std::array<char, 6> previousDisc{};
         bool introPatched = false;
+        ULONGLONG bootUntil = 0;   // Resident Evil 2: the first seconds of the disc, until its warning screen is patched
         int searchDelay = 0;
     };
 
@@ -238,6 +263,8 @@ namespace
         {
             watch.data = nullptr;
             watch.introPatched = false;
+            watch.previousDisc.fill(0);
+            pStartupScreens = nullptr;
             Game::sPlayerHealth = nullptr;
             return;
         }
@@ -251,6 +278,7 @@ namespace
             watch.memcheck = nullptr;
             watch.introPatched = false;
             watch.searchDelay = 0;
+            pStartupScreens = nullptr;
             Game::sPlayerHealth = nullptr;
             if (!gameVersion)
             {
@@ -258,6 +286,7 @@ namespace
                 return;
             }
             std::memcpy(watch.previousDisc.data(), disc.data(), watch.previousDisc.size());
+            watch.bootUntil = gameVersion == RE2 ? GetTickCount64() + 20000 : 0;
         }
 
         if (bSkipIntro)
@@ -266,6 +295,8 @@ namespace
                 watch.introPatched = false;
             if (!watch.introPatched)
                 watch.introPatched = SkipIntro(gameVersion);
+            else if (gameVersion == RE2)
+                EndStartupScreen();
         }
 
         // Door skip, unthrottled doors and the health lighting need the game's room code, which Resident Evil 2 loads
@@ -317,7 +348,9 @@ namespace
         Watch watch;
         while (true)
         {
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            // Resident Evil 2 shows its warning screen as soon as its code is loaded: until then it is looked for often
+            const bool booting = bSkipIntro && !pStartupScreens && GetTickCount64() < watch.bootUntil;
+            std::this_thread::sleep_for(std::chrono::milliseconds(booting ? 2 : 100));
             GuardedUpdate(watch);
         }
     }

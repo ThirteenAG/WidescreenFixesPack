@@ -15,6 +15,7 @@
 - **Resolution list** — Every display mode of the monitor.
 - **Ultrawide and narrow screens** — The game renders at the screen's own aspect with the same vertical view (Hor+). Menus, the file viewer and other 2D screens keep their 16:9 shape in the middle of the screen.
 - **HUD** — The objective, the minimap and the equipment panels sit at the screen edges; button prompts and messages stay centered.
+- **Genesis scanner** — Black side panels extend the scanner's bezel across ultrawide displays while the scanner is raised.
 - **Cutscenes** — On screens wider than 16:9 cutscenes keep their original 16:9 framing with black bars at the sides (can be turned off).
 - **Movies** — Shown whole at their own aspect, with black bars where the screen is wider or narrower; nothing is cut off or stretched.
 - **Film grain** — Keeps its size at high resolutions.
@@ -52,7 +53,6 @@ The game supports Xbox controllers natively and shows their buttons.
 
 ## Known limits
 
-- On screens wider than 16:9 the pause blur behind the file viewer and the pause menu covers only the 16:9 middle of the screen.
 - The game's own Full Screen option uses exclusive full screen; window sizes follow the game's resolution list.
 - PlayStation and Nintendo icon styles have not yet been verified in game; controller diagrams and other artwork may retain Xbox labels.
 

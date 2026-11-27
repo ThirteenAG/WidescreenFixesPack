@@ -8,14 +8,16 @@ module;
 
 export module Hud;
 
+import SplitScreen;
+
 // The HUD. Every 2D layout is drawn in a 1280x720 space that the renderer fits into a centred 16:9 box on wider
 // screens. The HUD layouts (cockpit: life gauges, ammo, partner, action buttons, prompts, saving notice) are spread to
 // the box of MAIN.HudAspectRatioConstraint (Auto = the whole screen): each top-level element (one whose parents all
 // sit at x 0) on the left third of the layout moves left by the box's extra margin, one on the right third moves
 // right, the rest stays centred. The move is made in the element's own position before the game builds its world
 // matrix, so its children and the texts the game places from that position move with it. Markers projected from 3D
-// positions keep their place. Menus and full screens (inventory, map, loading) stay in the 16:9 box; in split screen the game's own
-// layout stays (SplitScreen fits it into each player's half with the side-by-side layout).
+// positions keep their place. Menus and full screens (inventory, map, loading) stay in the 16:9 box. In split screen
+// each player's HUD is spread the same way within that player's view (SplitScreen).
 
 namespace
 {
@@ -27,7 +29,6 @@ namespace
 
     GameRef<uintptr_t> Screen;      // +0x50 width, +0x54 height
     GameRef<uintptr_t> Renderer;    // +0x4EE0 2D fit mode: 2 = fit height (16:9 box), 3 = fit width
-    GameRef<uintptr_t> Main;        // +0x1042C game state, its +0x558 the game mode (1 = split screen)
 
     std::atomic<float> HudAspect{ 0.0f };   // 0 = Auto
 
@@ -49,12 +50,8 @@ namespace
     {
         if (!Screen.is_initialized() || !Screen || !Renderer.is_initialized() || !Renderer)
             return 0.0f;
-        if (Main.is_initialized() && Main)
-        {
-            const auto state = Field<uintptr_t>(Main, 0x1042C);
-            if (state && Field<int32_t>(state, 0x558) == 1)
-                return 0.0f;
-        }
+        if (SplitScreen::IsActive())
+            return SplitScreen::HudShift(HudAspect.load());
         const int width = Field<int32_t>(Screen, 0x50);
         const int height = Field<int32_t>(Screen, 0x54);
         if (width <= 0 || height <= 0)
@@ -206,7 +203,6 @@ export namespace Hud
         auto placed = hook::pattern("F3 0F 10 46 50 F3 0F 11 44 24 40 F3 0F 10 46 54 F3 0F 11 44 24 44 F3 0F 10 46 58");
 
         Screen.SetAddress(*screen.get_first<uintptr_t*>(1));
-        Main.SetAddress(*screen.get_first<uintptr_t*>(12));
         Renderer.SetAddress(*renderer.get_first<uintptr_t*>(2));
 
         // Markers placed from 3D positions on the screen (partner, targets, items)

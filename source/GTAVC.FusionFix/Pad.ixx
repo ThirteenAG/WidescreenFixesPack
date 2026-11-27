@@ -529,12 +529,13 @@ namespace
         Stick(g.sThumbLX, g.sThumbLY, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE, lx, ly);
         Stick(g.sThumbRX, g.sThumbRY, XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE, rx, ry);
         auto vehicle = PlayerVehicle();
+        const bool classicScope = context == Context::Classic && !vehicle && IsScopeMode(ActiveCameraMode());
         bool hydraulics = vehicle && vehicle->GetModelIndex() == MI_VOODOO;
         // The PlayStation 2 sticks: down is positive. The game's cameras look up on a positive right stick Y; vehicles
         // keep the console's sign (the guns, flying)
         float look = RWGTA::PadOptions::LookUp(ry);
         s.LeftStickX = ToAxis(lx);
-        s.LeftStickY = ToAxis(-ly);
+        s.LeftStickY = ToAxis(classicScope ? RWGTA::PadOptions::LookUp(ly) : -ly);
         s.RightStickX = ToAxis(rx);
         s.RightStickY = ToAxis(context == Context::Frontend || hydraulics ? -ry : vehicle ? -look : look);
 

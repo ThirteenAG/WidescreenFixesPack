@@ -12,7 +12,7 @@ export namespace ScarfaceIntro
     inline SafetyHookInline DialogHook;
     inline void(__thiscall* Close)(void*, bool) = nullptr;
     inline bool(__cdecl* PauseContext)() = nullptr;
-    inline bool Skip = true, Startup = true;
+    inline bool Startup = true;
 
     inline bool StartupNotice(std::string_view text, bool system, unsigned options)
     {
@@ -25,7 +25,7 @@ export namespace ScarfaceIntro
     {
         const auto result = DialogHook.unsafe_thiscall<uintptr_t>(dialog, header, text, system, options,
             first, second, third, fourth);
-        if (Skip && Startup && !PauseContext() && text && StartupNotice(std::string_view(text, strnlen(text, 512)), system, options))
+        if (Startup && !PauseContext() && text && StartupNotice(std::string_view(text, strnlen(text, 512)), system, options))
         {
             Startup = false;
             // Complete the native dialog lifecycle and publish its only result to the profile manager.
@@ -36,7 +36,8 @@ export namespace ScarfaceIntro
 
     inline void Install()
     {
-        Skip = FixSettings().Bool("MAIN.SkipIntro");
+        if (!FixSettings().Bool("MAIN.SkipIntro"))
+            return;
         auto state = hook::pattern("E8 ? ? ? ? 84 C0 74 07 68 ? ? ? ? EB 1D 8B 0D");
         PauseContext = reinterpret_cast<decltype(PauseContext)>(injector::GetBranchDestination(state.get_first()).as_int());
         Close = reinterpret_cast<decltype(Close)>(hook::pattern("53 56 8B F1 33 DB F6 46 60 08 0F 84 ? ? ? ? 6A FF 53 53 53").get_first());
@@ -44,7 +45,7 @@ export namespace ScarfaceIntro
         ScarfaceFrame::Handlers.push_back([](void*)
         {
             // A later load is reached through the pause context and must retain its notice.
-            if (PauseContext())
+            if (Startup && PauseContext())
                 Startup = false;
         });
     }

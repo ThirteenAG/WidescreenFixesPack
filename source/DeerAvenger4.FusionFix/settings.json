@@ -86,31 +86,6 @@
       ]
     },
     {
-      "id": "MAIN.FMVWidescreenMode",
-      "type": "choice",
-      "default": 1,
-      "label": "@FMVWidescreenMode",
-      "description": "@FMVWidescreenMode.description",
-      "page": "display",
-      "apply": "live",
-      "visibility": "menu",
-      "presets": {
-        "vanilla": 0,
-        "recommended": 1,
-        "enhanced": 1
-      },
-      "choices": [
-        {
-          "value": 0,
-          "label": "@FMVWidescreenMode.0"
-        },
-        {
-          "value": 1,
-          "label": "@FMVWidescreenMode.1"
-        }
-      ]
-    },
-    {
       "id": "MAIN.SkipIntro",
       "type": "bool",
       "default": true,

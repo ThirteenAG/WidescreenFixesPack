@@ -2,8 +2,6 @@ module;
 
 #include "stdafx.h"
 #include "FixSettings.hpp"
-#include <fstream>
-#include <set>
 
 export module Camera;
 
@@ -34,37 +32,12 @@ float AdjustHorizontalFOV(float fov)
     return 2.0f * std::atan(std::tan(fov * 0.5f) * Screen.fAspectRatioDiff * Screen.GameplayFOVFactor());
 }
 
-bool bTraceComicCapture = false;
 bool bComicCapturePass = false;
-std::ofstream& ComicCaptureLog()
-{
-    static std::ofstream log(GetThisModulePath() / "USM.ComicCapture.log", std::ios::trunc);
-    return log;
-}
 
 SafetyHookInline shRenderComicCamera;
 void __fastcall RenderComicCamera(uintptr_t component, void*, float* info)
 {
-    static std::set<std::array<uintptr_t, 4>> seen;
     auto capture = reinterpret_cast<uint8_t*>(info)[323];
-    if (bTraceComicCapture && seen.size() < 128)
-    {
-        auto texture = *reinterpret_cast<uintptr_t*>(component + 0x44);
-        if (seen.insert({ component, texture, capture, IsBackBufferScene() }).second)
-        {
-            auto& log = ComicCaptureLog();
-            log << "panel component=" << component << " texture=" << texture
-                << " capture=" << int(capture) << " backbuffer=" << IsBackBufferScene()
-                << " screen=" << Screen.Width << ',' << Screen.Height << " rect=";
-            for (size_t i = 69; i < 73; ++i) log << info[i] << ',';
-            log << " matrix=";
-            for (size_t i = 0; i < 16; ++i) log << info[i] << ',';
-            if (texture)
-                log << " textureSize=" << *reinterpret_cast<uint32_t*>(texture + 24)
-                << ',' << *reinterpret_cast<uint32_t*>(texture + 28);
-            log << std::endl;
-        }
-    }
     const auto savedComicPass = USMCamera::ComicPass;
     // The full player view also uses the comic renderer. Only its uncaptured,
     // untextured 640x480 canvas may use the ordinary chase-camera multiplier.
@@ -113,23 +86,6 @@ int RebuildViewFrameForScene(bool comicCamera)
     // read FOV alone. Bake zoom into FOV for this rebuild so they agree.
     fov = AdjustHorizontalFOV(originalFOV * (pIgnoreZoom->get() ? 1.0f : originalZoom));
     zoom = 1.0f;
-
-    if (bTraceComicCapture && bComicCapturePass)
-    {
-        static std::set<std::array<uint32_t, 5>> seen;
-        auto target = nglCurScene.get() ? *reinterpret_cast<uintptr_t*>(nglCurScene.get() + 0x334) : 0;
-        if (seen.size() < 128 && seen.insert({ uint32_t(target), std::bit_cast<uint32_t>(originalAspect),
-            std::bit_cast<uint32_t>(originalFOV), std::bit_cast<uint32_t>(originalZoom), uint32_t(comicCamera) }).second)
-        {
-            auto& log = ComicCaptureLog();
-            log << "projection initial=" << comicCamera << " target=" << target << " backbuffer=" << IsBackBufferScene()
-                << " original=" << originalAspect << ',' << originalFOV << ',' << originalZoom
-                << " adjusted=" << aspect << ',' << fov;
-            if (target) log << " targetSize=" << *reinterpret_cast<uint32_t*>(target + 24)
-                << ',' << *reinterpret_cast<uint32_t*>(target + 28);
-            log << std::endl;
-        }
-    }
 
     auto result = shRebuildViewFrame.ccall<int>();
     aspect = originalAspect;
@@ -288,10 +244,6 @@ public:
             pattern = hook::pattern("E8 ? ? ? ? 6A 00 E8 ? ? ? ? 6A 04 E8 ? ? ? ? 50 E8 ? ? ? ? 8A 46 48"); //0x741C68
             injector::MakeCALL(pattern.get_first(), RebuildComicViewFrame, true);
 
-            // Developer diagnostics, compiled in only on request
-#ifdef USM_DEBUG_TRACE_COMIC_CAPTURE
-            bTraceComicCapture = true;
-#endif
             pattern = hook::pattern("64 A1 00 00 00 00 6A FF 68 ? ? ? ? 50 64 89 25 00 00 00 00 83 EC 40 56 8B F1 83 7E 2C 04"); //0x7419C0
             shRenderComicCamera = safetyhook::create_inline(pattern.get_first(), RenderComicCamera);
 
@@ -307,40 +259,7 @@ public:
                 auto bounds = reinterpret_cast<float*>(regs.esp + 0x0C);
                 auto width = bounds[2] - bounds[0];
                 bounds[2] = bounds[0] + width * Screen.fAspectRatioDiff;
-                if (bTraceComicCapture)
-                {
-                    static uint32_t count = 0;
-                    if (count < 32)
-                    {
-                        ++count;
-                        ComicCaptureLog() << "capture FOV bounds width=" << width
-                            << " corrected=" << bounds[2] - bounds[0]
-                            << " height=" << bounds[3] - bounds[1] << std::endl;
-                    }
-                }
             });
-            if (bTraceComicCapture)
-            {
-                pattern = hook::pattern("E8 ? ? ? ? 83 C4 0C 83 C4 10 C3"); //0x733365
-                static auto TraceComicCopy = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-                {
-                    static uint32_t count = 0;
-                    if (count >= 64)
-                        return;
-                    ++count;
-                    auto args = reinterpret_cast<uintptr_t*>(regs.esp);
-                    auto& log = ComicCaptureLog();
-                    log << "copy source=" << args[0] << " destination=" << args[1];
-                    for (size_t i = 0; i < 2; ++i)
-                        if (args[i]) log << " size" << i << '='
-                            << *reinterpret_cast<uint32_t*>(args[i] + 24) << ','
-                            << *reinterpret_cast<uint32_t*>(args[i] + 28);
-                    auto rect = reinterpret_cast<int32_t*>(args[2]);
-                    log << " rect=";
-                    for (size_t i = 0; i < 4; ++i) log << rect[i] << ',';
-                    log << std::endl;
-                });
-            }
 
             pattern = hook::pattern("D8 05 ? ? ? ? D9 5C 24 04 8B 54 24 04 D8 05"); //0x529E80 + 2
             pVisibilityOrigin = BindGameRef(visibilityOrigin, *pattern.get_first<float*>(2));
@@ -357,22 +276,6 @@ public:
             });
 
             auto& settings = FixSettings();
-#ifdef USM_DEBUG_TRACE_BUILDING_VISIBILITY
-            {
-                static std::ofstream visibilityLog(GetThisModulePath() / "USM.BuildingVisibility.log", std::ios::trunc);
-                visibilityLog << "Visibility-list trace active; stock capacity = 20.\n" << std::flush;
-                pattern = hook::pattern("83 FA 14 7D 07 89 44 91 08 FF 41 04"); //0x562AA2
-                static auto traceRegionCapacity = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-                {
-                    static uint32_t recorded = 0;
-                    if (regs.edx < 20 || recorded >= 16)
-                        return;
-                    ++recorded;
-                    visibilityLog << "Dropped region=" << std::hex << regs.eax << std::dec
-                        << " count=" << regs.edx << " time=" << GetTickCount64() << '\n' << std::flush;
-                });
-            }
-#endif
 
 #ifdef USM_DEBUG_DISABLE_OCCLUSION_CULLING
             {

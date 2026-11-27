@@ -49,6 +49,17 @@ export namespace RE6Input
     inline std::atomic<uint32_t> focusGeneration{ 0 };
     inline std::atomic<bool> keyboardBlocked{ false };
     inline SafetyHookInline padHook, keyboardHook, mouseHook;
+    inline SafetyHookMid keyboardSnapshotHook;
+    inline thread_local std::array<BYTE, 256> keyboardState;
+
+    inline SHORT WINAPI SnapshotKeyState(int key)
+    {
+        constexpr int ImeAlphanumeric = 0xF0;
+        // Keep the native asynchronous mouse-button state and the IME key's recent-press bit.
+        if (key <= VK_XBUTTON2 || key == ImeAlphanumeric)
+            return GetAsyncKeyState(key);
+        return static_cast<SHORT>((keyboardState[key] & 0x80) << 8);
+    }
 
     template<class T> T Read(const void* object, size_t offset)
     {
@@ -185,5 +196,14 @@ export namespace RE6Input
         padHook = safetyhook::create_inline(pad.get_first(), Pad);
         keyboardHook = safetyhook::create_inline(keyboard.get_first(), Keyboard);
         mouseHook = safetyhook::create_inline(mouse.get_first(), Mouse);
+
+        // The Win32 fallback asks for all 256 keys once per update. A single snapshot avoids
+        // serializing those queries with the window manager's high-rate mouse delivery.
+        auto keys = hook::pattern("8B 2D ? ? ? ? 33 F6 8D 5E 01 8D 64 24 00 56 FF D5 0F B7 C0 A9 00 80 00 00");
+        keyboardSnapshotHook = safetyhook::create_mid(keys.get_first(6), [](SafetyHookContext& regs)
+        {
+            if (GetKeyboardState(keyboardState.data()))
+                regs.ebp = reinterpret_cast<uintptr_t>(SnapshotKeyState);
+        });
     }
 }

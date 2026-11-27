@@ -3,6 +3,7 @@ module;
 #include <dinput.h>
 #include <ddraw.h>
 #include <d3d.h>
+#include <array>
 #include "FixSettings.hpp"
 
 export module Misc;
@@ -45,12 +46,9 @@ char __fastcall OpenMovie(void* player, void*, const char** filename, void* targ
     const auto name = (slash && backslash ? std::max(slash, backslash) : slash ? slash : backslash);
     const std::string_view base = name ? name + 1 : path;
     const auto stem = base.substr(0, base.find('.'));
-    // The intro and new game movies are 640x480 files with black bars baked in above and below the picture.
-    const auto equals = [&](std::string_view other)
-    {
-        return stem.size() == other.size() && _strnicmp(stem.data(), other.data(), other.size()) == 0;
-    };
-    const bool letterboxed = equals("intro") || equals("newgame");
+    // New Game uses the full frame for a flash. The intro has black borders throughout.
+    const std::string_view intro = "intro";
+    const bool letterboxed = stem.size() == intro.size() && _strnicmp(stem.data(), intro.data(), intro.size()) == 0;
     const auto result = MovieOpenHook.thiscall<char>(player, filename, target);
     LetterboxedMovie.store(result && letterboxed, std::memory_order_relaxed);
     return result;
@@ -72,7 +70,7 @@ IDirectDrawSurface* WINAPI BltMovieFrame(IDirectDrawSurface* destination, RECT* 
             SUCCEEDED(source->GetSurfaceDesc(&video)) && video.dwWidth == 640 && video.dwHeight == 480 &&
             (!sourceRect || (sourceRect->left == 0 && sourceRect->top == 0 && sourceRect->right == 640 && sourceRect->bottom == 480)))
         {
-            // The picture stays within rows 72-408 in both movies; keep every column.
+            // The intro picture stays within rows 72-407 inclusive.
             visible = { 0, 72, 640, 408 };
             sourceRect = &visible;
         }
@@ -98,6 +96,24 @@ IDirectDrawSurface* WINAPI BltMovieFrame(IDirectDrawSurface* destination, RECT* 
         destination->Blt(destinationRect, source, sourceRect, flags, effects);
     }
     return destination;
+}
+
+void (__thiscall* ClearCamera)(uint8_t*, int) = nullptr;
+
+void __fastcall ClearSpeakerDepth(uint8_t* camera, void*, int flags)
+{
+    const float designWidth = std::min(Screen.fWidth, Screen.fHeight * KnightRider2Camera::NativeAspect);
+    const float offset = (Screen.fWidth - designWidth) * 0.5f
+        + KnightRider2Hud::Offset(Screen.fWidth, Screen.fHeight, -1);
+    const float scale = std::min(1.0f, Screen.fAspectRatio / KnightRider2Camera::NativeAspect);
+    auto viewport = reinterpret_cast<float*>(camera + 348);
+    const std::array original{ viewport[0], viewport[1], viewport[2], viewport[3] };
+    viewport[0] = (original[0] * designWidth + offset) / Screen.fWidth;
+    viewport[1] = (original[1] * designWidth + offset) / Screen.fWidth;
+    viewport[2] = 0.5f + (original[2] - 0.5f) * scale;
+    viewport[3] = 0.5f + (original[3] - 0.5f) * scale;
+    ClearCamera(camera, flags);
+    std::copy(original.begin(), original.end(), viewport);
 }
 
 void InitializeGame()
@@ -208,6 +224,11 @@ void InitializeGame()
         }
     }; injector::MakeInline<HUDHook>(pattern.get_first(0), pattern.get_first(8)); //0x
 
+    // Clear the portrait depth where the HUD hook will draw its adjusted viewport.
+    auto speakerClear = hook::get_pattern("8B 4E 40 85 C9 74 ? 6A 04 E8 ? ? ? ? 8B 4E 40 E8 ? ? ? ? 5E 59 C2 08 00", 9);
+    ClearCamera = reinterpret_cast<decltype(ClearCamera)>(injector::GetBranchDestination(speakerClear).as_int());
+    injector::MakeCALL(speakerClear, ClearSpeakerDepth);
+
     //Mouse cooperative level: some systems refuse non-exclusive mouse access, which makes the game abort at start-up
     pattern = hook::pattern("8B 4C 24 20 8B 46 3C 8B 10 6A 06 51 50 FF 52 34");
     struct MouseCooperativeLevelHook
@@ -223,6 +244,7 @@ void InitializeGame()
         }
     }; injector::MakeInline<MouseCooperativeLevelHook>(pattern.get_first(9), pattern.get_first(16)); //0x67D499
 
+    MessagePumpGuard::Install(GetModuleHandleW(nullptr));
     KnightRider2Window::Init(Screen.nWidth, Screen.nHeight);
     KnightRider2Intro::Init();
     KnightRider2Hud::Init();

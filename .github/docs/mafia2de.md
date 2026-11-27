@@ -10,7 +10,7 @@
 
 ## Fixes
 
-- **High polling rate mice** — with a 4000 or 8000 Hz mouse the frame rate dropped and the camera lagged while the mouse moved, because Windows also turned every mouse report into window messages for the game, which it doesn't use. While the game window is in front and the cursor is over it, those messages are switched off; the game's own mouse input stays complete, so mouse look keeps exactly the same movement and sensitivity. The title bar of a window and other programs keep working as usual. Always on.
+- **High polling rate mice** — the fix moves the game's DirectInput mouse registration to a separate thread that reads raw reports in batches. While the game window is in front and the cursor is over its client area, the fix also stops Windows from generating legacy mouse messages for those reports. Mouse look keeps the same movement and sensitivity. The window's title bar and other programs keep their usual mouse behaviour. Always on.
 
 ## Options
 

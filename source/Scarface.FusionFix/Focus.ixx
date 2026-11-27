@@ -64,7 +64,7 @@ export namespace ScarfaceFocus
             *previousTime = Clock();
         }
         if (hWnd.is_initialized() && hWnd.get() && SoundActive)
-            SoundActive(!Background() || !Pause.load());
+            SoundActive(!Pause.load() || !Background());
         return result;
     }
 

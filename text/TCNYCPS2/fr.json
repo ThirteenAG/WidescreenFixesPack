@@ -20,6 +20,8 @@
   "SkipIntro": "Passer l'intro",
   "SkipIntro.description": "Passe la vidéo des logos Activision et Luxoflux au démarrage. Redémarrez le jeu pour appliquer.",
   "FPSLimit": "Fréquence d’images",
+  "SkipPressStart": "Passer l’écran de démarrage",
+  "SkipPressStart.description": "Ouvre automatiquement le menu principal au démarrage. Redémarrez le jeu pour appliquer.",
   "FPSLimit.description": "Fait tourner le jeu à 60 images par seconde au lieu de 30. La seule mission qui a besoin de la vitesse d'origine reste à 30. Redémarrez le jeu pour appliquer.",
   "UnthrottleEmuDuringLoading": "Chargement plus rapide",
   "UnthrottleEmuDuringLoading.description": "Fait tourner l'émulateur à pleine vitesse au démarrage et pendant les chargements, puis revient à la vitesse normale. Redémarrez le jeu pour appliquer."

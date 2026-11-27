@@ -3,6 +3,7 @@ module;
 #include <stdafx.h>
 #include "FixSettings.hpp"
 #include <commctrl.h>
+#include <minidx8/d3d8.h>
 #pragma comment(lib, "comctl32.lib")
 
 export module Windowed;
@@ -27,6 +28,8 @@ export namespace Windowed
     inline Mode WindowMode = Mode::Fullscreen;
     inline bool Resizable = false;
     inline HWND Window = nullptr;
+    inline D3DPRESENT_PARAMETERS* Presentation = nullptr;
+    inline SafetyHookMid SetWindowedBackBuffer;
 
     // The window procedure sees the client size the game renders at; a resizable window resizes the picture
     inline LRESULT CALLBACK Procedure(HWND window, UINT message, WPARAM wParam, LPARAM lParam, UINT_PTR, DWORD_PTR)
@@ -159,9 +162,10 @@ export namespace Windowed
         WindowedModeWrapper::bEnableWindowResize = Resizable;
         WindowedModeWrapper::bScaleWindow = WindowMode == Mode::Borderless && settings.Int("MAIN.BorderlessScaling") == 1;
 
-        // Screen_Full from sonic_h.ini, read right after Screen_Size_Selection: the fix decides it
-        auto config = hook::pattern("A2 ? ? ? ? E9 ? ? ? ? 8B 15 ? ? ? ? 8D 4C 24 10 51 68 ? ? ? ? 50 FF 92 30 01 00 00 8B 4C 24 1C 33 C0 83 C4 0C 3B CD 0F 95 C0 A3");
-        const auto fullscreenWrite = config.get_first<uint8_t>(0x2F);
+        // Screen_Full follows Screen_Size_Selection. Resolution::Init already NOPs the preceding
+        // Screen_Size_Selection store, so include its distinct parser but match through the store.
+        auto config = hook::pattern("8A 44 24 1C 83 C4 0C ? ? ? ? ? E9 ? ? ? ? 8B 15 ? ? ? ? 8D 4C 24 10 51 68 ? ? ? ? 50 FF 92 30 01 00 00 8B 4C 24 1C 33 C0 83 C4 0C 3B CD 0F 95 C0 A3");
+        const auto fullscreenWrite = config.get_first<uint8_t>(0x36);
         injector::WriteMemory<uint32_t>(*reinterpret_cast<uint32_t**>(fullscreenWrite + 1), WindowMode == Mode::Fullscreen, true);
         injector::MakeNOP(fullscreenWrite, 5, true);
 
@@ -180,6 +184,18 @@ export namespace Windowed
 
         if (WindowMode == Mode::Fullscreen)
             return;
+
+        // The windowed D3D8 mode otherwise uses implicit backbuffer sizes from the HWND.
+        // Supply the render size before creation and mode changes, even when the window is scaled.
+        auto backBuffer = hook::pattern("8B 44 24 14 2B C8 F7 D9 1B C9 41 89 0D ? ? ? ? 8B 15 ? ? ? ? 89 1D ? ? ? ? 8D 42 EB");
+        auto* const initializeDepthStencil = backBuffer.get_first(0x11);
+        const auto format = *backBuffer.get_first<uintptr_t>(0x13);
+        Presentation = reinterpret_cast<D3DPRESENT_PARAMETERS*>(format - offsetof(D3DPRESENT_PARAMETERS, BackBufferFormat));
+        SetWindowedBackBuffer = safetyhook::create_mid(initializeDepthStencil, [](SafetyHookContext&)
+        {
+            Presentation->BackBufferWidth = Screen.Width;
+            Presentation->BackBufferHeight = Screen.Height;
+        });
 
         IATHook::Replace(module, "USER32.dll",
             std::forward_as_tuple("AdjustWindowRect", WindowedModeWrapper::AdjustWindowRect_Hook),

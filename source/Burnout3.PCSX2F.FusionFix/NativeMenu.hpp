@@ -242,6 +242,7 @@ pcsx2::GameFunction<int(uintptr_t, int)> confirm, back, up, down, left, right;
 pcsx2::GameFunction<void(uintptr_t, int, int)> refresh;
 
 constexpr unsigned textLanguageOption = 12;
+constexpr unsigned skipPressStartOption = 13;
 constexpr const char* languageCodes[] = {"auto", "en", "fr", "de", "it", "es"};
 constexpr const char* languageNames[] = {"AUTO", "ENGLISH", "FRANCAIS", "DEUTSCH", "ITALIANO", "ESPANOL"};
 constexpr unsigned languageChoices = sizeof(languageCodes) / sizeof(*languageCodes);
@@ -294,9 +295,10 @@ const char* Toggle(unsigned index, const Language& language)
 int DetectedPreset()
 {
     const bool intro = console::ps2settings::boolean(values[3], true);
+    const bool pressStart = console::ps2settings::boolean(values[skipPressStartOption], true);
     const int movie = std::clamp(std::atoi(values[5].value), 0, 1);
     const bool fullRate = std::clamp(std::atoi(values[11].value), 30, 60) > 30;
-    if (int(intro) != movie || intro != fullRate)
+    if (int(intro) != movie || intro != fullRate || intro != pressStart)
         return -1;
     return intro ? (preset == 2 ? 2 : 1) : 0;
 }
@@ -306,11 +308,6 @@ void Number(char* out, float value, float low, float high)
         value = 1.0f;
     int n = int(std::clamp(value, low, high) * 100.0f + 0.5f);
     std::snprintf(out, 16, "%d.%02d", n / 100, n % 100);
-}
-// CFG text of a float setting: "1.0", "0.75".
-void Setting(char (&out)[16], float value, float low, float high)
-{
-    console::decimal(out, std::isfinite(value) ? std::clamp(value, low, high) : 1.0f, 2);
 }
 void Populate()
 {
@@ -362,8 +359,16 @@ void Populate()
             u"AUTO USA EL IDIOMA DEL JUEGO PARA ESTE MENU."};
         Label(4, languageLabels[&l - languages], languageNames[LanguageChoice()]);
         descriptions[4] = languageHelp[&l - languages];
-        Label(5, l.previous);
-        descriptions[5] = l.backHelp;
+        constexpr const char* titleLabels[] = {
+            "SKIP PRESS START", "PASSER L'ECRAN START", "START UEBERSPRINGEN", "SALTA SCHERMATA START", "SALTAR PULSA START"};
+        constexpr const char16_t* titleHelp[] = {
+            u"CONTINUE PAST PRESS START AUTOMATICALLY. RESTART REQUIRED.",
+            u"PASSER L'ECRAN START AUTOMATIQUEMENT. REDEMARRAGE NECESSAIRE.",
+            u"STARTBILDSCHIRM AUTOMATISCH UEBERSPRINGEN. NEUSTART ERFORDERLICH.",
+            u"PASSA OLTRE LA SCHERMATA START. RIAVVIO NECESSARIO.",
+            u"OMITE LA PANTALLA PULSA START. REINICIO NECESARIO."};
+        Label(5, titleLabels[&l - languages], Toggle(skipPressStartOption, l));
+        descriptions[5] = titleHelp[&l - languages];
     }
     else
     {
@@ -404,6 +409,7 @@ void OptionsReloaded()
 bool WriteValues(const unsigned* indices, const char* const* newValues, unsigned count, bool restart)
 {
     const bool oldIntro = console::ps2settings::boolean(values[3], true);
+    const bool oldPressStart = console::ps2settings::boolean(values[skipPressStartOption], true);
     const bool oldFullRate = std::atoi(values[11].value) > 30;
     static PCSX2FIniRequest request;
     request = {};
@@ -427,6 +433,7 @@ bool WriteValues(const unsigned* indices, const char* const* newValues, unsigned
     for (unsigned i = 0; i < count; ++i)
         console::ps2settings::copy(values[indices[i]].value, newValues[i]);
     onChange(restart && (oldIntro != console::ps2settings::boolean(values[3], true) ||
+                         oldPressStart != console::ps2settings::boolean(values[skipPressStartOption], true) ||
                          oldFullRate != (std::atoi(values[11].value) > 30)));
     return true;
 }
@@ -436,6 +443,18 @@ void ChangeOne(unsigned index, const char* value, bool restart = false)
     const char* next[] = {value};
     if (WriteValues(indices, next, 1, restart))
         preset = -1;
+}
+void ChangeNumber(unsigned index, int direction, int minimum, int maximum)
+{
+    char* end = nullptr;
+    float value = std::strtof(values[index].value, &end);
+    if (end == values[index].value || !std::isfinite(value))
+        value = 1.0f;
+    value = std::clamp(value, float(minimum) / 20.0f, float(maximum) / 20.0f);
+    const int step = std::clamp(int(value * 20.0f + 0.5f) + direction, minimum, maximum);
+    char number[16];
+    console::decimal(number, float(step) / 20.0f, 2);
+    ChangeOne(index, number);
 }
 void Change(unsigned row, int direction)
 {
@@ -452,15 +471,7 @@ void Change(unsigned row, int direction)
     }
     else if (page == 1 && (row == 2 || row == 3))
     {
-        const unsigned index = row == 2 ? 4 : 2;
-        const int maximum = row == 2 ? 30 : 40;
-        float n = std::strtof(values[index].value, nullptr);
-        if (!std::isfinite(n))
-            n = 1.0f;
-        int step = std::clamp(int(n * 20.0f + 0.5f) + direction, 10, maximum);
-        char number[16];
-        Setting(number, float(step) / 20.0f, 0.5f, row == 2 ? 1.5f : 2.0f);
-        ChangeOne(index, number);
+        ChangeNumber(row == 2 ? 4 : 2, direction, 10, row == 2 ? 30 : 40);
     }
     else if (page == 1 && row == 4)
     {
@@ -473,25 +484,17 @@ void Change(unsigned row, int direction)
         const unsigned next = (int(LanguageChoice()) + direction + int(languageChoices)) % languageChoices;
         ChangeOne(textLanguageOption, languageCodes[next]);
     }
+    else if (page == 2 && row == 5)
+        ChangeOne(skipPressStartOption, console::ps2settings::boolean(values[skipPressStartOption], true) ? "0" : "1", true);
     else if (page == 3 && row == 0)
     {
-        float value = std::strtof(values[6].value, nullptr);
-        if (!std::isfinite(value)) value = 1.0f;
-        const int step = std::clamp(int(value * 20.0f + 0.5f) + direction, 2, 100);
-        char number[16];
-        Setting(number, float(step) / 20.0f, 0.1f, 5.0f);
-        ChangeOne(6, number);
+        ChangeNumber(6, direction, 2, 100);
     }
     else if (page == 3 && row == 1)
         ChangeOne(7, console::ps2settings::boolean(values[7], false) ? "0" : "1");
     else if (page == 3 && row == 2)
     {
-        float value = std::strtof(values[8].value, nullptr);
-        if (!std::isfinite(value)) value = 1.0f;
-        const int step = std::clamp(int(value * 20.0f + 0.5f) + direction, 5, 80);
-        char number[16];
-        Setting(number, float(step) / 20.0f, 0.25f, 4.0f);
-        ChangeOne(8, number);
+        ChangeNumber(8, direction, 5, 80);
     }
     else if (page == 3 && row == 3)
         ChangeOne(9, console::ps2settings::boolean(values[9], false) ? "0" : "1");
@@ -501,8 +504,9 @@ void Change(unsigned row, int direction)
     {
         const int activePreset = DetectedPreset();
         const int next = activePreset < 0 ? 0 : (activePreset + direction + 3) % 3;
-        const unsigned indices[] = {3, 5, 11};
-        const char* settings[] = {next ? "1" : "0", next ? "1" : "0", next ? "60" : "30"};
+        const unsigned indices[] = {3, 5, 11, skipPressStartOption};
+        const char* toggle = next ? "1" : "0";
+        const char* settings[] = {toggle, toggle, next ? "60" : "30", toggle};
         if (WriteValues(indices, settings, std::size(indices), true))
             preset = next;
     }
@@ -579,10 +583,10 @@ int Update(uintptr_t owner)
             page = 3;
             *selected = 0;
         }
-        else if (select && ((page == 2 && *selected == 5) || (page == 3 && *selected == 4)))
+        else if (select && page == 3 && *selected == 4)
         {
-            *selected = page == 3 ? 3 : 5;
-            page = page == 3 ? 2 : 1;
+            *selected = 3;
+            page = 2;
         }
         else if (decrease || increase || select)
             Change(*selected, decrease ? -1 : 1);

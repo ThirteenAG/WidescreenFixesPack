@@ -10,7 +10,7 @@
   "HudAspectRatioConstraint": "HUD-Seitenverhältnis",
   "HudAspectRatioConstraint.description": "Auto setzt die seitlichen HUD-Felder an die Bildschirmränder. Ein Verhältnis hält sie an den Rändern eines zentrierten Rahmens dieser Form. Die Cockpitansicht behält ihr HUD immer auf dem 4:3-Armaturenbrett. Änderungen gelten sofort im Spiel.",
   "FMVWidescreenMode": "Videoanzeige",
-  "FMVWidescreenMode.description": "Original zeigt das vollständige 4:3-Videobild. Füllen vergrößert das sichtbare Bild bei Videos mit festen schwarzen Balken. Vollbildvideos behalten ihren gesamten Bildinhalt. Änderungen gelten sofort im Spiel.",
+  "FMVWidescreenMode.description": "Original zeigt das vollständige 4:3-Videobild. Füllen vergrößert das sichtbare Bild bei Videos mit festen schwarzen Balken. Clips, die das ganze Bild nutzen, behalten ihren gesamten Bildinhalt. Änderungen gelten sofort im Spiel.",
   "fmv.original": "Original",
   "fmv.fill": "Füllen",
   "CutsceneBorders": "Szenenbalken",

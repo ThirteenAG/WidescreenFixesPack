@@ -248,10 +248,23 @@
           "label": "@CutsceneBorders.0"
         },
         {
+          "value": 1,
+          "label": "@CutsceneBorders.1"
+        },
+        {
+          "value": 2,
+          "label": "@CutsceneBorders.2"
+        },
+        {
           "value": 3,
           "label": "@CutsceneBorders.3"
         }
       ],
+      "presets": {
+        "vanilla": 1,
+        "recommended": 3,
+        "enhanced": 3
+      },
       "label": "@CutsceneBorders",
       "description": "@CutsceneBorders.description",
       "page": "camera",

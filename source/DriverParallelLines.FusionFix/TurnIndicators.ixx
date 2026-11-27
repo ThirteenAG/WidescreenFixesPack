@@ -23,7 +23,7 @@ static void (__fastcall* ActivateLamp)(CVehicle* veh, void* edx, Lights a3, char
 
 using Vehicle = CVehicle*;
 
-export void InitTurnIndicatorsRequiredRefs()
+void InitTurnIndicatorsRequiredRefs()
 {
     pLifeSystem.SetAddress(*hook::pattern("8B 0D ? ? ? ? 3B CF 89 3D").get_first<CLifeSystem**>(2));
     pGameTime.SetAddress(*hook::pattern("A1 ? ? ? ? 8B 48 ? ? ? 8B 53").get_first<CGameTime**>(1));
@@ -163,11 +163,33 @@ static const size_t MAX_RECENT_VEHICLES = 5;
 
 namespace Natives
 {
+    float frameTime = 1.0f / 60.0f;
+
+    void UpdateFrameTime()
+    {
+        static std::array<int64_t, 50> times{};
+        static size_t next = 0, count = 0;
+        static const int64_t frequency = []()
+        {
+            LARGE_INTEGER value{};
+            QueryPerformanceFrequency(&value);
+            return value.QuadPart;
+        }();
+        LARGE_INTEGER time{};
+        QueryPerformanceCounter(&time);
+        times[next] = time.QuadPart;
+        next = (next + 1) % times.size();
+        count = std::min(count + 1, times.size());
+        const double elapsed = static_cast<double>(time.QuadPart - times[count == times.size() ? next : 0]);
+        frameTime = count > 1 && elapsed > 0.0 && frequency > 0 ?
+            static_cast<float>(std::clamp(elapsed / ((count - 1) * frequency), 0.001, 0.1)) : 1.0f / 60.0f;
+    }
+
     float Timestep()
     {
         auto time = *pGameTime;
         if (time && time->f[0])
-            return fTimeStep;
+            return frameTime;
         return 0.0f;
     }
 
@@ -228,6 +250,9 @@ VehicleState* findVehicle(Vehicle veh)
 
 VehicleState* addOrUpdateVehicle(Vehicle veh, const VehicleState& state = VehicleState{})
 {
+    if (!recent_vehicles.empty() && recent_vehicles.front().first == veh)
+        return &recent_vehicles.front().second;
+
     // Check if vehicle already exists
     for (auto it = recent_vehicles.begin(); it != recent_vehicles.end(); ++it)
     {
@@ -275,6 +300,7 @@ public:
             if (!bTurnIndicators)
                 return;
 
+            InitTurnIndicatorsRequiredRefs();
             auto pattern = hook::pattern("55 8B EC 51 8B 51 ? ? ? 83 F8");
             ActivateLamp = (decltype(ActivateLamp))pattern.get_first();
 
@@ -291,6 +317,7 @@ public:
 
             WFP::onGameProcessEvent() += [&]()
             {
+                Natives::UpdateFrameTime();
                 // Get current player vehicle
                 CCharacter* PlayerPed = nullptr;
                 Vehicle PlayerCar = nullptr;
@@ -322,13 +349,19 @@ public:
                 if (bManualTurnIndicators)
                 {
                     const bool active = player_fully_in_vehicle && !BlockGameInput && Natives::Timestep() > 0.0f;
-                    if (indicatorTaps.owner != PlayerCar)
-                        indicatorPad = {};
-                    const auto pad = indicatorPad.Read(active);
-                    const bool left = active && (IsKeyboardKeyPressed(nLeftIndicatorKey) || (pad.buttons & XINPUT_GAMEPAD_LEFT_SHOULDER));
-                    const bool right = active && (IsKeyboardKeyPressed(nRightIndicatorKey) || (pad.buttons & XINPUT_GAMEPAD_RIGHT_SHOULDER));
-                    manual = indicatorTaps.Update(PlayerCar, active && !pad.disconnectedWhileHeld,
-                        left, right, IndicatorTaps::Clock::now());
+                    if (active)
+                    {
+                        if (indicatorTaps.owner != PlayerCar)
+                            indicatorPad = {};
+                        const auto pad = indicatorPad.Read(true);
+                        const bool left = IsKeyboardKeyPressed(nLeftIndicatorKey) || (pad.buttons & XINPUT_GAMEPAD_LEFT_SHOULDER);
+                        const bool right = IsKeyboardKeyPressed(nRightIndicatorKey) || (pad.buttons & XINPUT_GAMEPAD_RIGHT_SHOULDER);
+                        manual = indicatorTaps.Update(PlayerCar, !pad.disconnectedWhileHeld, left, right, IndicatorTaps::Clock::now());
+                    }
+                    else if (indicatorTaps.owner || indicatorPad.slot != XUSER_MAX_COUNT)
+                    {
+                        CancelIndicatorTaps();
+                    }
                 }
 
                 // If player is in a vehicle, add/update it in our queue

@@ -10,7 +10,7 @@
 
 ---
 
-The included ASI loader provides Direct3D 8 to 9 conversion. Keep `d3d8.dll` and `d3d8.ini` together beside the game executable. If an existing `global.ini` in the game, `scripts`, `plugins`, or `update` folder sets `UseD3D8to9=0`, it overrides `d3d8.ini`; change that existing value to `1` to use the D3D9 post-effects.
+The included ASI loader provides Direct3D 8 to 9 conversion. Keep `dinput.dll`, `dinput.ini`, `d3d8.dll`, and `d3d8.ini` beside the game executable. The input loader initializes portable settings before the game reads its startup options. An existing `global.ini` in the game, `scripts`, `plugins`, or `update` folder can override `d3d8.ini`. Set `UseD3D8to9=1` in that file to use the D3D9 post-effects.
 
 ## Fixes
 
@@ -40,7 +40,7 @@ The included ASI loader provides Direct3D 8 to 9 conversion. Keep `d3d8.dll` and
 - **Cutscene borders** — In-engine cutscenes keep their original framing at any aspect ratio; choose letterbox borders, pillarbox borders, both, or none. Borders slide in and out, or appear at once with **Animated Cutscene Borders** off.
 - **Startup save** — Automatically load a selected, most recent, or last-used save on startup.
 - **Save location** — Store saves in a `savegames` folder inside the game directory.
-- **Settings file** — Keep the game's settings in `settings.ini` next to the savegames instead of the registry. The first time, the settings already in the registry are copied there.
+- **Portable settings** — Enabled by default. The launcher and game store their options in `scripts/MaxPayne2.FusionFix.cfg`. The fix initializes missing native settings sections from the registry. Changing Portable Settings under Options > Plugins > Fusion Fix takes effect after restarting the game.
 - **Background play** — Keep the game running when minimized.
 - **Raw mouse and smoothing** — Raw Mouse Input is on by default for relative camera movement; if the raw-input registration or compatible game hook is unavailable, the game falls back to DirectInput. Mouse Smoothing is off by default.
 - **Controller** — Xbox-style controllers work out of the box (PlayStation and Nintendo controllers through Steam Input or DS4Windows). Left stick moves, right stick aims, RT shoots, RS attacks in melee, LT shootdodges, LB starts bullet time, A jumps, X reloads, Y uses (and raises the sniper scope with a sniper rifle in hand), B takes painkillers, LS crouches, D-pad Up picks the best weapon, D-pad Left and Right change weapons, D-pad Down reads the story so far, RB quick saves (quick loads while paused), Back pauses and Start opens the menu.

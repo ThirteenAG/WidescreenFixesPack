@@ -2,6 +2,7 @@ module;
 
 #include <stdafx.h>
 #include <minidx8/d3d8.h>
+#include <span>
 #include "Shared/TonyHawk/Video.hpp"
 
 export module Movies;
@@ -11,6 +12,7 @@ import ComVars;
 export namespace THPS4Video
 {
     inline SafetyHookInline DrawHook;
+    inline SafetyHookMid LoadingPictureHook;
 
     inline void __cdecl Draw(IDirect3DTexture8* texture, float x, float y, float width, float height, float alpha)
     {
@@ -62,5 +64,28 @@ export namespace THPS4Video
         MovieFrameWidth.SetAddress(*dimensions.get_first<float*>(35));
         MovieFrameHeight.SetAddress(*dimensions.get_first<float*>(47));
         DrawHook = safetyhook::create_inline(draw.get_first(), Draw);
+
+        auto loadingPicture = hook::module_pattern(module,
+            "A1 ? ? ? ? 8D 4C 24 0C 6A 18 51 8B 10 6A 02 6A 05 50 FF 92 20 01 00 00 8B 4C 24 08");
+        LoadingPictureHook = safetyhook::create_mid(loadingPicture.get_first(19), [](SafetyHookContext& regs)
+        {
+            const auto box = TonyVideo::Layout(Screen.fWidth, Screen.fHeight, 4.0f, 3.0f, 1);
+            if (box.x == 0.0f && box.y == 0.0f)
+                return;
+
+            // The loading picture is drawn directly as a transformed quad. The progress bar has a separate draw.
+            struct Vertex
+            {
+                float x, y, z, rhw, u, v;
+            };
+            auto* device = *reinterpret_cast<IDirect3DDevice8**>(regs.esp);
+            auto* vertices = *reinterpret_cast<Vertex**>(regs.esp + 12);
+            device->Clear(0, nullptr, D3DCLEAR_TARGET, 0xFF000000, 1.0f, 0);
+            for (auto& vertex : std::span<Vertex, 4>(vertices, 4))
+            {
+                vertex.x = box.x + (vertex.x < 0.0f ? -0.5f : box.width);
+                vertex.y = box.y + (vertex.y < 0.0f ? -0.5f : box.height);
+            }
+        });
     }
 }

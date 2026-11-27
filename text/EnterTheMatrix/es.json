@@ -11,7 +11,7 @@
   "page.game": "Juego",
   "page.compatibility": "Compatibilidad",
   "WindowMode": "Modo de ventana",
-  "WindowMode.description": "Pantalla completa, una ventana o una ventana sin bordes que cubre el monitor. En ventana usa la resolución elegida en MatrixOptions; Sin bordes, la del monitor. Requiere reiniciar.",
+  "WindowMode.description": "Pantalla completa, una ventana o una ventana sin bordes que cubre el monitor. El modo en ventana inicia con la resolución elegida en MatrixOptions. Arrastra el marco para cambiar el tamaño. Requiere reiniciar.",
   "WindowMode.fullscreen": "Pantalla completa",
   "WindowMode.windowed": "En ventana",
   "WindowMode.borderless": "Sin bordes",

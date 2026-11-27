@@ -100,6 +100,7 @@ void InitFrame()
             Screen.fFieldOfView = CurrentFieldOfView();
         UpdateCameraLenses();
         ResetIconProjection();
+        EndTextFrame();
         HookIconDevice(device);
         EndCutsceneFrame(device);
         SufferingOverlay::Present(device, hGameWindow);

@@ -114,7 +114,8 @@ public:
             }; injector::MakeInline<MenuAspectRatioSwitchHook>(pattern.get_first(0), pattern.get_first(7));
 
             // 2D — uniform hor+ correction; skip fullscreen fades, radar border/overlay and the pause map game view
-            pattern = hook::pattern("89 56 DC 83 C0 01 D9 5E D4 89 44 24 10"); //0x57E5BD
+            // All six vertices are complete after the final Y store.
+            pattern = hook::pattern("D9 5E D8 3B 07 0F 82 ? ? ? ? 8B 0D"); //0x57E5DB
             static auto dword_53F06F = (uint32_t)hook::get_pattern("80 BE 40 02 00 00 00", 0);
             static auto dword_53F08A = (uint32_t)hook::get_pattern("8D 46 3C 53 E8 ? ? ? ? 5F", 9);
             static auto dword_540F2E = (uint32_t)hook::get_pattern("8D 86 9C 01 00 00 51 E8 ? ? ? ? C2", 12);
@@ -125,111 +126,99 @@ public:
             auto damagePattern = hook::pattern("E8 ? ? ? ? 83 C4 50 C2 08 00");
             static auto dword_53CEFD = (uint32_t)damagePattern.count(2).get(0).get<void>(5);
             static auto dword_53CF59 = (uint32_t)damagePattern.count(2).get(1).get<void>(5);
-            struct HudHook
+            static auto HudHook = safetyhook::create_mid(pattern.get_first(3), [](SafetyHookContext& regs)
             {
-                void operator()(injector::reg_pack& regs)
+                auto retAddr = *(uint32_t*)(regs.esp + 0x4C);
+                auto viewport = *(uintptr_t*)(regs.esp + 0x50);
+
+                if (Driv3rVideo::drawing)
+                    return;
+
+                // Skip radar border/overlay — position handled by RadarHook via sub_53D790
+                // Skip fullscreen fades — they cover the full widescreen viewport intentionally
+                if (retAddr == dword_53F06F || retAddr == dword_53F08A)
+                    return;
+
+                // Damage flash along the screen edge the hit came from
+                if (retAddr == dword_53CEFD || retAddr == dword_53CF59)
+                    return;
+
+                // Pause map: the HUD viewport shrinks from full screen into the radar's place (and back), showing a capture of the game view.
+                // The capture is drawn over the whole viewport, and the frame around it is already laid out in pixels.
+                if (retAddr == dword_53BE3E)
+                    return;
+
+                if (retAddr == dword_53BDAD || retAddr == dword_53BE23)
                 {
-                    auto retAddr = *(uint32_t*)(regs.esp + 0x4C);
-                    auto viewport = *(uintptr_t*)(regs.esp + 0x50);
-
-                    *(uint32_t*)(regs.esi - 0x24) = regs.edx;
-                    regs.eax += 1;
-                    float temp = 0.0f;
-                    _asm { fstp dword ptr[temp] }
-                    *(float*)(regs.esi - 0x2C) = temp;
-
-                    if (Driv3rVideo::drawing)
+                    // The capture has the screen's aspect ratio, crop its sides to the viewport instead of squishing it
+                    const int32_t viewportWidth = *(int32_t*)(viewport + 0x1E8);
+                    const int32_t viewportHeight = *(int32_t*)(viewport + 0x1EC);
+                    if (viewportWidth <= 0 || viewportHeight <= 0)
                         return;
 
-                    // Skip radar border/overlay — position handled by RadarHook via sub_53D790
-                    // Skip fullscreen fades — they cover the full widescreen viewport intentionally
-                    if (retAddr == dword_53F06F || retAddr == dword_53F08A)
-                        return;
-
-                    // Damage flash along the screen edge the hit came from
-                    if (retAddr == dword_53CEFD || retAddr == dword_53CF59)
-                        return;
-
-                    // Pause map: the HUD viewport shrinks from full screen into the radar's place (and back), showing a capture of the game view.
-                    // The capture is drawn over the whole viewport, and the frame around it is already laid out in pixels.
-                    if (retAddr == dword_53BE3E)
-                        return;
-
-                    if (retAddr == dword_53BDAD || retAddr == dword_53BE23)
-                    {
-                        // The capture has the screen's aspect ratio, crop its sides to the viewport instead of squishing it
-                        const int32_t viewportWidth = *(int32_t*)(viewport + 0x1E8);
-                        const int32_t viewportHeight = *(int32_t*)(viewport + 0x1EC);
-                        if (viewportWidth <= 0 || viewportHeight <= 0)
-                            return;
-
-                        const float crop = std::min(1.0f, (static_cast<float>(viewportWidth) / static_cast<float>(viewportHeight)) / fAspectRatio);
-                        auto vertices = reinterpret_cast<QuadVertex*>(regs.esi - 0xA4);
-                        for (int i = 0; i < 6; ++i)
-                            vertices[i].u = 0.5f + (vertices[i].u - 0.5f) * crop;
-                        return;
-                    }
-
-                    if (bHUD)
-                    {
-                        const float hudTopThreshold = 0.35f;    // [0..1], only elements above this Y are eligible
-                        const float hudLeftThreshold = 0.22f;   // [0..1], left-corner band width
-                        const float hudRightThreshold = 0.22f;  // [0..1], right-corner band width
-
-                        const float currentAspect = fAspectRatio;
-                        const float constrainedAspect = std::min(currentAspect, std::max(baseAspect, targetHudAspect.load()));
-                        const float stretchScale = std::max(1.0f, currentAspect / baseAspect);
-                        const float sideOffset = (1.0f - (baseAspect / constrainedAspect)) * targetHudAspect / currentAspect;
-
-                        const uintptr_t src = *(uintptr_t*)(regs.edi + 8) + (regs.ebp - 0x30);
-                        const float srcX1 = *(float*)(src + 0x10);
-                        const float srcY1 = *(float*)(src + 0x14);
-                        const float srcX2 = *(float*)(src + 0x18) + srcX1; // x + w
-                        const float srcY2 = *(float*)(src + 0x1C) + srcY1; // y + h
-
-                        // Only top row items can be moved.
-                        const bool isTop = (srcY1 <= hudTopThreshold);
-
-                        // Only true corners can be moved.
-                        const bool isLeftCorner = (srcX1 <= hudLeftThreshold);
-                        const bool isRightCorner = (srcX2 >= (1.0f - hudRightThreshold));
-
-                        // Skip center/edge-crossing items (neither or both).
-                        if (isTop && isLeftCorner != isRightCorner)
-                        {
-                            float* x0 = (float*)((regs.esi - 0x90) - 0x14);
-                            float* x1v = (float*)((regs.esi - 0x90) + 0x04);
-                            float* x2v = (float*)((regs.esi - 0x90) + 0x1C);
-                            float* x3v = (float*)((regs.esi - 0x90) + 0x34);
-                            float* x4 = (float*)((regs.esi - 0x44) + 0x00);
-                            float* x5 = (float*)((regs.esi - 0x2C) + 0x00);
-
-                            *x0 /= stretchScale; *x1v /= stretchScale; *x2v /= stretchScale;
-                            *x3v /= stretchScale; *x4 /= stretchScale; *x5 /= stretchScale;
-
-                            const float bias = isLeftCorner ? -sideOffset : sideOffset;
-                            *x0 += bias; *x1v += bias; *x2v += bias;
-                            *x3v += bias; *x4 += bias; *x5 += bias;
-                            return;
-                        }
-                    }
-
-                    auto x1 = *(float*)(*(uintptr_t*)(regs.edi + 8) + (regs.ebp - 0x30) + 0x10);
-                    auto x2 = *(float*)(*(uintptr_t*)(regs.edi + 8) + (regs.ebp - 0x30) + 24)
-                        + *(float*)((regs.ebp - 0x30) + *(uintptr_t*)(regs.edi + 8) + 16);
-
-                    if (x1 == 0.0f && x2 == 1.0f && retAddr == dword_540F2E)
-                        return;
-
-                    const float scale = std::max(1.0f, fAspectRatio / baseAspect);
-                    *(float*)((regs.esi - 0x90) - 0x14) /= scale; // vertex 0 X
-                    *(float*)((regs.esi - 0x90) + 0x04) /= scale; // vertex 1 X
-                    *(float*)((regs.esi - 0x90) + 0x1C) /= scale; // vertex 2 X
-                    *(float*)((regs.esi - 0x90) + 0x34) /= scale; // vertex 3 X
-                    *(float*)((regs.esi - 0x44) + 0x00) /= scale; // vertex 4 X
-                    *(float*)((regs.esi - 0x2C) + 0x00) /= scale; // vertex 5 X
+                    const float crop = std::min(1.0f, (static_cast<float>(viewportWidth) / static_cast<float>(viewportHeight)) / fAspectRatio);
+                    auto vertices = reinterpret_cast<QuadVertex*>(regs.esi - 0xA4);
+                    for (int i = 0; i < 6; ++i)
+                        vertices[i].u = 0.5f + (vertices[i].u - 0.5f) * crop;
+                    return;
                 }
-            }; injector::MakeInline<HudHook>(pattern.get_first(0), pattern.get_first(9));
+
+                if (bHUD)
+                {
+                    const float hudTopThreshold = 0.35f;    // [0..1], only elements above this Y are eligible
+                    const float hudLeftThreshold = 0.22f;   // [0..1], left-corner band width
+                    const float hudRightThreshold = 0.22f;  // [0..1], right-corner band width
+
+                    const float currentAspect = fAspectRatio;
+                    const uintptr_t src = *(uintptr_t*)(regs.edi + 8) + (regs.ebp - 0x30);
+                    const float srcY1 = *(float*)(src + 0x14);
+                    const bool isTop = (srcY1 <= hudTopThreshold);
+                    auto vertices = reinterpret_cast<QuadVertex*>(regs.esi - 0xA4);
+                    if (currentAspect < baseAspect)
+                    {
+                        // Keep the native width and scale height to match on a display narrower than 4:3.
+                        const float scale = currentAspect / baseAspect;
+                        const float anchor = isTop ? 1.0f : (srcY1 >= 1.0f - hudTopThreshold ? -1.0f : 0.0f);
+                        for (int i = 0; i < 6; ++i)
+                            vertices[i].y = anchor + (vertices[i].y - anchor) * scale;
+                        return;
+                    }
+
+                    // Only true corners can be moved.
+                    const float srcX1 = *(float*)(src + 0x10);
+                    const float srcX2 = srcX1 + *(float*)(src + 0x18);
+                    const bool isLeftCorner = (srcX1 <= hudLeftThreshold);
+                    const bool isRightCorner = (srcX2 >= (1.0f - hudRightThreshold));
+
+                    // Skip center/edge-crossing items (neither or both).
+                    if (isTop && isLeftCorner != isRightCorner)
+                    {
+                        const float targetAspect = targetHudAspect.load();
+                        const float constrainedAspect = std::clamp(targetAspect, baseAspect, currentAspect);
+                        const float stretchScale = currentAspect / baseAspect;
+                        const float sideOffset = (1.0f - baseAspect / constrainedAspect) * targetAspect / currentAspect;
+                        const float bias = isLeftCorner ? -sideOffset : sideOffset;
+                        for (int i = 0; i < 6; ++i)
+                            vertices[i].x = vertices[i].x / stretchScale + bias;
+                        return;
+                    }
+                }
+
+                auto x1 = *(float*)(*(uintptr_t*)(regs.edi + 8) + (regs.ebp - 0x30) + 0x10);
+                auto x2 = *(float*)(*(uintptr_t*)(regs.edi + 8) + (regs.ebp - 0x30) + 24)
+                    + *(float*)((regs.ebp - 0x30) + *(uintptr_t*)(regs.edi + 8) + 16);
+
+                if (x1 == 0.0f && x2 == 1.0f && retAddr == dword_540F2E)
+                    return;
+
+                const float scale = std::max(1.0f, fAspectRatio / baseAspect);
+                *(float*)((regs.esi - 0x90) - 0x14) /= scale; // vertex 0 X
+                *(float*)((regs.esi - 0x90) + 0x04) /= scale; // vertex 1 X
+                *(float*)((regs.esi - 0x90) + 0x1C) /= scale; // vertex 2 X
+                *(float*)((regs.esi - 0x90) + 0x34) /= scale; // vertex 3 X
+                *(float*)((regs.esi - 0x44) + 0x00) /= scale; // vertex 4 X
+                *(float*)((regs.esi - 0x2C) + 0x00) /= scale; // vertex 5 X
+            });
 
             // Radar
             pattern = hook::pattern("89 9E EC 01 00 00 89 9E F0 01 00 00"); //0x53DE73

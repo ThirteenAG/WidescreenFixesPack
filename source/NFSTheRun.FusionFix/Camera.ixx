@@ -73,10 +73,10 @@ export bool IsCinebotCamera(uintptr_t camera)
 
 export bool IsCinebotDrivingView()
 {
-    if (vCameraStack.empty())
-        return true;
-    const auto& mode = vCameraStack.back();
-    return mode.ends_with("chaseMode") || mode.ends_with("lookBackMode");
+    return vCameraStack.empty() || std::ranges::any_of(vCameraStack, [](const auto& mode)
+    {
+        return mode.ends_with("chaseMode") || mode.ends_with("lookBackMode");
+    });
 }
 
 struct alignas(16) RayCastHit

@@ -7,6 +7,8 @@ module;
 
 export module Menu;
 
+import SplitScreen;
+
 // The fix's settings in the game's own Options menu, at the title screen and in the pause menu.
 //
 // Options gets one more row, PLUGINS, above DEFAULT. It opens a list page: the fix first, then every other loaded
@@ -617,7 +619,7 @@ namespace
 
         // Pause menu: a list of text rows under the title, as the game's pause options
         int size = Game::PauseFontSize();
-        int top = 180;
+        int top = SplitScreen::PauseMenuTop();
         Text(page, title, 640, top, White, float(size), 1100.0f);
         int y = top + size + 18;
         for (int i = 0; i < VisibleRows && scroll + i < count; ++i, y += size)
@@ -830,7 +832,7 @@ namespace
     int PauseRowY(int slot)
     {
         int size = Game::PauseFontSize();
-        return 180 + size + size / 2 + slot * size;
+        return SplitScreen::PauseMenuTop() + size + size / 2 + slot * size;
     }
 
     uintptr_t* MouseAreas(int screen, int count)

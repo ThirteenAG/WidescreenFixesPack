@@ -304,9 +304,33 @@ namespace
             FillPage(manager);
     }
 
+    POINT ResolutionCursor{};
+    bool ResolutionCursorHeld{};
+
+    void SyncResolutionCursor(uint8_t* manager)
+    {
+        if (!ResolutionCursorHeld)
+            return;
+
+        POINT cursor{};
+        if (!GetCursorPos(&cursor) || cursor.x != ResolutionCursor.x || cursor.y != ResolutionCursor.y)
+        {
+            ResolutionCursorHeld = false;
+            return;
+        }
+
+        // A window resize changes client coordinates even when the cursor stays at the same screen position.
+        auto field = [manager](size_t offset) -> int32_t& { return *reinterpret_cast<int32_t*>(manager + offset); };
+        const auto x = std::clamp(field(0x64), 0, std::max(0, RsGlobal->width));
+        const auto y = std::clamp(field(0x68), 0, std::max(0, RsGlobal->height));
+        field(0x12C) = field(0x134) = x;
+        field(0x130) = field(0x138) = y;
+    }
+
     void* UserInputPrevious = nullptr;
     void __fastcall UserInput(uint8_t* manager, void* edx)
     {
+        SyncResolutionCursor(manager);
         if (bReady)
             Update(manager);
         bool overValue = ValueAreas.Contains(
@@ -565,6 +589,11 @@ namespace
 
 export namespace FixOptions
 {
+    void RememberResolutionCursor()
+    {
+        ResolutionCursorHeld = GetCursorPos(&ResolutionCursor) != FALSE;
+    }
+
     // From Menu.ixx's hook at the end of CMenuManager::Draw's right text switch: the value of a row of the fix
     const wchar_t* RightText(int action)
     {
@@ -624,6 +653,7 @@ public:
             // Menu.ixx may have hooked the code right after the call already
             auto rowText = find_pattern("B9 ? ? ? ? E8 ? ? ? ? 89 44 24 ? 80 7D", "B9 ? ? ? ? E8 ? ? ? ? 89 44 24 ? E9 ? ? ? ? ? 8B B5");
             auto userInput = hook::pattern("80 7B 38 00 74 ? 89 D9 E8");
+            UserInputPrevious = injector::MakeCALL(userInput.get_first(8), UserInput, true).get();
             auto processUserInput = hook::pattern("89 E9 FF 74 24 ? FF 74 24 ? FF 74 24 ? FF 74 24 ? FF 74 24 ? E8");
             auto accept = hook::pattern("89 E9 E8 ? ? ? ? 80 BC 24");
             auto change = hook::pattern("50 E8 ? ? ? ? 89 E9 E8 ? ? ? ? 83 BD");
@@ -643,7 +673,6 @@ public:
                 return;
 
             HookTextCalls(rowText.get_first<uint8_t>(5));
-            UserInputPrevious = injector::MakeCALL(userInput.get_first(8), UserInput, true).get();
             ProcessUserInputPrevious = injector::MakeCALL(processUserInput.get_first(22), ProcessUserInput, true).get();
             OnOffAcceptPrevious = injector::MakeCALL(accept.get_first(2), OnOffAccept, true).get();
             OnOffChangePrevious = injector::MakeCALL(changeCall, OnOffChange, true).get();

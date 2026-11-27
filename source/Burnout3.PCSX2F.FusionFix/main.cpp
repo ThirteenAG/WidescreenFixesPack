@@ -37,7 +37,7 @@ constexpr console::ps2settings::Value defaults[] = {
     {"MAIN", "FMVWidescreenMode", "1"}, {"MAIN", "MouseSensitivity", "1.0"},
     {"MAIN", "InvertMouseY", "0"}, {"MAIN", "GamepadCameraSpeed", "1.0"},
     {"MAIN", "InvertGamepadY", "0"}, {"MAIN", "SplitScreenSideBySide", "0"},
-    {"MAIN", "FPSLimit", "60"}, {"MAIN", "TextLanguage", "auto"}};
+    {"MAIN", "FPSLimit", "60"}, {"MAIN", "TextLanguage", "auto"}, {"MAIN", "SkipPressStart", "1"}};
 console::ps2settings::Value options[std::size(defaults)]{};
 uint32_t lastStateLoad;
 uint32_t observedStateLoad;
@@ -45,7 +45,10 @@ bool fps60Applied;
 uint32_t nativeFrameInterval = 1;
 pcsx2::GameFunction<void(int)> setFrameInterval;
 pcsx2::GameFunction<void(uintptr_t)> updateTimer;
-bool skipIntro, startupSkipIntro;
+bool skipIntro, startupSkipIntro, startupSkipPressStart;
+pcsx2::GameFunction<int(uintptr_t, int, int)> titleStartPressed;
+pcsx2::GameFunction<int(uintptr_t)> alternateControllerConnected;
+pcsx2::GameCallback<int(uintptr_t, int, int)> titleStart;
 uint32_t refreshFrames;
 uint32_t menuNoticeFrames;
 bool restartNotice;
@@ -395,6 +398,13 @@ bool IsDrivingCamera(uintptr_t camera)
     const uint64_t modes = *reinterpret_cast<const uint64_t*>(source - 512 + 2944);
     return modes == (1ull << 2) || modes == (1ull << 5);
 }
+uintptr_t ConnectedPad(uintptr_t manager, int slot)
+{
+    const uintptr_t device = *reinterpret_cast<const uint32_t*>(manager + 3400 + 300 * slot + 4);
+    if ((device == manager + 640 || device == manager + 876) && *reinterpret_cast<const uint8_t*>(device + 8))
+        return device;
+    return 0;
+}
 void PollMouse(uintptr_t game)
 {
     static_assert(sizeof(CMouseControllerState) == sizeof(console::Mouse));
@@ -461,10 +471,12 @@ void PollSettings()
         bool changed = false;
         if (ReadOptions(false, &changed))
         {
-            ReadSettings();
-            layout.aspect = 0;
             if (changed || loaded)
+            {
+                ReadSettings();
+                layout.aspect = 0;
                 burnout::menu::OptionsReloaded();
+            }
             const bool wanted60 = std::clamp(std::atoi(options[11].value), 30, 60) > 30;
             if (loaded && wanted60 != fps60Applied)
             {
@@ -544,17 +556,38 @@ void PollSettings()
 }
 void SkipStartupMovies()
 {
+    if (!skipIntro)
+        return;
+
     // The movie player ends a playing movie in state 4, as when a skip button
     // is pressed; the owning screen then continues natively. Movies 1 to 9 are
     // the legal and Criterion videos, movie 0 is the intro before the title.
     constexpr uintptr_t player = 0x1E98478;
     auto& state = *reinterpret_cast<int32_t*>(player + 4);
     const uint32_t movie = *reinterpret_cast<const uint32_t*>(0x51A9A4);
-    if (!skipIntro || state != 2 || movie > 9)
+    if (state != 2 || movie > 9)
         return;
     if (movie == 0)
         skipIntro = false;
     state = 4;
+}
+int SelectTitleController(uintptr_t manager, int button, int player)
+{
+    if (titleStartPressed(manager, button, player))
+        return 1;
+
+    for (uint8_t slot = 0; slot < 2; ++slot)
+    {
+        const uintptr_t controller = manager + 3400 + 300 * slot;
+        if (ConnectedPad(manager, slot) || alternateControllerConnected(controller))
+        {
+            // Match the normal Start press's controller selection and activity time.
+            *reinterpret_cast<uint8_t*>(manager + 4000) = slot;
+            *reinterpret_cast<float*>(controller + 296) = *reinterpret_cast<const float*>(0x4F50A0);
+            return 1;
+        }
+    }
+    return 0;
 }
 void MenuChanged(bool startupEdited)
 {
@@ -563,7 +596,9 @@ void MenuChanged(bool startupEdited)
     if (!startupEdited)
         return;
 
+    const bool pressStart = console::ps2settings::boolean(options[burnout::menu::skipPressStartOption], true);
     const bool pending = console::ps2settings::boolean(options[3], true) != startupSkipIntro ||
+                         pressStart != startupSkipPressStart ||
                          (std::atoi(options[11].value) > 30) != fps60Applied;
     if (pending)
     {
@@ -679,6 +714,12 @@ extern "C" void init()
     hudRender.create(0x1D75C0, RenderHudTree);
     ApplyHud();
     injector::WriteMemory<uint32_t>(0x228194, 0x24020001); // Select the native widescreen camera.
+    // The menu D-pad renderer caches four vertex offsets from the first
+    // rectangle it draws. Compute them from the current rectangle on each draw.
+    injector::WriteMemory<uint32_t>(0x380A78, 0x100000D6);
+    injector::WriteMemory<uint32_t>(0x380A84, 0x100000E3);
+    injector::WriteMemory<uint32_t>(0x380A90, 0x100000F0);
+    injector::WriteMemory<uint32_t>(0x380A9C, 0x100000FD);
     // Rebuild the player viewports between frames, retaining each HUD node's
     // offset from its native anchor as the viewport bounds change.
     Mid(0x13CA20, [](SafetyMipsContext&)
@@ -715,6 +756,15 @@ extern "C" void init()
     // Read once: the startup videos play before the first settings refresh.
     startupSkipIntro = console::ps2settings::boolean(options[3], true);
     skipIntro = startupSkipIntro;
+    startupSkipPressStart = console::ps2settings::boolean(options[burnout::menu::skipPressStartOption], true);
+    if (startupSkipPressStart &&
+        titleStartPressed.bind(0x22CB40) == PCSX2_HOOK_OK &&
+        alternateControllerConnected.bind(0x12EF20) == PCSX2_HOOK_OK &&
+        titleStart.bind(SelectTitleController) == PCSX2_HOOK_OK)
+    {
+        // Substitute the title screen's Start query. Keep its transition and timing checks.
+        injector::MakeCALL(0x438898, titleStart.address());
+    }
     hudReset1.bind(HudReset1);
     hudReset2.bind(HudReset2);
     injector::WriteMemory<uint32_t>(0x4DD840, hudReset1.address());
@@ -783,9 +833,8 @@ extern "C" void init()
             const int slot = *reinterpret_cast<const int8_t*>(manager + 4001 + player);
             if (slot >= 0 && slot <= 1)
             {
-                const uintptr_t device = *reinterpret_cast<const uint32_t*>(manager + 3400 + 300 * slot + 4);
-                if ((device == manager + 640 || device == manager + 876) &&
-                    *reinterpret_cast<const uint8_t*>(device + 8))
+                const uintptr_t device = ConnectedPad(manager, slot);
+                if (device)
                 {
                     x = *reinterpret_cast<const float*>(device + 176);
                     y = *reinterpret_cast<const float*>(device + 180);

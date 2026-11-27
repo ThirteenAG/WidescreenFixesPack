@@ -34,7 +34,8 @@
 
 - **HUD aspect ratio** — Auto spreads the HUD and on-screen text over the whole screen; a ratio such as 16:9 keeps them in a centred box. Menus keep their 16:9 layout on wider screens. Applies while the game runs.
 - **Blur** — The stuck blur in Necropolis, Brontosaurus, In The Mud and New York is removed, and the damage overlay is no longer obscured.
-- **Field of view** — Widen or narrow the view in play; menus keep their framing. Applies while the game runs.
+- **Field of view** — Widen or narrow the view in play. Menus keep their framing, as do scripted cameras in Gamer's Edition.
+- **Cutscene borders** — In Gamer's Edition, choose Off, Letterbox, Pillarbox or Both for scripted cameras. Changes apply while the game runs.
 - **Mouse sensitivity** — Adjust the raw mouse multiplier while playing; enabling or disabling raw input requires restarting.
 - **Broken geometry** — Objects with broken geometry or textures in Gamer's Edition are hidden.
 - **Window modes** — Choose fullscreen, windowed or borderless. The window keeps the size chosen in the settings application.
@@ -55,7 +56,7 @@ Widescreen, HUD, videos, input, timing and existing Direct3D 9 shader replacemen
 
 - The Plugins page is only in Gamer's Edition; in Signature Edition use FusionFixHub or the settings file.
 - Signature Edition: on screens wider than about 2.15:1 the dark background of the pause menu doesn't reach the sides of the screen.
-- No cutscene-border setting; cutscenes fill the screen with a wider view. The field-of-view multiplier also applies to scripted cameras.
+- Signature Edition uses its widescreen view for scripted cameras, including any field-of-view multiplier you apply.
 - The window can't be resized while the game runs (the game draws at the size it started with); choose the size in the settings application.
 - The "Press SPACE to continue" screen after the logos stays; press a key to continue.
 - Long menu entries can continue on another line or page. Changing a value can move nearby entries to a different page.

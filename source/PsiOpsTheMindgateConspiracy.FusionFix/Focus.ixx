@@ -16,11 +16,14 @@ export namespace PsiOpsFocus
     inline uintptr_t __fastcall Update(void* self, void*)
     {
         bool pause = false;
+        const auto window = PsiOpsWindow::window;
+        const bool pauseOnFocusLoss = enabled.load(std::memory_order_relaxed) && window;
+        if (pauseOnFocusLoss || PsiOpsWindow::blocksInput)
         {
             PsiOps::FloatingPointScope floatingPoint;
             pause = PsiOpsWindow::blocksInput && PsiOpsWindow::blocksInput();
-            if (enabled && PsiOpsWindow::window)
-                pause = pause || IsIconic(PsiOpsWindow::window) || GetForegroundWindow() != PsiOpsWindow::window;
+            if (pauseOnFocusLoss)
+                pause = pause || IsIconic(window) || GetForegroundWindow() != window;
         }
         if (pause)
             requestPause(self, 1);

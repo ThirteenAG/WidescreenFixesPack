@@ -1,7 +1,6 @@
 module;
 #include <stdafx.h>
-#include "Shared/CursorConfinement.hpp"
-#include "FixSettings.hpp"
+#include "Shared/AsiSettings/asi_settings.hpp"
 #include "overlay/OverlayD3D9.hpp"
 
 export module DeveloperOverlay;
@@ -124,16 +123,15 @@ export namespace PsiOpsOverlay
         {
             auto input = hook::pattern("55 8B EC 83 EC 20 89 4D E0 8B 45 E0 BA 01 00 00 00 8B 48 08 D3 E2 89 55 FC");
             inputHook = safetyhook::create_inline(input.get_first(), Input);
+            PsiOpsWindow::message = Message;
+            PsiOpsWindow::blocksInput = BlocksInput;
+            PsiOpsWindow::beforeReset = []() { Overlay.BeforeReset(); };
+            PsiOpsWindow::frame = [](IDirect3DDevice9* device)
+            {
+                Keyboard(PsiOpsWindow::window);
+                Draw(device);
+            };
         }
-        PsiOpsWindow::message = Message;
-        PsiOpsWindow::blocksInput = BlocksInput;
-        PsiOpsWindow::beforeReset = []() { Overlay.BeforeReset(); };
-        PsiOpsWindow::frame = [](IDirect3DDevice9* device)
-        {
-            Keyboard(PsiOpsWindow::window);
-            Draw(device);
-            CursorConfinement::SetEnabled(FixSettings().Bool("MAIN.ConfineCursor") && !BlocksInput());
-        };
     }
 }
 

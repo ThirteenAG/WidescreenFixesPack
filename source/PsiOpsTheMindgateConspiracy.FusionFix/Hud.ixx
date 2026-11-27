@@ -122,6 +122,41 @@ export namespace PsiOpsHud
         return result;
     }
 
+    struct HudScissor
+    {
+        RECT original{};
+        DWORD enabled{};
+        bool applied{};
+
+        void Set(IDirect3DDevice9* device, int width, int height, float aspect)
+        {
+            if (!device || aspect <= 0.0f || height <= 0 || float(width) <= float(height) * aspect)
+                return;
+
+            const auto boxWidth = LONG(std::round(float(height) * aspect));
+            const auto left = (width - boxWidth) / 2;
+            RECT clip{ left, 0, left + boxWidth, height };
+            if (FAILED(device->GetRenderState(D3DRS_SCISSORTESTENABLE, &enabled)) ||
+                FAILED(device->GetScissorRect(&original)) ||
+                (enabled && !IntersectRect(&clip, &clip, &original)) || FAILED(device->SetScissorRect(&clip)))
+                return;
+            if (!enabled && FAILED(device->SetRenderState(D3DRS_SCISSORTESTENABLE, TRUE)))
+            {
+                device->SetScissorRect(&original);
+                return;
+            }
+            applied = true;
+        }
+
+        void Restore(IDirect3DDevice9* device) const
+        {
+            if (!applied)
+                return;
+            device->SetScissorRect(&original);
+            device->SetRenderState(D3DRS_SCISSORTESTENABLE, enabled);
+        }
+    };
+
     inline uintptr_t __fastcall Draw(void* self, void*, void* color)
     {
         const auto node = *(reinterpret_cast<Node*>(static_cast<uint8_t*>(self) + 28));
@@ -137,16 +172,21 @@ export namespace PsiOpsHud
         auto x = reinterpret_cast<float*>(static_cast<uint8_t*>(self) + 16);
         auto y = reinterpret_cast<float*>(static_cast<uint8_t*>(self) + 20);
         const auto originalX = *x, originalY = *y;
+        const auto device = PsiOpsWindow::device;
+        const auto aspect = constraint.load(std::memory_order_relaxed);
+        HudScissor scissor;
         {
             PsiOps::FloatingPointScope floatingPoint;
-            const auto layout = Calculate(PsiOpsWindow::width, PsiOpsWindow::height, constraint);
+            const auto layout = Calculate(PsiOpsWindow::width, PsiOpsWindow::height, aspect);
             *x = originalX + found->second.x * layout.horizontal;
             *y = originalY + found->second.y * layout.vertical;
             rebuild(self);
+            scissor.Set(device, PsiOpsWindow::width, PsiOpsWindow::height, aspect);
         }
         const auto result = drawHook.unsafe_thiscall<uintptr_t>(self, color);
         {
             PsiOps::FloatingPointScope floatingPoint;
+            scissor.Restore(device);
             *x = originalX;
             *y = originalY;
             rebuild(self);

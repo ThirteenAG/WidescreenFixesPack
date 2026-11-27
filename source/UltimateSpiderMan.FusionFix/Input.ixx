@@ -2,6 +2,7 @@ module;
 
 #include "stdafx.h"
 #include "FixSettings.hpp"
+#include "rawinput.hpp"
 #include <atomic>
 #ifdef _DEBUG
 #define DIRECTINPUT_VERSION 0x0800
@@ -483,6 +484,7 @@ public:
     {
         WFP::onInitEvent() += []
         {
+            MessagePumpGuard::Install(GetModuleHandleW(nullptr));
 
             auto pattern = hook::pattern("8B 15 ? ? ? ? 89 44 24 ? 8B 4F"); //0x473B75 + 2
             pInput = BindGameRef(inputManager, *pattern.get_first<uintptr_t*>(2));

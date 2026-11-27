@@ -10,6 +10,7 @@ export module Runtime;
 import ComVars;
 import FrameRate;
 import Camera;
+import GUI;
 import DeveloperOverlay;
 import ControllerIcons;
 
@@ -20,10 +21,8 @@ import ControllerIcons;
 
 namespace
 {
-    void CutsceneBorders(IDirect3DDevice9* device)
+    void FillSideBars(IDirect3DDevice9* device)
     {
-        if (!ShouldPillarboxCutscene())
-            return;
         IDirect3DSurface9* backBuffer = nullptr;
         if (FAILED(device->GetBackBuffer(0, 0, D3DBACKBUFFER_TYPE_MONO, &backBuffer)) || !backBuffer)
             return;
@@ -59,7 +58,9 @@ namespace
         if (RevOverlay::cursorWindow.load() != parameters.hFocusWindow)
             PostMessageW(parameters.hFocusWindow, WM_NULL, 0, 0);
         CursorConfinement::Suspend(RevOverlay::BlocksInput());
-        CutsceneBorders(device);
+        // Extend the scanner's black bezel outside its 16:9 artwork.
+        if (ConsumeScannerMask() || ShouldPillarboxCutscene())
+            FillSideBars(device);
         RevOverlay::Keyboard(parameters.hFocusWindow);
         RevOverlay::Draw(device);
         RevFrameRate::Frame(parameters.hFocusWindow);

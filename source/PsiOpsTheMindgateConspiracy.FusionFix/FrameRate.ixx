@@ -24,17 +24,31 @@ export namespace PsiOpsFrameRate
 
     struct State
     {
-        HANDLE timer = CreateWaitableTimerExW(nullptr, nullptr, CREATE_WAITABLE_TIMER_HIGH_RESOLUTION, TIMER_ALL_ACCESS);
         LONGLONG next = 0;
         int rate = 0;
         uint32_t refresh = 60;
         ULONGLONG checked = 0;
         HMONITOR monitor = nullptr;
+
+        HANDLE Timer()
+        {
+            if (!timerRequested)
+            {
+                timerRequested = true;
+                timer = CreateWaitableTimerExW(nullptr, nullptr, CREATE_WAITABLE_TIMER_HIGH_RESOLUTION, TIMER_ALL_ACCESS);
+            }
+            return timer;
+        }
+
         ~State()
         {
             if (timer)
                 CloseHandle(timer);
         }
+
+    private:
+        HANDLE timer = nullptr;
+        bool timerRequested = false;
     };
 
     inline void WaitUntil(State& state, LONGLONG target)
@@ -47,8 +61,9 @@ export namespace PsiOpsFrameRate
         if (sleep > 0)
         {
             LARGE_INTEGER due{ .QuadPart = -(sleep * 10000000 / frequency) };
-            if (state.timer && SetWaitableTimer(state.timer, &due, 0, nullptr, nullptr, FALSE))
-                WaitForSingleObject(state.timer, 100);
+            const auto timer = state.Timer();
+            if (timer && SetWaitableTimer(timer, &due, 0, nullptr, nullptr, FALSE))
+                WaitForSingleObject(timer, 100);
             else
                 Sleep(DWORD(sleep * 1000 / frequency));
         }

@@ -20,6 +20,8 @@
   "SkipIntro": "Intro überspringen",
   "SkipIntro.description": "Überspringt beim Start das Video mit den Logos von Activision und Luxoflux. Zum Anwenden das Spiel neu starten.",
   "FPSLimit": "Bildrate",
+  "SkipPressStart": "Startbildschirm überspringen",
+  "SkipPressStart.description": "Öffnet beim Start automatisch das Hauptmenü. Zum Anwenden das Spiel neu starten.",
   "FPSLimit.description": "Lässt das Spiel mit 60 statt 30 Bildern pro Sekunde laufen. Die eine Mission, die die originale Geschwindigkeit braucht, bleibt bei 30. Zum Anwenden das Spiel neu starten.",
   "UnthrottleEmuDuringLoading": "Schnelleres Laden",
   "UnthrottleEmuDuringLoading.description": "Lässt den Emulator beim Start und in Ladebildschirmen mit voller Geschwindigkeit laufen und kehrt danach zur normalen Geschwindigkeit zurück. Zum Anwenden das Spiel neu starten."

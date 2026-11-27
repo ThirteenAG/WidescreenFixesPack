@@ -4,6 +4,7 @@ module;
 #include "FixSettings.hpp"
 #include "include/WindowStyle.hpp"
 #include "Shared/WindowCursor.hpp"
+#include <dinput.h>
 
 export module Window;
 
@@ -248,6 +249,9 @@ export namespace DeerWindow
         });
         if (mode != 0)
         {
+            // An exclusive mouse can be refused to a window, and the game never retries.
+            auto mouse = hook::pattern(game, "A1 ? ? ? ? 8B 74 24 0C 6A 05 56 8B 08 50 FF 51 34");
+            injector::WriteMemory<uint8_t>(mouse.get_first<uint8_t>(10), DISCL_NONEXCLUSIVE | DISCL_FOREGROUND, true);
             frameTimer = CreateWaitableTimerExW(nullptr, nullptr, CREATE_WAITABLE_TIMER_HIGH_RESOLUTION, TIMER_ALL_ACCESS);
             clockHook = safetyhook::create_inline(clock.get_first(), Clock);
         }

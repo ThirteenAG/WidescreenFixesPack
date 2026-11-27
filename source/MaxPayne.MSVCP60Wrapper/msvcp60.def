@@ -579,7 +579,7 @@ EXPORTS
 ??_7logic_error@std@@6B@=?decorated685@@YGXXZ @685
 ??_7messages_base@std@@6B@=?decorated686@@YGXXZ @686
 ??_7money_base@std@@6B@=?decorated687@@YGXXZ @687
-??_7out_of_range@std@@6B@=?decorated688@@YGXXZ @688
+??_7out_of_range@std@@6B@=?OutOfRangeVtable@@3PAPBXA @688 DATA
 ??_7overflow_error@std@@6B@=?decorated689@@YGXXZ @689
 ??_7range_error@std@@6B@=?decorated690@@YGXXZ @690
 ??_7runtime_error@std@@6B@=?decorated691@@YGXXZ @691
@@ -813,7 +813,7 @@ EXPORTS
 ?_Addcats@_Locinfo@std@@QAEAAV12@HPBD@Z=?decorated811@@YGXXZ @811
 ?_Addfac@locale@std@@QAEAAV12@PAVfacet@12@II@Z=?decorated812@@YGXXZ @812
 ?_Addstd@ios_base@std@@IAEXXZ=?decorated813@@YGXXZ @813
-?_C@?1??_Nullstr@?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@CAPBDXZ@4DB=?decorated814@@YGXXZ @814
+?_C@?1??_Nullstr@?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@CAPBDXZ@4DB=?StringNull@@3DB @814 DATA
 ?_C@?1??_Nullstr@?$basic_string@GU?$char_traits@G@std@@V?$allocator@G@2@@std@@CAPBGXZ@4GB=?decorated815@@YGXXZ @815
 ?_Callfns@ios_base@std@@AAEXW4event@12@@Z=?decorated816@@YGXXZ @816
 ?_Cl@?5??log@std@@YA?AV?$complex@M@2@ABV32@@Z@4MB=?decorated817@@YGXXZ @817
@@ -1632,7 +1632,7 @@ EXPORTS
 ?not_eof@?$char_traits@D@std@@SAHABH@Z=?decorated1631@@YGXXZ @1631
 ?not_eof@?$char_traits@G@std@@SAGABG@Z=?decorated1632@@YGXXZ @1632
 ?nothrow@std@@3Unothrow_t@1@B=?decorated1633@@YGXXZ @1633
-?npos@?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@2IB=?decorated1634@@YGXXZ @1634
+?npos@?$basic_string@DU?$char_traits@D@std@@V?$allocator@D@2@@std@@2IB=?StringNpos@@3IB @1634 DATA
 ?npos@?$basic_string@GU?$char_traits@G@std@@V?$allocator@G@2@@std@@2IB=?decorated1635@@YGXXZ @1635
 ?open@?$basic_filebuf@DU?$char_traits@D@std@@@std@@QAEPAV12@PBDF@Z=?decorated1636@@YGXXZ @1636
 ?open@?$basic_filebuf@DU?$char_traits@D@std@@@std@@QAEPAV12@PBDH@Z=?decorated1637@@YGXXZ @1637

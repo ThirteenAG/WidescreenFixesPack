@@ -12,6 +12,7 @@ import Window;
 
 export namespace KnightRider2Camera
 {
+    inline constexpr float NativeAspect = 4.0f / 3.0f;
     inline float NativeFOV = 53.0f;
     inline bool Cinematic = false;
     inline thread_local bool DrawingMain = false;
@@ -28,6 +29,14 @@ export namespace KnightRider2Camera
     {
         Cinematic = false;
         KnightRider2Hud::CockpitActive = false;
+    }
+
+    inline bool UseCinematicViewport(float aspect)
+    {
+        if (!Cinematic || aspect == NativeAspect)
+            return false;
+        const int border = aspect > NativeAspect ? 2 : 1;
+        return (Borders.load(std::memory_order_relaxed) & border) != 0;
     }
 
     inline void ClearBorders(uint8_t* camera, int marginX, int marginY)
@@ -67,11 +76,10 @@ export namespace KnightRider2Camera
     inline std::array<float, 4> Prepare(uint8_t* camera)
     {
         const float aspect = static_cast<float>(KnightRider2Window::Width) / KnightRider2Window::Height;
-        const float nativeAspect = 4.0f / 3.0f;
-        const bool preserve = Cinematic && (Borders.load(std::memory_order_relaxed) & (aspect > nativeAspect ? 2 : 1)) != 0;
+        const bool preserve = UseCinematicViewport(aspect);
         const float factor = Cinematic ? 1.0f : FOVFactor.load(std::memory_order_relaxed);
-        const float halfHeight = std::tan(std::min(NativeFOV * factor, 170.0f) * 0.0087266462f) / nativeAspect;
-        const float projectionAspect = preserve ? nativeAspect : aspect;
+        const float halfHeight = std::tan(std::min(NativeFOV * factor, 170.0f) * 0.0087266462f) / NativeAspect;
+        const float projectionAspect = preserve ? NativeAspect : aspect;
         auto frustum = reinterpret_cast<float*>(camera + 324);
         frustum[0] = -halfHeight * projectionAspect;
         frustum[1] = halfHeight * projectionAspect;
@@ -85,16 +93,16 @@ export namespace KnightRider2Camera
         viewport[3] = 0.0f;
         if (preserve)
         {
-            if (aspect > nativeAspect)
+            if (aspect > NativeAspect)
             {
-                const float margin = std::round((KnightRider2Window::Width - KnightRider2Window::Height * nativeAspect) * 0.5f);
+                const float margin = std::round((KnightRider2Window::Width - KnightRider2Window::Height * NativeAspect) * 0.5f);
                 viewport[0] = margin / KnightRider2Window::Width;
                 viewport[1] = 1.0f - viewport[0];
                 ClearBorders(camera, static_cast<int>(margin), 0);
             }
             else
             {
-                const float margin = std::round((KnightRider2Window::Height - KnightRider2Window::Width / nativeAspect) * 0.5f);
+                const float margin = std::round((KnightRider2Window::Height - KnightRider2Window::Width / NativeAspect) * 0.5f);
                 viewport[3] = margin / KnightRider2Window::Height;
                 viewport[2] = 1.0f - viewport[3];
                 ClearBorders(camera, 0, static_cast<int>(margin));

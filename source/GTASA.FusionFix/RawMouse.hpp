@@ -5,9 +5,8 @@ namespace GtaRawMouse
 {
     inline SafetyHookMid MouseHook;
 
-    inline void Install(HWND (*gameWindow)(), bool (*playing)(), void (*mouseActivity)())
+    inline void Install(HWND (*gameWindow)(), void (*mouseActivity)())
     {
-        Playing = playing;
         MouseActivity = mouseActivity;
         // Replace the native relative packet before its invert-axis handling.
         // Buttons, wheel, menu cursor and the game's sensitivity remain native.

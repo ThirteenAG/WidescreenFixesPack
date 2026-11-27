@@ -18,7 +18,7 @@
 - **Menus and 2D screens** — Menus, pause screens, loading screens, subtitles and messages keep their original 4:3 layout in the middle of the screen; on screens narrower than 4:3 they get black bars above and below instead of being cut off.
 - **Movies** — Every movie is shown whole and undistorted.
 - **Cutscenes** — In-game cutscenes keep their original 16:9 framing with black borders around it, and can be switched to fill the screen.
-- **Window** — Windowed mode centers the game at the chosen client resolution with square corners on Windows 11. At desktop resolution the client covers the monitor and the frame stays outside the screen after minimize and restore.
+- **Window** — Windowed mode starts at the chosen client resolution and uses square corners on Windows 11. Drag the frame to resize the game. At desktop resolution the client covers the monitor and the frame stays outside the screen after minimize and restore.
 - **Display scaling** — The game is sharp on scaled (high-DPI) desktops; MatrixOptions keeps Windows' own dialog scaling.
 - **Controller** — The package includes Xidi, so an Xbox-style controller shows up as the game's own DirectInput controller.
 - **Mouse input** — Raw mouse reports are collected in batches on a separate thread. The game reads the accumulated movement, buttons and wheel through its usual controls.
@@ -41,7 +41,7 @@ Settings are changed on fusionfix.io or in FusionFixHub. Defaults are set by the
 ## Known limits
 
 - The fix has no page in the game's own options menu (its option pages are fixed screens with no list to add to); its settings are changed in FusionFixHub or on fusionfix.io.
-- The window size follows the resolution chosen at startup; resizing the window and Alt+Enter aren't supported by the game.
+- To change between Fullscreen, Windowed and Borderless, choose a mode and restart the game.
 - Button prompts show keyboard keys while a controller is used.
 - In Fill, the subtitles of the story movies are shown over the bottom of the picture instead of below it.
 

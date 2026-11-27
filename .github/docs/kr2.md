@@ -14,7 +14,7 @@
 
 - **Resolution and aspect ratio** — Supports custom resolutions, including render targets larger than the original 2048-pixel limit. The gameplay view widens at the sides while retaining its original height.
 - **HUD** — Auto places the HUD near the screen edges; a choice of centered HUD boxes is available. The cockpit retains its original centered 4:3 view and instruments, with black side areas on wider screens. Menu artwork keeps its original proportions.
-- **Videos** — Original fits the whole video in the original 4:3 presentation. Fill preserves the picture and skips the black borders encoded in the intro and new game videos.
+- **Videos** — Original fits the whole video in the original 4:3 presentation. Fill removes the encoded black borders from the intro and keeps the full picture for videos that use it, including the flash in New Game.
 - **Frame rate** — An adjustable limiter replaces the native limits, and game time follows real time.
 - **Window modes** — Choose fullscreen, framed windowed or borderless. Resolution and mode changes require a restart.
 - **Intro skip** — Skips the startup logos and legal screens; mission scenes remain available.
@@ -27,7 +27,7 @@
 - **Window mode** — Fullscreen, Windowed or Borderless; restart required. Borderless uses the desktop resolution.
 - **HUD aspect ratio constraint** — Auto uses the screen edges; 4:3, 16:9, 21:9 or 32:9 places the HUD inside a centered box. Applies live.
 - **Frame rate limit** — Choose Monitor, Unlimited or a cap from 30 to 1000 FPS. Default 60 FPS. Applies live.
-- **Cutscene borders** — Off or Both; applies live. Both keeps the original 4:3 story framing with black bars at the sides (above and below on screens narrower than 4:3).
+- **Cutscene borders** — Change during a story scene. Off opens the view to fill the screen. Letterbox keeps the original top and bottom strips. Pillarbox keeps the original 4:3 framing with side borders on wider screens. Both combines the two.
 - **Pause when unfocused** — Pauses gameplay while another window is active; applies live.
 - **Video framing** — Original or Fill, as described above.
 - **Confine cursor** — Keeps the cursor inside the focused game window; applies live.

@@ -58,7 +58,7 @@
   "SkipIntro": "Passer l'intro",
   "SkipIntro.description": "Passe les mentions légales et les vidéos des logos de l'éditeur et du moteur au démarrage. Les vidéos de l'histoire et les vérifications normales des options et du profil restent.",
   "WindowMode": "Mode fenêtre",
-  "WindowMode.description": "Plein écran, fenêtre avec cadre ou sans bordure à la taille de l'écran. Les changements utilisent la réinitialisation d'affichage du jeu à la prochaine image au premier plan. Alt+Entrée alterne entre plein écran et le dernier mode fenêtre.",
+  "WindowMode.description": "Plein écran, fenêtre redimensionnable ou sans bordure à la taille du moniteur. Faites glisser le cadre pour redimensionner la fenêtre. Alt+Entrée alterne entre le plein écran et le dernier mode fenêtré.",
   "Fullscreen": "Plein écran",
   "Windowed": "Fenêtré",
   "Borderless": "Sans bordure",

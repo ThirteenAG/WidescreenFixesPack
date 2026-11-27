@@ -1,7 +1,6 @@
 module;
 
 #include <stdafx.h>
-#include "FixSettings.hpp"
 #include <ddraw.h>
 
 export module Movie;
@@ -23,25 +22,16 @@ export namespace DeerMovie
     inline uint8_t* (__cdecl* lockRaster)(void*, int, int) = nullptr;
     inline void* (__cdecl* unlockRaster)(void*) = nullptr;
 
-    inline bool Geometry(int sw, int sh, int dw, int dh, int mode, Layout& result)
+    inline bool Geometry(int sw, int sh, int dw, int dh, Layout& result)
     {
         if (sw <= 0 || sh <= 0 || dw <= 0 || dh <= 0 || sw > 16384 || sh > 16384 || dw > 16384 || dh > 16384)
             return false;
         result = { { 0, 0, sw, sh }, { 0, 0, dw, dh } };
-        // Original retains the game's 4:3 presentation frame; Fill uses the screen.
-        int frameWidth = dw, frameHeight = dh;
-        if (mode == 0)
-        {
-            if (int64_t(dw) * 3 > int64_t(dh) * 4)
-                frameWidth = (std::max)(1, int(int64_t(dh) * 4 / 3));
-            else
-                frameHeight = (std::max)(1, int(int64_t(dw) * 3 / 4));
-        }
-        int w = frameWidth, h = frameHeight;
-        if (int64_t(sw) * frameHeight > int64_t(frameWidth) * sh)
-            h = (std::max)(1, int(int64_t(frameWidth) * sh / sw));
+        int w = dw, h = dh;
+        if (int64_t(sw) * dh > int64_t(dw) * sh)
+            h = (std::max)(1, int(int64_t(dw) * sh / sw));
         else
-            w = (std::max)(1, int(int64_t(frameHeight) * sw / sh));
+            w = (std::max)(1, int(int64_t(dh) * sw / sh));
         const int x = (dw - w) / 2, y = (dh - h) / 2;
         result.destination = { x, y, x + w, y + h };
         return true;
@@ -138,13 +128,10 @@ export namespace DeerMovie
         auto src = reinterpret_cast<uintptr_t>(raster), dst = reinterpret_cast<uintptr_t>(target);
         Layout layout;
         if (!Geometry(DeerMenu::Read<int>(src + 12), DeerMenu::Read<int>(src + 16),
-            DeerMenu::Read<int>(dst + 12), DeerMenu::Read<int>(dst + 16),
-            std::clamp(FixSettings().Int("MAIN.FMVWidescreenMode"), 0, 1), layout))
+            DeerMenu::Read<int>(dst + 12), DeerMenu::Read<int>(dst + 16), layout))
             return drawHook.ccall<void*>(raster, nativeRect);
         if (!Render(raster, target, layout))
         {
-            Geometry(DeerMenu::Read<int>(src + 12), DeerMenu::Read<int>(src + 16),
-                DeerMenu::Read<int>(dst + 12), DeerMenu::Read<int>(dst + 16), 0, layout);
             const auto& d = layout.destination;
             const int fitted[]{ d.left, d.top, d.right - d.left, d.bottom - d.top };
             return drawHook.ccall<void*>(raster, fitted);
@@ -163,7 +150,7 @@ export namespace DeerMovie
         return copyHook.stdcall<int>(bink, destination, pitch, height, x, y, flags);
     }
 
-    inline bool Init(HMODULE game = GetModuleHandleW(nullptr))
+    inline void Init(HMODULE game = GetModuleHandleW(nullptr))
     {
         auto branch = hook::pattern(game, "A1 ? ? ? ? 83 C4 18 85 C0 74 16 8B 0D ? ? ? ? 68 ? ? ? ? 51 E8 ? ? ? ? 83 C4 08 EB 1C");
         auto draw = hook::pattern(game, "53 8B 5C 24 08 83 EC 10 89 1C 24 8B 44 24 1C C7 44 24 08 00 00 00 00 89 44 24 04 A1 ? ? ? ? FF 90 90 00 00 00");
@@ -178,6 +165,5 @@ export namespace DeerMovie
         branchHook = safetyhook::create_mid(branch.get_first(5), [](SafetyHookContext& context) { context.eax = 1; });
         drawHook = safetyhook::create_inline(draw.get_first(), Draw);
         copyHook = safetyhook::create_inline(GetProcAddress(GetModuleHandleW(L"binkw32.dll"), "_BinkCopyToBuffer@28"), BinkCopy);
-        return true;
     }
 }

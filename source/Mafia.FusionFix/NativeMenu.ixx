@@ -258,10 +258,20 @@ export namespace MafiaMenu
         bool retired = false;
         bool pause = false;
     };
+
+    // Preserve restart baselines across menu openings.
+    RWGTAMenu::Model closedModel;
+
+    void CloseModel(RWGTAMenu::Model& model)
+    {
+        model.Close();
+        closedModel = model;
+    }
+
     struct Context
     {
         std::shared_ptr<Source> source;
-        RWGTAMenu::Model model;
+        RWGTAMenu::Model model{ closedModel };
         Page* page = nullptr;
         Page* returnParent = nullptr;
         Control* title = nullptr;
@@ -270,9 +280,9 @@ export namespace MafiaMenu
         std::deque<Item> items;
         std::array<Control*, maxRows> labels{}, values{};
         size_t rowCount = minRows;
-        std::string titleText, descriptionText;
+        std::string titleText, descriptionText, restartWarning;
         std::deque<Item> prepared;
-        std::string preparedTitle;
+        std::string preparedTitle, preparedRestartWarning;
         float labelWidth = 0;
         uint64_t serial = 0;
         int category = -1;
@@ -287,6 +297,7 @@ export namespace MafiaMenu
         std::vector<std::string> helpLines;
         std::string helpTitle, helpBack;
         Control* helpSelection = nullptr;
+        uint32_t legacyHelpSelection = 0;
     };
     struct Pending
     {
@@ -388,7 +399,7 @@ export namespace MafiaMenu
     {
         if (!owner || owner->retired) return;
         owner->retired = true;
-        owner->model.Close();
+        CloseModel(owner->model);
     }
     bool Queue(const std::shared_ptr<Context>& owner, uint32_t selected, int direction, bool back)
     {
@@ -516,11 +527,7 @@ export namespace MafiaMenu
                 if (!current()) return false;
                 next.push_back({ ItemKind::Setting, index, std::move(label), std::move(value), enabled });
                 next.back().row = row;
-                // Once a changed setting needs a restart, its rows say so in the help line, in the game's own font
-                const bool restart = row.kind == RWGTAMenu::RowKind::Setting && row.setting && row.setting->apply == "restart";
                 next.back().description = owner->model.Help(row);
-                if (restart && owner->model.RestartRequired())
-                    next.back().description = owner->model.Text("menu.restartwarning") + " " + next.back().description;
             }
         }
         if (owner->category >= 0)
@@ -530,11 +537,12 @@ export namespace MafiaMenu
             if (limit < rows.size()) next.push_back({ ItemKind::Next, limit, owner->model.Text("menu.next") });
         }
         next.push_back({ ItemKind::Back, 0, owner->model.Text("menu.back") });
-        if (owner->category < 0 && owner->model.RestartRequired())
-            next.back().description = owner->model.Text("menu.restartwarning");
         if (!current() || next.empty() || next.size() > owner->rowCount) return false;
+        const bool restartPending = Foreign([&] { return owner->model.RestartRequired(); });
+        if (!current()) return false;
         auto nativeTitle = NativeText(title);
-        if (!nativeTitle) return false;
+        auto restartWarning = NativeText(restartPending ? owner->model.Text("menu.restartwarning") : "");
+        if (!nativeTitle || !restartWarning) return false;
         for (auto& item : next)
         {
             auto label = NativeText(item.label);
@@ -550,6 +558,7 @@ export namespace MafiaMenu
         // leave the currently owned control pool and its strings untouched.
         owner->prepared = std::move(next);
         owner->preparedTitle = std::move(*nativeTitle);
+        owner->preparedRestartWarning = std::move(*restartWarning);
         return true;
     }
     bool PrepareItems(const std::shared_ptr<Context>& owner)
@@ -786,6 +795,7 @@ export namespace MafiaMenu
         owner->serial = ++generation;
         owner->items = std::move(owner->prepared);
         owner->titleText = std::move(title);
+        owner->restartWarning = std::move(owner->preparedRestartWarning);
         owner->page->root->text = owner->titleText.c_str();
         owner->descriptionText.clear();
         owner->description->text = owner->descriptionText.c_str();
@@ -829,12 +839,13 @@ export namespace MafiaMenu
         for (const auto& item : owner->items)
         {
             if (item.native->id != selected) continue;
-            auto description = item.description;
-            if (item.kind == ItemKind::Setting)
+            const bool restartPending = !owner->restartWarning.empty();
+            auto description = restartPending ? owner->restartWarning : item.description;
+            if (!restartPending && item.kind == ItemKind::Setting)
                 description = "F1: " + description;
             auto height = owner->source->prototype->height;
-            const auto fullPageName = item.kind == ItemKind::Page;
-            if (!Fit(description, height, owner->description->width, owner->description->flags & 15, fullPageName)) return;
+            if (!Fit(description, height, owner->description->width, owner->description->flags & 15,
+                restartPending || item.kind == ItemKind::Page)) return;
             owner->descriptionText = std::move(description);
             owner->description->height = height;
             owner->description->text = owner->descriptionText.c_str();
@@ -1542,6 +1553,7 @@ export namespace MafiaMenu
             if (!PrepareItems(owner, current)) return false;
             owner->items = std::move(owner->prepared);
             owner->titleText = std::move(owner->preparedTitle);
+            owner->restartWarning = std::move(owner->preparedRestartWarning);
             return Display(owner);
         }
         bool DisplayHelp(const std::shared_ptr<Context>& owner)
@@ -1561,8 +1573,9 @@ export namespace MafiaMenu
             owner->items.push_back({ ItemKind::Back, 0, NativeText(owner->model.Text("menu.back")).value_or("Back") });
             return Display(owner);
         }
-        void OpenHelp(const std::shared_ptr<Context>& owner, std::string title, std::string text)
+        void OpenHelp(const std::shared_ptr<Context>& owner, std::string title, std::string text, uint32_t selection)
         {
+            owner->legacyHelpSelection = selection;
             owner->helpTitle = std::move(title);
             owner->helpLines.clear();
             // The 1.0 item renderer accepts one line per control.
@@ -1586,7 +1599,7 @@ export namespace MafiaMenu
             if (!page && session)
             {
                 auto old = std::exchange(session, {});
-                old->model.Close();
+                CloseModel(old->model);
             }
             if (auto source = std::exchange(opening, uintptr_t{}); source && *stack == source && !page)
             {
@@ -1620,7 +1633,17 @@ export namespace MafiaMenu
                 if (goBack || (id == firstRowId + slot && row.kind == ItemKind::Back))
                 {
                     owner->help = false;
-                    if (!Publish(owner)) ClosePrivate();
+                    if (!Publish(owner))
+                    {
+                        ClosePrivate();
+                        return;
+                    }
+                    if (page && *stack == page && session == owner)
+                    {
+                        auto control = ControlById(page, owner->legacyHelpSelection);
+                        if (control && (Field<uint32_t>(control, 8) & 1))
+                            SelectControl(control);
+                    }
                 }
                 else if (id == firstRowId + slot && (row.kind == ItemKind::Previous || row.kind == ItemKind::Next))
                 {
@@ -1632,12 +1655,12 @@ export namespace MafiaMenu
             if (!noticeText.empty())
             {
                 OpenHelp(owner, NativeText(FixSettings().GetTexts().Resolve("@plugin.name")).value_or("Mafia Fusion Fix"),
-                    std::exchange(noticeText, {}));
+                    std::exchange(noticeText, {}), firstRowId + slot);
                 return;
             }
             if (help && !owner->items[slot].description.empty())
             {
-                OpenHelp(owner, owner->items[slot].label, owner->items[slot].description);
+                OpenHelp(owner, owner->items[slot].label, owner->items[slot].description, firstRowId + slot);
                 return;
             }
             bool refresh = false;
@@ -1683,6 +1706,7 @@ export namespace MafiaMenu
             }
             slot = Field<uint32_t>(Field<uintptr_t>(page, 0x2C), 4) - firstRowId;
             Field<const char*>(ControlById(page, helpId), 0x30) =
+                !owner->restartWarning.empty() ? owner->restartWarning.c_str() :
                 slot < owner->items.size() ? owner->items[slot].description.c_str() : "";
         }
         void Install()
@@ -1706,6 +1730,7 @@ export namespace MafiaMenu
     void Init()
     {
         if (ready || LegacyPage::stack) return;
+        closedModel.RememberRunningSettings(FixSettings());
         GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
             reinterpret_cast<LPCWSTR>(&Init), &module);
         if (hook::pattern("8B 0D ? ? ? ? E8 ? ? ? ? A1 ? ? ? ? C7 05 ? ? ? ? 00 00 00 00").empty())

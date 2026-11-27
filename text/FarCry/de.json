@@ -58,7 +58,7 @@
   "SkipIntro": "Intro überspringen",
   "SkipIntro.description": "Überspringt Rechtshinweise und Logovideos von Publisher und Engine beim Start. Story-Videos und die normalen Optionen- und Profilprüfungen bleiben.",
   "WindowMode": "Fenstermodus",
-  "WindowMode.description": "Vollbild, Fenster mit Rahmen oder randlos in Monitorgröße. Änderungen nutzen das Zurücksetzen der Anzeige des Spiels beim nächsten Bild im Vordergrund. Alt+Enter wechselt zwischen Vollbild und dem letzten Fenstermodus.",
+  "WindowMode.description": "Vollbild, änderbares Fenster mit Rahmen oder randlos in Monitorgröße. Ziehe am Rahmen, um die Fenstergröße zu ändern. Alt+Enter wechselt zwischen Vollbild und dem letzten Fenstermodus.",
   "Fullscreen": "Vollbild",
   "Windowed": "Fenster",
   "Borderless": "Randlos",

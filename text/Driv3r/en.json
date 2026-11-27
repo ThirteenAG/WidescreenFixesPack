@@ -91,7 +91,7 @@
   "menu.restartwarning": "Restart required",
   "menu.presethelp": "Choose a preset, then press twice to apply it to this plugin.",
   "MAIN.WindowMode": "Window Mode",
-  "MAIN.WindowMode.description": "Fullscreen, a centered window at the selected resolution, or borderless at the monitor resolution. Restart required. Alt+Enter switches between fullscreen and the last window mode.",
+  "MAIN.WindowMode.description": "Fullscreen, a resizable window that starts centered at the selected resolution, or borderless at the monitor resolution. Restart required. Alt+Enter switches between fullscreen and the last window mode.",
   "MAIN.WindowMode.0": "Fullscreen",
   "MAIN.WindowMode.1": "Windowed",
   "MAIN.WindowMode.2": "Borderless",

@@ -32,8 +32,10 @@
   "FPSLimit.monitor": "Bildschirm",
   "FPSLimit.unlimited": "Unbegrenzt",
   "CutsceneBorders": "Zwischensequenzbalken",
-  "CutsceneBorders.description": "Bewahrt den ursprünglichen Bildausschnitt der Zwischensequenzen mit seitlichen Balken. Aus erweitert die Ansicht. Gilt sofort.",
+  "CutsceneBorders.description": "„Oben und unten“ behält die ursprünglichen Balken bei. „Seitlich“ fügt auf Bildschirmen, die breiter als 4:3 sind, seitliche Balken hinzu. „Beide“ kombiniert die Optionen. Gilt sofort.",
   "CutsceneBorders.0": "Aus",
+  "CutsceneBorders.1": "Oben und unten",
+  "CutsceneBorders.2": "Seitlich",
   "CutsceneBorders.3": "Beide",
   "CheckForUpdates": "Nach Updates suchen",
   "CheckForUpdates.description": "Sucht bei Aktivierung nach einer neueren Version. Ein Hinweis erscheint im Hauptmenü. FusionFixHub öffnet die Update-Seite nach dem Beenden, wenn es im Spielordner installiert ist. Standardmäßig aus.",
@@ -45,7 +47,7 @@
   "SkipPressStart": "Startbildschirm überspringen",
   "SkipPressStart.description": "Überspringt automatisch den Bildschirm « Start drücken ». Ein Neustart des Spiels ist erforderlich.",
   "FMVWidescreenMode": "Videodarstellung",
-  "FMVWidescreenMode.description": "Original passt das gesamte Video in den ursprünglichen 4:3-Rahmen ein. Ausfüllen erhält das Bild und überspringt die fest codierten schwarzen Ränder der Intro- und Neues-Spiel-Videos.",
+  "FMVWidescreenMode.description": "Original passt das gesamte Video in den ursprünglichen 4:3-Rahmen ein. Ausfüllen erhält das Bild und überspringt die fest codierten schwarzen Ränder des Intro-Videos.",
   "FMVWidescreenMode.original": "Original",
   "FMVWidescreenMode.fill": "Ausfüllen"
 }

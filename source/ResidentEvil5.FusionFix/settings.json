@@ -93,6 +93,43 @@
       }
     },
     {
+      "id": "MAIN.CutsceneBorders",
+      "type": "choice",
+      "default": 3,
+      "choices": [
+        {
+          "value": 0,
+          "label": "@CutsceneBorders.off"
+        },
+        {
+          "value": 1,
+          "label": "@CutsceneBorders.letterbox"
+        },
+        {
+          "value": 2,
+          "label": "@CutsceneBorders.pillarbox"
+        },
+        {
+          "value": 3,
+          "label": "@CutsceneBorders.both"
+        }
+      ],
+      "label": "@CutsceneBorders",
+      "description": "@CutsceneBorders.description",
+      "page": "display",
+      "visibility": "menu",
+      "apply": "live",
+      "control": [
+        "cycler",
+        "dropdown"
+      ],
+      "presets": {
+        "vanilla": 1,
+        "recommended": 3,
+        "enhanced": 3
+      }
+    },
+    {
       "id": "MAIN.SplitScreenLayout",
       "type": "choice",
       "default": 0,

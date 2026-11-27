@@ -27,6 +27,7 @@ namespace
     {
         const char* name;
         int x, y;
+        bool shared = false;
     };
     constexpr Anchor Anchors[] =
     {
@@ -34,6 +35,7 @@ namespace
         { "HudAdvGadgetsClassic", -1, 1 }, { "HudAdvGadgetsClassic_MERC", -1, 1 },
         { "HudTips", -1, 1 }, { "HudTips_ADV", -1, 1 },
         { "HudWeapon", 1, 1 }, { "HudAdvWeapon", 1, 1 }, { "HudAdvWeapon_MERC", 1, 1 },
+        { "MissionObjectives", -1, -1, true },
         { "HudMarkAndExecute", 1, 0 }, { "HudRadar", -1, 0 }, { "HudMPRadar", -1, 0 },
         { "HudMPBMSRadar", -1, 0 }, { "HudMPHealth", -1, 1 },
         { "HudMPScoreBarTDM", 0, -1 }, { "HudMPScoreBarSVM", 0, -1 },
@@ -84,19 +86,22 @@ namespace
         }
     }
 
+    // Keep the register-based DX9 call out of the caller so MSVC spills its live XMM values.
+    __declspec(noinline) void SetDx9(uintptr_t root, const Point* position)
+    {
+        const auto method = SetRoot;
+        __asm
+        {
+            mov esi, root
+            mov ecx, position
+            call method
+        }
+    }
+
     void Set(uintptr_t root, const Point& point)
     {
         if (Dx9)
-        {
-            const auto position = &point;
-            const auto method = SetRoot;
-            __asm
-            {
-                mov esi, root
-                mov ecx, position
-                call method
-            }
-        }
+            SetDx9(root, &point);
         else
             reinterpret_cast<void(__thiscall*)(uintptr_t, const Point*)>(SetRoot)(root, &point);
     }
@@ -122,8 +127,7 @@ namespace
         const auto root = *reinterpret_cast<const uintptr_t*>(scene + 0x1A8);
         if (!root)
             return;
-        const auto viewport = GetViewport(scene);
-        if (bSplitscreen && !viewport)
+        if (bSplitscreen && !anchor->shared && !GetViewport(scene))
             return;
         if (!covered)
         {

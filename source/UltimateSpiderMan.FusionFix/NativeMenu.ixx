@@ -3,9 +3,6 @@ module;
 #include "stdafx.h"
 #include "FixSettings.hpp"
 #include <d3d9.h>
-#ifdef USM_DEBUG_TRACE_MENU_EVENTS
-#include <fstream>
-#endif
 #include "Shared/RWGTA/FixMenu.hpp"
 #include "Shared/RWGTA/UpdateCheck.hpp"
 
@@ -87,17 +84,6 @@ export namespace USMMenu
         return id > 6 || (id == 0 && caption && (caption[0] == '+' || caption[0] == '-') && !caption[1]);
     }
 
-#ifdef USM_DEBUG_TRACE_MENU_EVENTS
-    inline void Trace(uintptr_t receiver, UINT message, WPARAM key)
-    {
-        static std::ofstream log(GetThisModulePath() / "USM.MenuTrace.log", std::ios::trunc);
-        static size_t count = 0;
-        if (count++ < 200)
-            log << std::hex << receiver << ' ' << Manager << ' ' << message << ' ' << key
-                << std::dec << ' ' << Opened << ' ' << Page << ' ' << Selected << std::endl;
-    }
-#endif
-
     inline void RememberVisibility(uintptr_t object)
     {
         while (object && std::none_of(SavedVisibility.begin(), SavedVisibility.end(), [object](const auto& value) { return value.first == object; }))
@@ -126,9 +112,6 @@ export namespace USMMenu
 
     inline void __cdecl Click(uintptr_t widget, int event, uintptr_t)
     {
-#ifdef USM_DEBUG_TRACE_MENU_EVENTS
-        Trace(widget, 0, event);
-#endif
         if (event != 2)
             return;
         if (widget == Tab)
@@ -394,10 +377,6 @@ export namespace USMMenu
 
     inline void __fastcall Event(uintptr_t manager, void*, UINT message, WPARAM key, LPARAM parameter)
     {
-#ifdef USM_DEBUG_TRACE_MENU_EVENTS
-        if (message != WM_MOUSEMOVE)
-            Trace(manager, message, key);
-#endif
         if (USMOverlayBlocksInput() && ((message >= WM_KEYFIRST && message <= WM_KEYLAST) ||
             (message >= WM_MOUSEFIRST && message <= WM_MOUSELAST)))
             return;

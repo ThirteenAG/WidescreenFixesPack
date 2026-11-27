@@ -77,7 +77,7 @@
   "menu.restoredefaultshelp": "Setzt die Einstellungen dieser Seite auf ihre Standardwerte zurück.",
   "menu.restartwarning": "Einige Einstellungen gelten erst nach einem Neustart des Spiels.",
   "WindowMode": "Fenstermodus",
-  "WindowMode.description": "Vollbild, zentriertes Fenster mit gewählter Auflösung oder randlos mit Monitorauflösung. Neustart erforderlich. Alt+Eingabe wechselt zwischen Vollbild und dem letzten Fenstermodus.",
+  "WindowMode.description": "Vollbild, ein zentriert startendes Fenster mit gewählter Auflösung und veränderbarer Größe oder randlos mit Monitorauflösung. Neustart erforderlich. Alt+Eingabe wechselt zwischen Vollbild und dem letzten Fenstermodus.",
   "WindowMode.0": "Vollbild",
   "WindowMode.1": "Fenster",
   "WindowMode.2": "Randlos",

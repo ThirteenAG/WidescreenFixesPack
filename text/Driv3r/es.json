@@ -91,7 +91,7 @@
   "menu.restartwarning": "Requiere reiniciar",
   "menu.presethelp": "Elige un preajuste y confirma dos veces para aplicarlo a este plugin.",
   "MAIN.WindowMode": "Modo de ventana",
-  "MAIN.WindowMode.description": "Pantalla completa, ventana centrada a la resolución elegida o sin bordes a la resolución del monitor. Requiere reiniciar. Alt+Intro alterna pantalla completa y el último modo de ventana.",
+  "MAIN.WindowMode.description": "Pantalla completa, ventana redimensionable que se abre centrada a la resolución elegida o sin bordes a la resolución del monitor. Requiere reiniciar. Alt+Intro alterna pantalla completa y el último modo de ventana.",
   "MAIN.WindowMode.0": "Pantalla completa",
   "MAIN.WindowMode.1": "Ventana",
   "MAIN.WindowMode.2": "Sin bordes",

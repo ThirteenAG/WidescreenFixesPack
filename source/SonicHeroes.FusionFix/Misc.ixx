@@ -2,6 +2,7 @@ module;
 
 #include <stdafx.h>
 #include "FixSettings.hpp"
+#include "rawinput.hpp"
 #include <shlobj.h>
 #include <shlwapi.h>
 #pragma comment(lib, "shell32.lib")
@@ -142,6 +143,8 @@ namespace Options
             injector::MakeCALL(create.get_first(), NoMouse, true);
             injector::MakeJMP(create.get_first(5), skip, true);
         }
+        else
+            MessagePumpGuard::Install(GetModuleHandleW(nullptr));
 
         // Castle and mansion switches: the PlayStation 2 blend of the flash (6 is the PC's)
         if (const int flash = std::clamp(settings.Int("MISC.WarpSwitchEffectMode"), 0, 2); flash != 0)

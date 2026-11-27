@@ -6,6 +6,7 @@ module;
 export module Camera;
 
 import ComVars;
+import Frontend;
 import Hud;
 
 void* retAddrFading = nullptr;
@@ -28,8 +29,7 @@ float BoundedProjection(float tangent)
     if (!std::isfinite(tangent) || tangent <= 0.0f ||
         !std::isfinite(Screen.fFieldOfView) || Screen.fFieldOfView <= 0.0f)
         return 1.0f;
-    // Menus keep the original framing
-    const float factor = KingKongInMenu() ? 1.0f : FOVFactor.load(std::memory_order_relaxed);
+    const float factor = KingKongInMenu() || KingKongInCutscene() ? 1.0f : FOVFactor.load(std::memory_order_relaxed);
     return std::max(minimumScale, Screen.fFieldOfView / (tangent * factor));
 }
 

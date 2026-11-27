@@ -55,7 +55,7 @@ namespace KongMovies
         if (width == 640 && height == 480)
         {
             if (MovieName(name, "bonus_0.bik")) return 60;
-            if (MovieName(name, "bonus_2.bik")) return 50;
+            if (MovieName(name, "bonus_2.bik")) return 48;
         }
         return 0;
     }
@@ -69,23 +69,26 @@ namespace KongMovies
         return { video[1], Mode.load(std::memory_order_relaxed) };
     }
 
-    bool BlackRow(const uint8_t* row, uint32_t width, uint32_t type, uint32_t bytes)
+    bool BlackRow(const uint8_t* row, uint32_t width, uint32_t type, uint32_t bytes, bool nearPicture)
     {
+        const int rgbLimit = nearPicture ? 31 : 7;
+        const unsigned lumaLimit = nearPicture ? 47 : 23;
+        const unsigned colorMask = type == 7 ? (nearPicture ? 0x0EEE : 0x0FFF) :
+            type == 9 ? (nearPicture ? 0x739C : 0x7FFF) : (nearPicture ? 0xE71C : 0xFFDF);
         for (uint32_t x = 0; x < width; ++x, row += bytes)
         {
             if (bytes >= 3)
             {
-                if ((row[0] | row[1] | row[2]) > 7) return false;
+                if ((row[0] | row[1] | row[2]) > rgbLimit) return false;
             }
             else if (type == 13 || type == 14)
             {
                 const unsigned luma = row[type == 13 ? 0 : 1];
                 const unsigned chroma = row[type == 13 ? 1 : 0];
-                if (luma > 23 || chroma < 120 || chroma > 136) return false;
+                if (luma > lumaLimit || chroma < 120 || chroma > 136) return false;
             }
             else
             {
-                const unsigned colorMask = type == 7 ? 0x0FFF : type == 9 ? 0x7FFF : 0xFFDF;
                 if (((row[1] << 8) | row[0]) & colorMask) return false;
             }
         }
@@ -102,7 +105,10 @@ namespace KongMovies
         const auto row = [=](uint32_t y) { return pixels + size_t(y) * pitch; };
         for (uint32_t y = 0; y < bars; ++y)
         {
-            if (!BlackRow(row(y), width, type, bytes) || !BlackRow(row(height - 1 - y), width, type, bytes))
+            // Compression can leave faint pixels in the last few rows next to the picture.
+            const bool nearPicture = bars - y <= 6;
+            if (!BlackRow(row(y), width, type, bytes, nearPicture) ||
+                !BlackRow(row(height - 1 - y), width, type, bytes, nearPicture))
                 return false;
         }
 

@@ -18,6 +18,8 @@ export namespace SniperWindow
     inline SafetyHookMid WindowedSwitch;
     inline SafetyHookInline WindowProcHook;
     inline std::atomic<HWND> Window{ nullptr };
+    inline std::atomic<bool> PauseInBackground{ true };
+    inline UINT RefreshActivity = 0;
     inline bool (*Message)(HWND, UINT, WPARAM, LPARAM, LRESULT&){};
 
     inline RECT Monitor(HWND window)
@@ -121,10 +123,19 @@ export namespace SniperWindow
     inline LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam)
     {
         Window.store(window, std::memory_order_release);
+        if (RefreshActivity && message == RefreshActivity)
+        {
+            if (GetForegroundWindow() != window)
+            {
+                const bool active = !IsIconic(window) && !PauseInBackground.load(std::memory_order_relaxed);
+                return WindowProcHook.stdcall<LRESULT>(window, WM_ACTIVATEAPP, active, 0);
+            }
+            return 0;
+        }
         LRESULT handled = 0;
         if (Message && Message(window, message, wParam, lParam, handled))
             return handled;
-        if (message == WM_ACTIVATEAPP && !wParam && !FixSettings().Bool("MAIN.PauseOnFocusLoss"))
+        if (message == WM_ACTIVATEAPP && !wParam && !PauseInBackground.load(std::memory_order_relaxed))
             return 0;
         // Fullscreen: on activation the game waits inside this message until its lost device can be reset, but the
         // device only comes back while messages are handled; it hung when the focus left again meanwhile. The
@@ -158,6 +169,15 @@ export namespace SniperWindow
     inline void Init(int width, int height)
     {
         Mode = std::clamp(FixSettings().Int("MAIN.WindowMode"), 0, 2);
+        PauseInBackground.store(FixSettings().Bool("MAIN.PauseOnFocusLoss"), std::memory_order_relaxed);
+        if (Mode)
+            RefreshActivity = RegisterWindowMessageW(L"SniperElite.FusionFix.RefreshActivity");
+        FixSettings().OnChange("MAIN.PauseOnFocusLoss", []()
+        {
+            PauseInBackground.store(FixSettings().Bool("MAIN.PauseOnFocusLoss"), std::memory_order_relaxed);
+            if (const auto window = Window.load(std::memory_order_acquire); window && RefreshActivity)
+                PostMessageW(window, RefreshActivity, 0, 0);
+        });
         Width = width;
         Height = height;
         auto setup = hook::pattern("8A 15 ? ? ? ? 8B 0D ? ? ? ? 84 D2 8B 15 ? ? ? ? 0F 94 C0");

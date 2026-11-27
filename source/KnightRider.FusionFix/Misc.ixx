@@ -79,8 +79,11 @@ void InitializeGame()
     //2D
     static auto dword_56F775 = hook::get_pattern("8B 8E B0 01 00 00 8B 01 FF 90 B4 00 00 00 8B 8E 7C 01 00 00 85 C9", 0);
     static auto dword_4AF6E1 = hook::get_pattern("85 F6 74 11 8B 46 04 48 89 46 04 75 08 8B 06 6A 01 8B CE FF 10 5E C2 08 00", 0);
-    static auto dword_40AC69 = hook::get_pattern("8B 4E 2C E8 ? ? ? ? 8B 4E 1C E8 ? ? ? ? 8B 4E 20 E8 ? ? ? ? 8A 46 58 84 C0", 0);
-    static auto dword_40AC71 = hook::get_pattern("8B 4E 1C E8 ? ? ? ? 8B 4E 20 E8 ? ? ? ? 8A 46 58 84 C0 74 10 8B 46 14 8B 4E", 0);
+    // The two strip cameras precede the separate caption and speaker draws.
+    KnightRiderCamera::SubtitleStripCallers = {
+        hook::get_pattern("8B 4E 2C E8 ? ? ? ? 8B 4E 1C E8 ? ? ? ? 8B 4E 20 E8 ? ? ? ? 8A 46 58 84 C0", 0),
+        hook::get_pattern("8B 4E 1C E8 ? ? ? ? 8B 4E 20 E8 ? ? ? ? 8A 46 58 84 C0 74 10 8B 46 14 8B 4E", 0)
+    };
     static auto dword_4BD9A5 = hook::get_pattern("8B 96 C4 00 00 00 33 C9 8B 52 08 8B 82 EC 00 00 00 85 C0", 0);
     static auto dword_4081EF = hook::pattern("83 7C 24 08 01 75 08 8B 49 10 E8 ? ? ? ? C2 08 00").count(2).get(1).get<void>(15); //objective marker
     static auto dword_404D92 = hook::get_pattern("8B 4B 20 E8 ? ? ? ? 5F 5E", 0); //night vision 1
@@ -106,7 +109,7 @@ void InitializeGame()
                 ret3 = KnightRiderCamera::CallerNext;
             }
 
-            if (ret1 == dword_56F775 && ret2 != dword_4AF6E1 && ret2 != dword_40AC69 && ret2 != dword_40AC71 && ret2 != dword_4BD9A5 && ret2 != dword_4081EF && ret2 != dword_404D92 && ret2 != dword_404D9A && ret3 != dword_4B514B)
+            if (ret1 == dword_56F775 && ret2 != dword_4AF6E1 && !KnightRiderCamera::IsSubtitleStripCall(ret2) && ret2 != dword_4BD9A5 && ret2 != dword_4081EF && ret2 != dword_404D92 && ret2 != dword_404D9A && ret3 != dword_4B514B)
             {
                 if (KnightRiderHud::InfoScene)
                 {
@@ -138,18 +141,31 @@ void InitializeGame()
         }
     }; injector::MakeInline<HUDHook>(pattern.get_first(0), pattern.get_first(8)); //0x5C0EB1
 
-    // The game clears depth for the target and minimap before setting their viewport. In the cockpit those viewports
-    // are moved into the centered 4:3 picture, so the clear rectangle moves with them; stale depth clips their left edges.
+    // Clear depth at the same position as the adjusted cockpit and speaker viewports.
+    static const auto cameraClearReturn = hook::get_pattern("8B 81 B0 01 00 00 85 C0 74 ? 8B 10 56 8B 74 24 08 81 C1 6C 01 00 00 56 51 8B C8 FF 52 44 5E C2 04 00", 30);
+    static const auto speakerClearReturn = hook::get_pattern("8B 4E 28 85 C9 74 ? 6A 04 E8 ? ? ? ? 8B 4E 28 E8 ? ? ? ? 5E C2 08 00", 14);
     pattern = hook::pattern("8B 4D 00 89 8E 48 02 00 00 8B 10 8B 46 28 89 96 4C 02 00 00");
-    static auto CockpitClearHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& context)
+    static auto HudDepthClearHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& context)
     {
-        if (!KnightRiderHud::CockpitActive || (KnightRiderHud::Anchor != -1 && KnightRiderHud::Anchor != 1))
+        const auto stack = reinterpret_cast<void* const*>(context.esp);
+        const bool speaker = stack[0x28 / sizeof(void*)] == cameraClearReturn
+            && stack[0x38 / sizeof(void*)] == speakerClearReturn;
+        if (!speaker && (!KnightRiderHud::CockpitActive || (KnightRiderHud::Anchor != -1 && KnightRiderHud::Anchor != 1)))
             return;
-        const float designWidth = std::min(Screen.fWidth, Screen.fHeight * (4.0f / 3.0f));
-        const float offset = (Screen.fWidth - designWidth) * 0.5f;
+
+        const float designWidth = std::min(Screen.fWidth, Screen.fHeight * KnightRiderCamera::NativeAspect);
+        const float offset = (Screen.fWidth - designWidth) * 0.5f
+            + (speaker ? KnightRiderHud::Offset(Screen.fWidth, Screen.fHeight, -1) : 0.0f);
         auto rect = reinterpret_cast<int32_t*>(context.esp + 0x18);
         rect[0] = static_cast<int32_t>(std::lround(rect[0] * designWidth / Screen.fWidth + offset));
         rect[2] = static_cast<int32_t>(std::lround(rect[2] * designWidth / Screen.fWidth + offset));
+        if (speaker && Screen.fAspectRatio < KnightRiderCamera::NativeAspect)
+        {
+            const float scale = Screen.fAspectRatio / KnightRiderCamera::NativeAspect;
+            const float top = Screen.fHeight * (1.0f - scale) * 0.5f;
+            rect[1] = static_cast<int32_t>(std::lround(rect[1] * scale + top));
+            rect[3] = static_cast<int32_t>(std::lround(rect[3] * scale + top));
+        }
     });
 
     pattern = hook::pattern("D8 0D ? ? ? ? 53 8B D9 56 57 D9 F2 8B 53 08");
@@ -168,6 +184,13 @@ void InitializeGame()
         }
     }; injector::MakeInline<FOVHook>(pattern.get_first(0), pattern.get_first(6)); //0x485717
 
+    // A failed Miles provider switch must leave the listener closed.
+    pattern = hook::pattern("8B 86 30 02 00 00 50 FF 15 ? ? ? ? 8B 8E 20 02 00 00 51 FF 15");
+    static auto ClearClosedListener = safetyhook::create_mid(pattern.get_first(13), [](SafetyHookContext& context)
+    {
+        *reinterpret_cast<void**>(context.esi + 0x230) = nullptr;
+    });
+
     //Mouse cooperative level: some systems refuse non-exclusive mouse access, which makes the game abort at start-up
     pattern = hook::pattern("8B 10 6A 06 57 50 FF 52 34 8B CE E8 ? ? ? ? 8B CE E8 ? ? ? ? 8B 08 50 FF 51 1C");
     struct MouseCooperativeLevelHook
@@ -183,6 +206,7 @@ void InitializeGame()
         }
     }; injector::MakeInline<MouseCooperativeLevelHook>(pattern.get_first(2), pattern.get_first(9)); //0x4C92EE
 
+    MessagePumpGuard::Install(GetModuleHandleW(nullptr));
     KnightRiderWindow::Init(Screen.nWidth, Screen.nHeight);
     KnightRiderIntro::Init();
     KnightRiderHud::Init();

@@ -149,7 +149,7 @@
   "WFP_DESC_ANTIALIASING": "Az SMAA simítja az éleket.",
   "WFP_DESC_HIDEAABUG": "Egypixeles széli vonalakkal rejti el az MSAA hibáját.",
   "WFP_DESC_LANGUAGE": "A játék nyelve. Csak a telepített nyelvek választhatók.",
-  "WFP_DESC_RAINDROPLETS": "A képernyőn látható esőcseppek mérete. Xbox Rain Droplets mellett nincs hatása.",
+  "WFP_DESC_RAINDROPLETS": "A képernyőn látható esőcseppek mérete. Fusion Rain Droplets mellett nincs hatása.",
   "WFP_DESC_SUBTITLES": "Minden nyelven megjeleníti a videók feliratait.",
   "WFP_WRITESETTINGS": "Beállítások fájlban",
   "WFP_DESC_WRITESETTINGS": "A rendszerleíró adatbázis helyett a profil Settings.ini fájljába menti a beállításokat. Ide írd a CD-kulcsot.",

@@ -149,7 +149,7 @@
   "WFP_DESC_ANTIALIASING": "SMAA vyhlazuje hrany.",
   "WFP_DESC_HIDEAABUG": "Zakryje chybu MSAA na okrajích čarami širokými jeden pixel.",
   "WFP_DESC_LANGUAGE": "Jazyk hry. K dispozici jsou jen nainstalované jazyky.",
-  "WFP_DESC_RAINDROPLETS": "Velikost kapek deště na obrazovce. S Xbox Rain Droplets nemá vliv.",
+  "WFP_DESC_RAINDROPLETS": "Velikost kapek deště na obrazovce. S Fusion Rain Droplets nemá vliv.",
   "WFP_DESC_SUBTITLES": "Zobrazuje titulky ve videích ve všech jazycích.",
   "WFP_WRITESETTINGS": "Nastavení v souboru",
   "WFP_DESC_WRITESETTINGS": "Ukládá nastavení registru do Settings.ini ve složce profilu. Zadejte tam CD klíč.",

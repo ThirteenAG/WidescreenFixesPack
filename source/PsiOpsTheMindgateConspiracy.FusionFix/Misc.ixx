@@ -1,6 +1,7 @@
 module;
 #include <stdafx.h>
 #include "FixSettings.hpp"
+#include "rawinput.hpp"
 
 export module Misc;
 import ComVars;
@@ -26,6 +27,7 @@ void InitializeGame()
     hook::pattern pattern;
     auto& settings = FixSettings();
     asi_settings::LiveLink::Start();
+    MessagePumpGuard::Install(GetModuleHandleW(nullptr));
     PsiOpsMenu::Init();
     Screen.Width = settings.Int("MAIN.ResX");
     Screen.Height = settings.Int("MAIN.ResY");

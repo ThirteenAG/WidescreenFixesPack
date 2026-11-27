@@ -146,34 +146,6 @@
       }
     },
     {
-      "id": "MAIN.FMVWidescreenMode",
-      "type": "choice",
-      "default": 1,
-      "choices": [
-        {
-          "value": 0,
-          "label": "@movies.original"
-        },
-        {
-          "value": 1,
-          "label": "@movies.fill"
-        }
-      ],
-      "label": "@movies",
-      "description": "@movies.description",
-      "page": "display",
-      "group": "@group.cutscenes",
-      "control": [
-        "cycler",
-        "segmented"
-      ],
-      "presets": {
-        "vanilla": 0,
-        "recommended": 1,
-        "enhanced": 1
-      }
-    },
-    {
       "id": "CAMERA.Camera",
       "type": "choice",
       "default": 1,

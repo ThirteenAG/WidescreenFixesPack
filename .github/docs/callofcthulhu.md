@@ -13,7 +13,7 @@
 ## Fixes
 
 - **View** — The game keeps its vertical view at every aspect ratio, so wider screens see more at the sides. The field of view factor widens the normal gameplay view, up to 150 degrees across.
-- **Menus** — Menus, the inventory, the journal and loading screens keep their 4:3 layout in the middle of the screen, with black beside full screen pictures. Dimming behind menus, fades, subtitle bands and tip panels cover the whole screen.
+- **Menus** — Menus, the inventory, the journal and loading screens fit their 4:3 layout in the middle of the screen. Full-screen pictures have black bars at the sides on wide displays and above and below on 5:4 displays. Fades and dimming still cover the screen, and subtitle and tip panels span the full width.
 - **Cutscenes** — The in-engine cutscenes are framed as a 16:9 picture (the original bars on a 4:3 screen). The fix keeps that picture at any screen shape: on 16:9 it fills the screen, on wider screens it stays 16:9 between side bars, on narrower ones it gets bars above and below.
 - **Videos** — Videos keep their aspect ratio and are always shown complete, with black bars where needed. Original shows them inside the game's centred 4:3 frame, Fill fits them to the screen; a 4:3 video looks the same in both.
 - **Window modes** — Fullscreen, a window with exactly the chosen resolution, or borderless at the resolution of the monitor the window is on.
@@ -77,7 +77,6 @@ The game reads only the keyboard and mouse. The controller presses the default k
 - Button prompts and the Key Configuration menu name keyboard keys and mouse buttons.
 - Aiming, scripted views, camera effects and transitions keep their original framing; the factor changes the normal gameplay view.
 - Long help lines on the in-game page are shortened; FusionFixHub and fusionfix.io show them in full.
-- On screens narrower than 4:3 (5:4) the 4:3 menus are slightly wider than the screen at the sides.
 
 ## Installation
 

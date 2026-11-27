@@ -15,7 +15,6 @@ export namespace DPLFrameRate
 {
     HWND Window = nullptr;
     LARGE_INTEGER frequency{};
-    HANDLE timer = nullptr;
     double deadline = 0.0;
     int previousLimit = -2;
     HMONITOR previousMonitor = nullptr;
@@ -55,12 +54,6 @@ export namespace DPLFrameRate
     {
         if (limit == -1) limit = MonitorRate();
         const auto now = Counter();
-        if (limit <= 0)
-        {
-            deadline = 0.0;
-            previousLimit = 0;
-            return;
-        }
         const double interval = static_cast<double>(frequency.QuadPart) / limit;
         if (limit != previousLimit || deadline <= 0.0)
             deadline = static_cast<double>(now);
@@ -71,6 +64,11 @@ export namespace DPLFrameRate
             if (remaining <= 0.0) break;
             if (remaining > 0.001)
             {
+                static const HANDLE timer = []()
+                {
+                    const auto highResolution = CreateWaitableTimerExW(nullptr, nullptr, 0x2, TIMER_ALL_ACCESS);
+                    return highResolution ? highResolution : CreateWaitableTimerW(nullptr, FALSE, nullptr);
+                }();
                 LARGE_INTEGER due{};
                 due.QuadPart = -std::max<int64_t>(1, static_cast<int64_t>((remaining - 0.0003) * 10000000.0));
                 if (timer && SetWaitableTimer(timer, &due, 0, nullptr, nullptr, FALSE))
@@ -85,27 +83,43 @@ export namespace DPLFrameRate
     }
 
 
+    void Install()
+    {
+        BindLiveSetting("MAIN.FPSLimit", requestedLimit);
+    }
+
     void Frame(HWND window)
     {
+        const int requested = requestedLimit.load(std::memory_order_relaxed);
+        if (requested == 0)
+        {
+            deadline = 0.0;
+            previousLimit = 0;
+            if constexpr (!WFP::DeveloperOverlay)
+                return;
+        }
         static const bool initialized = []()
         {
             QueryPerformanceFrequency(&frequency);
-            timer = CreateWaitableTimerExW(nullptr, nullptr, 0x2, TIMER_ALL_ACCESS);
-            if (!timer) timer = CreateWaitableTimerW(nullptr, FALSE, nullptr);
-            BindLiveSetting("MAIN.FPSLimit", requestedLimit);
             return frequency.QuadPart > 0;
         }();
         if (!initialized) return;
-        Window = window;
-        const int requested = requestedLimit.load(std::memory_order_relaxed);
-        Pace(requested == -1 || requested == 0 ? requested : std::clamp(requested, 30, 1000));
-        const auto now = Counter();
-        ++statisticsFrames;
-        if (!statisticsStart) { statisticsStart = now; statisticsFrames = 0; }
-        else if (now - statisticsStart >= frequency.QuadPart)
+        if (requested != 0)
         {
-            actualFPS = static_cast<float>(statisticsFrames * static_cast<double>(frequency.QuadPart) / (now - statisticsStart));
-            statisticsStart = now; statisticsFrames = 0;
+            Window = window;
+            Pace(requested == -1 ? requested : std::clamp(requested, 30, 1000));
+        }
+        if constexpr (WFP::DeveloperOverlay)
+        {
+            const auto now = Counter();
+            ++statisticsFrames;
+            if (!statisticsStart || now - statisticsStart >= frequency.QuadPart)
+            {
+                if (statisticsStart)
+                    actualFPS = static_cast<float>(statisticsFrames * static_cast<double>(frequency.QuadPart) / (now - statisticsStart));
+                statisticsStart = now;
+                statisticsFrames = 0;
+            }
         }
     }
 }

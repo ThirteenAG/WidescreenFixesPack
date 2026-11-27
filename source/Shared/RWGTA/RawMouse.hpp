@@ -7,7 +7,6 @@
 #include <cstdint>
 #include <limits>
 #include <mutex>
-#include <optional>
 #include <utility>
 
 namespace GtaRawMouse
@@ -18,7 +17,6 @@ namespace GtaRawMouse
     inline constexpr UINT ReleaseReaderMessage = WM_APP + 0x421;
     inline constexpr UINT_PTR ReleaseReaderTimer = 1;
     inline constexpr auto PreviousProperty = L"WFP.RawMouse.Previous";
-    inline bool (*Playing)() = nullptr;
     inline void (*MouseActivity)() = nullptr;
 
     struct Motion
@@ -55,7 +53,6 @@ namespace GtaRawMouse
         ++MotionGeneration;
         Pending = {};
     }
-    inline std::optional<RAWINPUTDEVICE> Original;
     enum class Registration { Error, Empty, Mouse };
 
     inline Registration Query(RAWINPUTDEVICE& mouse)
@@ -79,37 +76,6 @@ namespace GtaRawMouse
             }
         }
         return Registration::Empty;
-    }
-
-    inline void SetLegacy(const RAWINPUTDEVICE& mouse, bool legacy)
-    {
-        if (Original && (mouse.hwndTarget != Original->hwndTarget || mouse.dwFlags != (Original->dwFlags | RIDEV_NOLEGACY)))
-            Original.reset();
-        if (legacy)
-        {
-            if (Original && RegisterRawInputDevices(&*Original, 1, sizeof(mouse)))
-                Original.reset();
-        }
-        else if ((mouse.dwFlags & RIDEV_NOLEGACY) != RIDEV_NOLEGACY)
-        {
-            auto modified = mouse;
-            modified.dwFlags |= RIDEV_NOLEGACY;
-            if (RegisterRawInputDevices(&modified, 1, sizeof(modified)))
-                Original = mouse;
-        }
-    }
-
-    inline void RestoreLegacy(HWND gameWindow = nullptr)
-    {
-        std::lock_guard lock(RegistrationMutex);
-        if ((gameWindow && gameWindow != Window) || !Original)
-            return;
-        RAWINPUTDEVICE mouse{};
-        const auto state = Query(mouse);
-        if (state == Registration::Mouse)
-            SetLegacy(mouse, true);
-        else if (state == Registration::Empty)
-            Original.reset();
     }
 
     inline bool Front()
@@ -175,17 +141,12 @@ namespace GtaRawMouse
             return ReaderRelease::Retry;
         if (state == Registration::Mouse && mouse.hwndTarget == reader)
         {
-            constexpr DWORD readerFlags = RIDEV_INPUTSINK;
-            const bool addedNoLegacy = Original && Original->hwndTarget == reader &&
-                Original->dwFlags == readerFlags && mouse.dwFlags == (readerFlags | RIDEV_NOLEGACY);
-            if (mouse.dwFlags != readerFlags && !addedNoLegacy)
+            if (mouse.dwFlags != RIDEV_INPUTSINK)
                 return ReaderRelease::Keep;
             const RAWINPUTDEVICE remove{ 1, 2, RIDEV_REMOVE, nullptr };
             if (!RegisterRawInputDevices(&remove, 1, sizeof(remove)))
                 return ReaderRelease::Retry;
         }
-        if (Original && Original->hwndTarget == reader)
-            Original.reset();
         FallbackWindow = nullptr;
         return ReaderRelease::Destroy;
     }
@@ -273,39 +234,32 @@ namespace GtaRawMouse
         HWND target = nullptr;
         if (state == Registration::Mouse)
         {
+            // Keep the owner's registration flags so cursor messages can reach other window handlers.
             target = mouse.hwndTarget ? mouse.hwndTarget : Window;
             DWORD owner = 0;
             GetWindowThreadProcessId(target, &owner);
             if (owner != GetCurrentProcessId() || (target != Window && target != FallbackWindow && !Observe(target)))
                 target = nullptr;
         }
-        else
+        else if (front)
         {
-            Original.reset();
-            if (front)
-            {
-                if (!FallbackWindow)
-                    FallbackWindow = CreateRawInputWindow(L"WFPGtaRawMouse", FallbackProc);
-                const RAWINPUTDEVICE device{ 1, 2, RIDEV_INPUTSINK, FallbackWindow };
-                if (FallbackWindow && RegisterRawInputDevices(&device, 1, sizeof(device)))
-                    target = FallbackWindow;
-            }
+            if (!FallbackWindow)
+                FallbackWindow = CreateRawInputWindow(L"WFPGtaRawMouse", FallbackProc);
+            const RAWINPUTDEVICE device{ 1, 2, RIDEV_INPUTSINK, FallbackWindow };
+            if (FallbackWindow && RegisterRawInputDevices(&device, 1, sizeof(device)))
+                target = FallbackWindow;
         }
-        bool relative = false;
         {
             std::lock_guard motion(MotionMutex);
             if (std::exchange(InputTarget, target) != target || !front || !target)
                 InvalidateMotion();
-            relative = Pending.relative;
-            if (relative)
+            if (Pending.relative)
             {
                 const auto axis = [](int64_t value) { return static_cast<int32_t>(std::clamp<int64_t>(value, INT32_MIN, INT32_MAX)); };
                 x = axis(std::exchange(Pending.x, int64_t{ 0 }));
                 y = axis(std::exchange(Pending.y, int64_t{ 0 }));
             }
         }
-        if (state == Registration::Mouse)
-            SetLegacy(mouse, !relative || !Playing || !Playing());
     }
 
     inline LRESULT CALLBACK WindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam, UINT_PTR, DWORD_PTR)
@@ -315,17 +269,13 @@ namespace GtaRawMouse
         if (message == WM_KILLFOCUS || (message == WM_ACTIVATE && LOWORD(wParam) == WA_INACTIVE) ||
             (message == WM_ACTIVATEAPP && !wParam))
         {
-            {
-                std::lock_guard lock(MotionMutex);
-                if (Window == window)
-                    InvalidateMotion();
-            }
-            RestoreLegacy(window);
+            std::lock_guard lock(MotionMutex);
+            if (Window == window)
+                InvalidateMotion();
         }
         if (message == WM_NCDESTROY)
         {
             RemoveWindowSubclass(window, WindowProc, GameWindowSubclass);
-            RestoreLegacy(window);
             std::lock_guard registration(RegistrationMutex);
             if (Window == window)
             {

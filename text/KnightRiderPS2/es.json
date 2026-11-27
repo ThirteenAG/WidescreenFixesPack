@@ -10,7 +10,7 @@
   "HudAspectRatioConstraint": "Relación de aspecto del HUD",
   "HudAspectRatioConstraint.description": "Auto coloca los paneles laterales del HUD en los bordes de la pantalla. Una relación los mantiene en los bordes de un recuadro centrado con esa forma. La vista de cabina siempre mantiene su HUD en el salpicadero 4:3. Los cambios se aplican durante el juego.",
   "FMVWidescreenMode": "Visualización de vídeos",
-  "FMVWidescreenMode.description": "Original encaja el fotograma 4:3 completo. Llenar amplía la imagen de los vídeos con franjas negras integradas. Los vídeos de fotograma completo conservan toda la imagen. Los cambios se aplican durante el juego.",
+  "FMVWidescreenMode.description": "Original encaja el fotograma 4:3 completo. Llenar amplía la imagen de los vídeos con franjas negras fijas. Los vídeos que usan todo el fotograma conservan toda la imagen. Los cambios se aplican durante el juego.",
   "fmv.original": "Original",
   "fmv.fill": "Llenar",
   "CutsceneBorders": "Franjas de las escenas",

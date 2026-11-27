@@ -240,15 +240,36 @@ namespace
     }
 
     // The projection's x shift in clip space
+    // In split screen the gauges are laid out for the split HUD box (800x360 of 1280x720) in each player's view, which
+    // fits that box into its width when the view is narrower (side by side)
     float GetCockpitShift()
     {
-        if (IsSplitScreenActive() || GetDiff() < 0.999f || GetTickCount64() - nCockpitPlaced.load(std::memory_order_relaxed) > 250)
+        if (GetTickCount64() - nCockpitPlaced.load(std::memory_order_relaxed) > 250)
             return 0.0f;
-        const float screen = GetAspectRatio();
+        float view = GetAspectRatio();
+        float layout = defaultAspectRatio;
+        if (IsSplitScreenActive())
+        {
+            view = (float)SplitScreen::GetCurrentResX() / (float)SplitScreen::GetCurrentResY();
+            layout = (std::min)(fSplitHudWidth / fSplitHudHeight, view);
+        }
+        else if (GetDiff() < 0.999f)
+            return 0.0f;
         const float aspect = GetHudAspectSetting();
-        const float box = aspect > 0.0f ? (std::min)(screen, aspect) : screen;
-        const float shift = (box - defaultAspectRatio) / screen;
-        return bCockpitLeft.load(std::memory_order_relaxed) ? -shift : shift;
+        const float box = aspect > 0.0f ? (std::min)(view, aspect) : view;
+        return (box - layout) / view;
+    }
+
+    // The side of the gauges drawn into a view (left, top, right, bottom): in split screen player 1's are on the right
+    // and player 2's on the left, as in the game's own layout; otherwise the side the game placed them on
+    bool IsCockpitLeft(const int32_t* rect)
+    {
+        if (IsSplitScreenActive())
+        {
+            const auto second = GetPlayerViewport(1);
+            return rect[0] == second[0] && rect[1] == second[1];
+        }
+        return bCockpitLeft.load(std::memory_order_relaxed);
     }
 
     // The gauges' position (x, y, z), after the game's sway with the camera: the side they are on
@@ -278,9 +299,11 @@ export void SetSubtitlesNow()
 }
 
 // The cockpit screens' x shift in clip space (the objective markers drawn there move back by it)
-export float GetCockpitProjectionShift()
+export float GetCockpitProjectionShift(int player)
 {
-    return GetCockpitShift();
+    const float shift = GetCockpitShift();
+    const bool left = IsSplitScreenActive() ? player == 1 : bCockpitLeft.load(std::memory_order_relaxed);
+    return left ? -shift : shift;
 }
 
 export float GetHudAspectRatioInv()
@@ -382,9 +405,13 @@ public:
             {
                 if (!IsCockpitScreen(regs.edi))
                     return;
-                const float shift = GetCockpitShift();
+                float shift = GetCockpitShift();
                 if (shift == 0.0f)
                     return;
+                // The view being drawn (the function's first argument): its rectangle at +0xBC
+                const auto view = *reinterpret_cast<uintptr_t*>(regs.ebp + 8);
+                if (IsCockpitLeft(reinterpret_cast<const int32_t*>(view + 0xBC)))
+                    shift = -shift;
                 auto matrix = reinterpret_cast<float*>(regs.esp + 0x50);
                 for (int row = 0; row < 4; ++row)
                     matrix[row * 4] += shift * matrix[row * 4 + 3];

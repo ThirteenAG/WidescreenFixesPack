@@ -714,6 +714,12 @@ export namespace FarCryPad
         return FarCryPadState::PadInUse;
     }
 
+    inline bool ZoomActive()
+    {
+        const auto map = FarCryPadState::CurrentMap;
+        return map == FarCryPadState::Zoom || map == FarCryPadState::Binozoom;
+    }
+
     // Input the developer overlay takes for itself
     inline void SetOverlayInput(bool (*blocked)(), void (*gamepad)(const XINPUT_GAMEPAD&))
     {

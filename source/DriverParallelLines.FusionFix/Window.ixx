@@ -20,6 +20,7 @@ export namespace DPLWindow
     inline bool haveFramedRect = false;
     inline RECT framedRect{};
     inline int framedWidth = 0, framedHeight = 0;
+    inline bool placingWindow = false, sizingWindow = false, resizeRequested = false;
     inline SafetyHookInline procedureHook;
     struct ModeChange
     {
@@ -28,6 +29,7 @@ export namespace DPLWindow
         int target{}, width{}, height{};
         UINT refresh{};
         bool recovering{};
+        RECT resizedFrame{};
     };
     inline ModeChange pendingMode;
     inline std::atomic<D3DPRESENT_PARAMETERS*> stagedReset{ nullptr };
@@ -47,7 +49,7 @@ export namespace DPLWindow
 
     inline void CancelPendingMode(HWND window)
     {
-        if (window && pendingMode.window == window)
+        if (window && pendingMode.window == window && pendingMode.target != mode)
             pendingMode.recovering = true;
     }
 
@@ -76,15 +78,21 @@ export namespace DPLWindow
             return false;
         const DWORD frameBits = WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU;
         DWORD style = DWORD(GetWindowLongW(window, GWL_STYLE)) & ~(frameBits | WS_POPUP);
-        style |= mode == 2 ? WS_POPUP : WS_CAPTION | WS_MINIMIZEBOX | WS_SYSMENU;
-        SetWindowLongW(window, GWL_STYLE, LONG(style));
-        SetWindowPos(window, nullptr, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
-        WindowStyle::SquareCorners(window);
+        style |= mode == 2 ? WS_POPUP : WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_SYSMENU;
+        const bool previous = std::exchange(placingWindow, true);
+        if (style != DWORD(GetWindowLongW(window, GWL_STYLE)))
+        {
+            SetWindowLongW(window, GWL_STYLE, LONG(style));
+            SetWindowPos(window, nullptr, 0, 0, 0, 0,
+                SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
+        }
         WindowStyle::Place(window, width, height);
-        if (mode == 1 && haveFramedRect && width == framedWidth && height == framedHeight)
+        if (mode == 1 && haveFramedRect && width == framedWidth && height == framedHeight &&
+            !WindowStyle::CoversMonitor(WindowStyle::MonitorRect(window), width, height))
             SetWindowPos(window, nullptr, framedRect.left, framedRect.top,
                 framedRect.right - framedRect.left, framedRect.bottom - framedRect.top,
                 SWP_NOACTIVATE | SWP_NOZORDER | SWP_FRAMECHANGED);
+        placingWindow = previous;
         return true;
     }
 
@@ -161,8 +169,21 @@ export namespace DPLWindow
         }
         const auto applied = std::exchange(pendingMode, {});
         // A synchronous Reset can dispatch focus messages. Match the parameters that it used.
-        if (stagedRecovery || applied.window != Window())
+        if (applied.window != Window())
             return;
+        const bool resized = mode == 1 && applied.target == mode;
+        if (stagedRecovery)
+        {
+            if (resized) Place(BackbufferWidth, BackbufferHeight);
+            return;
+        }
+        if (resized)
+        {
+            framedRect = applied.resizedFrame;
+            framedWidth = applied.width;
+            framedHeight = applied.height;
+            haveFramedRect = true;
+        }
         if (mode) lastWindowMode = mode;
         mode = applied.target;
         if (commitMode) commitMode(applied);
@@ -170,11 +191,33 @@ export namespace DPLWindow
         else Place(applied.width, applied.height);
     }
 
+    inline void QueueResize(HWND window, IDirect3DDevice9* device)
+    {
+        if (mode != 1 || !resizeRequested || sizingWindow || pendingMode.window || !device || !queueMode || IsIconic(window))
+            return;
+        RECT client{}, frame{};
+        if (!GetClientRect(window, &client) || !GetWindowRect(window, &frame)) return;
+        int width = client.right, height = client.bottom;
+        if (!Dimensions(width, height) || (width == BackbufferWidth && height == BackbufferHeight))
+        {
+            resizeRequested = false;
+            return;
+        }
+        ModeChange next{ window, device, mode, width, height };
+        next.resizedFrame = frame;
+        if (device->TestCooperativeLevel() == D3D_OK && queueMode(next))
+        {
+            pendingMode = next;
+            resizeRequested = false;
+        }
+    }
+
     inline bool Frame(IDirect3DDevice9* device, bool blocked)
     {
         const auto window = Window();
         if (pendingMode.window && (pendingMode.window != window || pendingMode.device != device))
             pendingMode = {};
+        if (window && !toggleRequested.load()) QueueResize(window, device);
         if (!window || GetForegroundWindow() != window)
         {
             InterlockedExchange(&toggleDown, ToggleKeysDown());
@@ -228,9 +271,29 @@ export namespace DPLWindow
             CancelToggle(window);
             if (window == Window())
             {
+                if (message == WM_NCDESTROY) sizingWindow = resizeRequested = false;
                 CancelPendingMode(window);
                 InterlockedExchange(&toggleDown, ToggleKeysDown());
                 if (onDeactivate) onDeactivate();
+            }
+        }
+        if (mode == 1 && window == Window())
+        {
+            if (message == WM_ENTERSIZEMOVE) sizingWindow = true;
+            if (message == WM_EXITSIZEMOVE) sizingWindow = false;
+            if (message == WM_SIZE)
+            {
+                if (wParam == SIZE_MINIMIZED) return 0;
+                if (!placingWindow) resizeRequested = true;
+            }
+            if (message == WM_GETMINMAXINFO)
+            {
+                const auto result = procedureHook.stdcall<LRESULT>(window, message, wParam, lParam);
+                const auto frame = WindowStyle::FrameOf(window);
+                auto& info = *reinterpret_cast<MINMAXINFO*>(lParam);
+                info.ptMinTrackSize.x = std::max(info.ptMinTrackSize.x, 320 + frame.Width());
+                info.ptMinTrackSize.y = std::max(info.ptMinTrackSize.y, 240 + frame.Height());
+                return result;
             }
         }
         if (window == Window() && wParam == VK_RETURN &&

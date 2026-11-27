@@ -8,8 +8,6 @@ module;
 #include "OverlayInput.hpp"
 #include "VibrationInput.hpp"
 #include <stdexcept>
-#define DIRECTINPUT_VERSION 0x0800
-#include <dinput.h>
 
 export module Input;
 import ComVars;
@@ -22,6 +20,8 @@ class OptionManager
 {
 public:
     static inline bool bGamepadUsed = false;
+    static inline bool ScrollWeapons = false;
+    static inline std::atomic<int> WeaponWheel{ 0 };
     static inline std::atomic<float> GamepadCameraSpeed{ 1.0f };
     static inline std::atomic<float> VehicleCameraRecenterDelay{ 3.0f };
     static inline std::atomic<float> OnFootCameraRecenterDelay{ 0.0f };
@@ -29,6 +29,15 @@ public:
     static inline uint32_t nVehicleCameraAimHoldOffset = 0;
     static inline bool (*pScarfaceHook_GetMenuActive)() = nullptr;
     static inline bool (*NativeMenuActive)() = nullptr;
+
+    static void QueueWeaponWheel(int delta)
+    {
+        auto pending = WeaponWheel.load(std::memory_order_relaxed);
+        while (!WeaponWheel.compare_exchange_weak(pending, std::clamp(pending + delta, -120 * WHEEL_DELTA, 120 * WHEEL_DELTA),
+            std::memory_order_relaxed))
+        {
+        }
+    }
 
     static inline void RecordGamepadMotion(float x, float y)
     {
@@ -78,7 +87,15 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
         return result;
     ControllerPrompts::OnMessage(hWnd, Msg, wParam, lParam);
     if (Msg == WM_KILLFOCUS || (Msg == WM_ACTIVATEAPP && !wParam))
+    {
+        OptionManager::WeaponWheel.store(0, std::memory_order_relaxed);
         ScarfaceRawMouse::Clear();
+    }
+    if (Msg == WM_MOUSEWHEEL && OptionManager::ScrollWeapons && hWnd == GetForegroundWindow() &&
+        !ScarfaceOverlayInput::BlocksInput() && !OptionManager::ScarfaceHook_GetMenuActive())
+    {
+        OptionManager::QueueWeaponWheel(GET_WHEEL_DELTA_WPARAM(wParam));
+    }
     if (Msg == WM_NCDESTROY || Msg == WM_KILLFOCUS || (Msg == WM_ACTIVATEAPP && !wParam))
         ScarfaceRawMouse::UnbindCursor(hWnd);
 
@@ -251,7 +268,7 @@ namespace WalkInput
 void Init()
 {
     auto& settings = FixSettings();
-    auto bScrollWeaponsWithMouseWheel = settings.Bool("MAIN.ScrollWeaponsWithMouseWheel");
+    OptionManager::ScrollWeapons = settings.Bool("MAIN.ScrollWeaponsWithMouseWheel");
     auto publish = []()
     {
         static std::mutex mutex;
@@ -356,36 +373,8 @@ void Init()
         }
     }; injector::MakeInline<GamepadCheck>(pattern.get_first(0));
 
-    if (bScrollWeaponsWithMouseWheel)
+    if (OptionManager::ScrollWeapons)
     {
-        static int nMouseWheelValue = 0;
-        pattern = hook::pattern("8B B7 ? ? ? ? 85 F6 74 21 90");
-        struct GetDeviceDataHook
-        {
-            void operator()(injector::reg_pack& regs)
-            {
-                regs.esi = *(uint32_t*)(regs.edi + 0x264);
-                auto controller = std::string_view((char*)regs.edi + 0x40);
-
-                if (controller.starts_with("Mouse"))
-                {
-                    auto rgdod = (LPDIDEVICEOBJECTDATA)(regs.esp + 0x10);
-                    if (rgdod)
-                    {
-                        switch (rgdod->dwOfs)
-                        {
-                            case offsetof(DIMOUSESTATE, lZ):
-                                nMouseWheelValue = int(std::clamp<int64_t>(int64_t(nMouseWheelValue) +
-                                    int32_t(rgdod->dwData), -120 * WHEEL_DELTA, 120 * WHEEL_DELTA));
-                                break;
-                            default:
-                                break;
-                        }
-                    }
-                }
-            }
-        }; injector::MakeInline<GetDeviceDataHook>(pattern.get_first(0), pattern.get_first(6));
-
         pattern = hook::pattern("0F BF 54 24 08 ? ? ? ? 03");
         if (pattern.empty()) pattern = hook::pattern("0F BF 54 24 ? E9");
         struct MouseScroll
@@ -394,30 +383,29 @@ void Init()
             {
                 *(int32_t*)&regs.edx = *(int16_t*)(regs.esp + 0x8);
 
+                auto& wheel = OptionManager::WeaponWheel;
+                auto pending = wheel.load(std::memory_order_relaxed);
+                if (pending > -WHEEL_DELTA && pending < WHEEL_DELTA)
+                    return;
+                constexpr int previousWeapon = 9;
+                constexpr int nextWeapon = 10;
+                const int action = *reinterpret_cast<const int*>(regs.esp + 4);
+                if (action != (pending > 0 ? previousWeapon : nextWeapon))
+                    return;
                 if (ScarfaceOverlayInput::BlocksInput() || !hWndInput.is_initialized() || !hWndInput.get() ||
-                    GetForegroundWindow() != hWndInput.get() || OptionManager::bGamepadUsed || OptionManager::ScarfaceHook_GetMenuActive())
+                    GetForegroundWindow() != hWndInput.get() || OptionManager::ScarfaceHook_GetMenuActive())
                 {
-                    nMouseWheelValue = 0;
+                    wheel.store(0, std::memory_order_relaxed);
                     return;
                 }
 
-                enum
-                {
-                    weaponleft = 0x9,
-                    weaponright = 0xA
-                };
-
-                // Consume each physical detent once. Mouse motion events must not erase queued wheel input.
-                if (nMouseWheelValue >= WHEEL_DELTA)
-                {
-                    *reinterpret_cast<int16_t*>(regs.ecx + weaponleft * 2) = 1;
-                    nMouseWheelValue -= WHEEL_DELTA;
-                }
-                else if (nMouseWheelValue <= -WHEEL_DELTA)
-                {
-                    *reinterpret_cast<int16_t*>(regs.ecx + weaponright * 2) = 1;
-                    nMouseWheelValue += WHEEL_DELTA;
-                }
+                // The native mapper writes this action later in the update. Give it a pressed input for just this
+                // action and let the next update release it before sending another detent in the same direction.
+                if (reinterpret_cast<const int16_t*>(regs.ecx)[action] == 1)
+                    return;
+                const int remaining = pending + (pending > 0 ? -WHEEL_DELTA : WHEEL_DELTA);
+                if (wheel.compare_exchange_strong(pending, remaining, std::memory_order_relaxed))
+                    regs.edx = 2; // Native input state 2 maps to action state 1 (pressed).
             }
         }; injector::MakeInline<MouseScroll>(pattern.get_first(0));
     }

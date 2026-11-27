@@ -8,6 +8,7 @@ module;
 export module PostFX;
 
 import PostFXCore;
+import ComVars;
 import ShaderDump;
 import CharacterBlood;
 import SkinRendering;
@@ -15,6 +16,15 @@ import ControllerPrompts;
 
 IDirect3DDevice9* pDevice = nullptr;
 std::atomic<bool> smaaEnabled{ true }, consoleGammaEnabled{ false };
+SafetyHookInline oceanReflectionHook;
+
+void __fastcall DrawOceanReflection(void* reflection, void*, void (*draw)())
+{
+    // The device can lose the reflection targets while the ocean renderer still exists.
+    if (Game::Field<IDirect3DTexture9*>(reflection, 0x0C) &&
+        Game::Field<IDirect3DSurface9*>(reflection, 0x14))
+        oceanReflectionHook.unsafe_fastcall<void>(reflection, nullptr, draw);
+}
 
 injector::hook_back<void(*)()> hb_sub_654B20;
 void sub_654B20()
@@ -54,6 +64,9 @@ public:
             ShaderDump::Initialize();
             CharacterBlood::Initialize();
             ControllerPrompts::Initialize();
+
+            auto reflection = hook::pattern("83 EC 3C 55 8B 6C 24 44 85 ED 57 8B F9 0F 84 ? ? ? ? 8B 47 0C 8B 08 53 56 8D 5F 10");
+            oceanReflectionHook = safetyhook::create_inline(reflection.get_first(), DrawOceanReflection);
 
             auto draw = hook::pattern("E8 ? ? ? ? 8B 4C 24 ? 8B 54 24 ? ? ? 83 C4");
             auto reset = hook::pattern("8B 46 ? ? ? 50 FF 51 ? 3D");
@@ -104,6 +117,7 @@ public:
 
         WFP::onShutdownEvent() += []()
         {
+            oceanReflectionHook.reset();
             SkinRendering::Shutdown();
             ControllerPrompts::Shutdown();
             ShaderDump::Shutdown();

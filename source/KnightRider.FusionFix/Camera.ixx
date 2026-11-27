@@ -11,11 +11,13 @@ import Window;
 
 export namespace KnightRiderCamera
 {
+    inline constexpr float NativeAspect = 4.0f / 3.0f;
     inline float NativeFOV = 53.0f;
     inline bool Cinematic = false;
     inline thread_local bool DrawingMain = false;
     inline thread_local void* Caller = nullptr;
     inline thread_local void* CallerNext = nullptr;
+    inline std::array<void*, 2> SubtitleStripCallers{};
     inline std::atomic<int> Borders{ 3 };
     inline std::atomic<float> FOVFactor{ 1.0f };
     inline SafetyHookMid AnimationHook, StaticHook;
@@ -26,6 +28,19 @@ export namespace KnightRiderCamera
     {
         Cinematic = false;
         KnightRiderHud::CockpitActive = false;
+    }
+
+    inline bool UseCinematicViewport(float aspect)
+    {
+        if (!Cinematic || aspect == NativeAspect)
+            return false;
+        const int border = aspect > NativeAspect ? 2 : 1;
+        return (Borders.load(std::memory_order_relaxed) & border) != 0;
+    }
+
+    inline bool IsSubtitleStripCall(void* caller)
+    {
+        return caller && (caller == SubtitleStripCallers[0] || caller == SubtitleStripCallers[1]);
     }
 
     inline void ClearBorders(uint8_t* camera, int marginX, int marginY)
@@ -73,15 +88,16 @@ export namespace KnightRiderCamera
         const auto returnAddress = reinterpret_cast<void**>(_AddressOfReturnAddress());
         Caller = returnAddress[0];
         CallerNext = returnAddress[1];
+        if (Cinematic && IsSubtitleStripCall(Caller) && !(Borders.load(std::memory_order_relaxed) & 1))
+            return;
         DrawingMain = Wrapper.is_initialized() && Wrapper.get() && *reinterpret_cast<uint8_t**>(Wrapper.get() + 8) == camera;
         if (!DrawingMain)
             return DrawHook.thiscall<void>(camera);
         const float aspect = static_cast<float>(KnightRiderWindow::Width) / KnightRiderWindow::Height;
-        const float nativeAspect = 4.0f / 3.0f;
-        const bool preserve = Cinematic && (Borders.load(std::memory_order_relaxed) & (aspect > nativeAspect ? 2 : 1)) != 0;
+        const bool preserve = UseCinematicViewport(aspect);
         const float factor = Cinematic ? 1.0f : FOVFactor.load(std::memory_order_relaxed);
-        const float halfHeight = std::tan(std::min(NativeFOV * factor, 170.0f) * 0.0087266462f) / nativeAspect;
-        const float projectionAspect = preserve ? nativeAspect : aspect;
+        const float halfHeight = std::tan(std::min(NativeFOV * factor, 170.0f) * 0.0087266462f) / NativeAspect;
+        const float projectionAspect = preserve ? NativeAspect : aspect;
         auto frustum = reinterpret_cast<float*>(camera + 340);
         frustum[0] = -halfHeight * projectionAspect;
         frustum[1] = halfHeight * projectionAspect;
@@ -95,16 +111,16 @@ export namespace KnightRiderCamera
         viewport[3] = 0.0f;
         if (preserve)
         {
-            if (aspect > nativeAspect)
+            if (aspect > NativeAspect)
             {
-                const float margin = std::round((KnightRiderWindow::Width - KnightRiderWindow::Height * nativeAspect) * 0.5f);
+                const float margin = std::round((KnightRiderWindow::Width - KnightRiderWindow::Height * NativeAspect) * 0.5f);
                 viewport[0] = margin / KnightRiderWindow::Width;
                 viewport[1] = 1.0f - viewport[0];
                 ClearBorders(camera, static_cast<int>(margin), 0);
             }
             else
             {
-                const float margin = std::round((KnightRiderWindow::Height - KnightRiderWindow::Width / nativeAspect) * 0.5f);
+                const float margin = std::round((KnightRiderWindow::Height - KnightRiderWindow::Width / NativeAspect) * 0.5f);
                 viewport[3] = margin / KnightRiderWindow::Height;
                 viewport[2] = 1.0f - viewport[3];
                 ClearBorders(camera, 0, static_cast<int>(margin));

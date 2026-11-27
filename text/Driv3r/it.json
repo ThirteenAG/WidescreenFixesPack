@@ -91,7 +91,7 @@
   "menu.restartwarning": "Riavvio richiesto",
   "menu.presethelp": "Scegli un profilo e conferma due volte per applicarlo a questo plugin.",
   "MAIN.WindowMode": "Modalità finestra",
-  "MAIN.WindowMode.description": "Schermo intero, finestra centrata alla risoluzione scelta o senza bordi alla risoluzione del monitor. Riavvio richiesto. Alt+Invio alterna schermo intero e l’ultima modalità finestra.",
+  "MAIN.WindowMode.description": "Schermo intero, finestra ridimensionabile che si apre centrata alla risoluzione scelta o senza bordi alla risoluzione del monitor. Riavvio richiesto. Alt+Invio alterna schermo intero e l’ultima modalità finestra.",
   "MAIN.WindowMode.0": "Schermo intero",
   "MAIN.WindowMode.1": "Finestra",
   "MAIN.WindowMode.2": "Senza bordi",

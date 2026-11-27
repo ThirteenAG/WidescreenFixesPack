@@ -52,7 +52,6 @@ export namespace CoCFrame
     inline void Pace()
     {
         static LONGLONG next = 0, frequency = 0;
-        static HANDLE timer = CreateWaitableTimerExW(nullptr, nullptr, CREATE_WAITABLE_TIMER_HIGH_RESOLUTION, TIMER_ALL_ACCESS);
         static HMONITOR previous = nullptr;
         static ULONGLONG lastCheck = 0;
         static int refresh = 60;
@@ -100,6 +99,7 @@ export namespace CoCFrame
         const double seconds = double(next - now.QuadPart) / double(frequency);
         if (seconds > SpinTime)
         {
+            static HANDLE timer = CreateWaitableTimerExW(nullptr, nullptr, CREATE_WAITABLE_TIMER_HIGH_RESOLUTION, TIMER_ALL_ACCESS);
             LARGE_INTEGER due;
             due.QuadPart = -static_cast<LONGLONG>((seconds - SpinTime) * 10000000.0);
             if (timer && SetWaitableTimer(timer, &due, 0, nullptr, nullptr, FALSE))

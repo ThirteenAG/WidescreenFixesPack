@@ -213,7 +213,9 @@ public:
         WFP::onInitEvent() += []()
         {
 
-            static bool bTurnIndicators = FixSettings().Bool("TURNINDICATORS.TurnIndicators");
+            if (!FixSettings().Bool("TURNINDICATORS.TurnIndicators"))
+                return;
+
             static bool bManualTurnIndicators = FixSettings().Bool("TURNINDICATORS.ManualTurnIndicators");
             static uint32_t nLeftIndicatorKey = FixSettings().Int("TURNINDICATORS.LeftIndicatorKey");
             static uint32_t nRightIndicatorKey = FixSettings().Int("TURNINDICATORS.RightIndicatorKey");
@@ -302,12 +304,6 @@ public:
 
                     bool is_player_vehicle = (veh == PlayerCar);
                     bool player_in_vehicle = is_player_vehicle && player_fully_in_vehicle;
-
-                    // Skip processing if feature is disabled and no active blinkers
-                    if (!bTurnIndicators && state.current_blinker == 0 && !state.manual_hazard)
-                    {
-                        continue;
-                    }
 
                     // Get vehicle structure (we already have it for player vehicle)
                     auto vehicleStruct = (is_player_vehicle) ? pVehicleStruct : nullptr;

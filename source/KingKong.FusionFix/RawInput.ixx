@@ -133,6 +133,8 @@ public:
     {
         WFP::onInitEvent() += []()
         {
+            MessagePumpGuard::Install(GetModuleHandleW(nullptr));
+
             const bool rawInput = FixSettings().Get("MAIN.RawInputMouse") == "1";
             const auto updateMouseSensitivity = [rawInput]()
             {
@@ -171,6 +173,9 @@ public:
             FixSettings().OnChange("MAIN.PauseOnFocusLoss", updatePause);
             updatePause();
 
+            auto settings = hook::pattern("8B 0D ? ? ? ? 8B 91 ? ? ? ? 89 95 ? ? ? ? 8B 85 ? ? ? ? 83 E8 06");
+            pSettings.SetAddress(*settings.get_first<uintptr_t*>(2));
+
             auto pattern = hook::pattern("8B 55 ? 8B 82 ? ? ? ? 89 45 ? D9 45 ? D8 1D ? ? ? ? DF E0 F6 C4 41 75 ? C7 45 ? ? ? ? ? EB 1F D9 45 ? D8 1D ? ? ? ? DF E0 F6 C4 05 7A ? C7 45 ? ? ? ? ? EB 06 8B 4D ? 89 4D ? 8B 55 ? 8B 45 ? 89 82 ? ? ? ? 8B 4D");
             static auto MouseCursorHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
             {
@@ -195,9 +200,6 @@ public:
 
                 pattern = hook::pattern("C7 05 ? ? ? ? ? ? ? ? C3 D8 15 ? ? ? ? DF E0 F6 C4 41 75 ? DD D8 C7 05");
                 aMouseY.SetAddress(*pattern.get_first<float*>(2));
-
-                pattern = hook::pattern("8B 0D ? ? ? ? 8B 91 ? ? ? ? 89 95 ? ? ? ? 8B 85 ? ? ? ? 83 E8 06");
-                pSettings.SetAddress(*pattern.get_first<uintptr_t*>(2));
 
                 pattern = hook::pattern("55 8B EC B8 ? ? ? ? E8 ? ? ? ? A1 ? ? ? ? 8B 48 ? 89 8D ? ? ? ? 8B 15 ? ? ? ? 89 95 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? DF E0");
                 shsub_45B1B0 = safetyhook::create_inline(pattern.get_first(), sub_45B1B0);

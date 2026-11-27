@@ -19,11 +19,14 @@ export namespace NeoHud
     inline SafetyHookInline RootHook;
     inline std::atomic<float> Constraint{ 0.0f };
     inline std::atomic<bool> FillMovies{ true };
+    inline std::atomic<bool> OptionsSubpageVisible{ false };
     struct HudRoot
     {
         int anchor{};
         bool gameplay{};
         bool fade{};
+        bool options{};
+        bool hideOptionFocus{};
     };
     inline thread_local HudRoot Root;
     inline void (*BeforeRoot)(void*) = nullptr;
@@ -42,7 +45,8 @@ export namespace NeoHud
         return { left ? -1 : right ? 1 : 0,
             left || right || Contains(name, "prompts") || Contains(name, "interact") || Contains(name, "objectives") ||
                 Contains(name, "reticle") || Contains(name, "countdown") || Contains(name, "Rescue"),
-            Contains(name, "FadeToBlack") };
+            Contains(name, "FadeToBlack"),
+            Contains(name, "gm_options_PC.lou") };
     }
 
     inline int __cdecl DrawRoot(void* root)
@@ -87,11 +91,17 @@ export namespace NeoHud
         if (!a1 || !a2 || !a3 || !a4 || !material || Screen.fAspectRatio <= 0.0f)
             return DrawHook.fun(a1, a2, a3, a4, red, green, blue, alpha, material, depth, rotation, flags);
         const auto name = static_cast<const char*>(material) + 4;
+        if (Root.hideOptionFocus && (Contains(name, "hud_focus_icon4") || Contains(name, "hud_focus_glow")))
+            return;
         std::array<float, 2> first{}, last{}, uvFirst{}, uvLast{};
         std::memcpy(first.data(), a1, sizeof(first));
         std::memcpy(last.data(), a2, sizeof(last));
         std::memcpy(uvFirst.data(), a3, sizeof(uvFirst));
         std::memcpy(uvLast.data(), a4, sizeof(uvLast));
+        if (OptionsSubpageVisible.load(std::memory_order_relaxed) && first[0] > 0.33f && last[0] < 0.43f &&
+            first[1] > 0.35f && last[1] < 0.79f && (Contains(name, "hud_line_horizontal") ||
+                Contains(name, "hud_line_vertical") || Contains(name, "hud_fill_box")))
+            return;
         const bool full = first[0] <= 0.001f && last[0] >= 0.999f && first[1] <= 0.001f && last[1] >= 0.999f;
         if (MovieFrame(name, first, last))
         {

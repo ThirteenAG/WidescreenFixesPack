@@ -2,6 +2,7 @@
   "plugin.name": "Sniper Elite Fusion Fix",
   "page.display": "Anzeige",
   "page.advanced": "Erweitert",
+  "page.compatibility": "Kompatibilität",
   "ResX": "Auflösungsbreite",
   "ResX.description": "Breite des Bildschirms in Pixeln. 0 nimmt die Desktop-Auflösung.",
   "ResY": "Auflösungshöhe",

@@ -11,13 +11,16 @@ import FloatingPoint;
 
 export namespace PsiOpsWindow
 {
-    inline SafetyHookInline createWindowHook, createD3DHook, createDeviceHook, resetHook, presentHook;
+    inline SafetyHookInline createWindowHook;
+    inline SafetyHookMid createSoftwareDeviceHook, createHardwareDeviceHook, resetHook, presentHook, moviePresentHook;
     inline HWND window = nullptr;
     inline int width = 640, height = 480;
     inline WNDPROC originalProc = nullptr;
     inline IDirect3DDevice9* device = nullptr;
     inline DWORD renderThread = 0;
     inline int appliedMode = 0;
+    inline std::atomic<bool> confineCursor{ true };
+    inline std::atomic<int> fpsLimit{ 60 };
     inline thread_local bool placing = false;
     inline thread_local bool repairingSize = false;
     inline thread_local bool presenting = false;
@@ -133,7 +136,6 @@ export namespace PsiOpsWindow
         }
         if (id == WM_NCDESTROY)
         {
-            CursorConfinement::Detach();
             const auto native = originalProc;
             window = nullptr;
             originalProc = nullptr;
@@ -149,7 +151,6 @@ export namespace PsiOpsWindow
         window = target;
         originalProc = reinterpret_cast<WNDPROC>(SetWindowLongPtrW(target, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(Procedure)));
         Corners(target);
-        CursorConfinement::Attach(target);
     }
 
     inline RECT Placement(HWND target, int mode, int clientWidth, int clientHeight, DWORD style, DWORD extended)
@@ -244,7 +245,7 @@ export namespace PsiOpsWindow
                 beforeReset();
             Parameters(*parameters, window);
         }
-        const auto result = resetHook.unsafe_stdcall<HRESULT>(target, parameters);
+        const auto result = target->Reset(parameters);
         if (SUCCEEDED(result) && target == device && parameters)
             Size(*parameters);
         return result;
@@ -262,9 +263,22 @@ export namespace PsiOpsWindow
             PsiOps::FloatingPointScope floatingPoint;
             MSG pending{};
             PeekMessageW(&pending, window, WM_NULL, WM_NULL, PM_NOREMOVE);
-            CursorConfinement::SetEnabled(FixSettings().Bool("MAIN.ConfineCursor") && (!blocksInput || !blocksInput()));
-            CursorConfinement::Update(window);
-            const int cursorState = (cursorVisible || (blocksInput && blocksInput())) ? 1 : 0;
+            static std::once_flag gameInit;
+            std::call_once(gameInit, []()
+            {
+                WFP::onGameInitEvent().executeAll();
+            });
+            WFP::onGameProcessEvent().executeAll();
+            if (frame)
+                frame(target);
+
+            const bool blocked = blocksInput && blocksInput();
+            const bool confine = confineCursor.load(std::memory_order_relaxed) && !blocked;
+            if (confine != CursorConfinement::Enabled)
+                CursorConfinement::SetEnabled(confine);
+            if (confine)
+                CursorConfinement::Update(window);
+            const int cursorState = (cursorVisible || blocked) ? 1 : 0;
             static int lastCursorState = -1;
             if (lastCursorState != cursorState)
             {
@@ -275,17 +289,9 @@ export namespace PsiOpsWindow
                     GetClientRect(window, &client) && PtInRect(&client, point))
                     PostMessageW(window, WM_SETCURSOR, reinterpret_cast<WPARAM>(window), MAKELPARAM(HTCLIENT, WM_MOUSEMOVE));
             }
-            static std::once_flag gameInit;
-            std::call_once(gameInit, []()
-            {
-                WFP::onGameInitEvent().executeAll();
-            });
-            WFP::onGameProcessEvent().executeAll();
-            if (frame)
-                frame(target);
-            PsiOpsFrameRate::Limit(FixSettings().Int("MAIN.FPSLimit"), window);
+            PsiOpsFrameRate::Limit(fpsLimit.load(std::memory_order_relaxed), window);
         }
-        return presentHook.unsafe_stdcall<HRESULT>(target, source, destination, overrideWindow, dirty);
+        return target->Present(source, destination, overrideWindow, dirty);
     }
 
     inline HRESULT WINAPI CreateDevice(IDirect3D9* d3d, UINT adapter, D3DDEVTYPE type, HWND focus, DWORD behavior,
@@ -294,29 +300,34 @@ export namespace PsiOpsWindow
         PlacementScope placementScope(parameters != nullptr);
         if (parameters)
             Parameters(*parameters, focus);
-        const auto result = createDeviceHook.unsafe_stdcall<HRESULT>(d3d, adapter, type, focus, behavior, parameters, output);
+        const auto result = d3d->CreateDevice(adapter, type, focus, behavior, parameters, output);
         if (SUCCEEDED(result) && output && *output)
         {
             device = *output;
             renderThread = GetCurrentThreadId();
-            const auto methods = *reinterpret_cast<void***>(device);
-            if (!resetHook)
-                resetHook = safetyhook::create_inline(methods[16], Reset);
-            if (!presentHook)
-                presentHook = safetyhook::create_inline(methods[17], Present);
             if (parameters)
                 Size(*parameters);
         }
         return result;
     }
 
-    inline IDirect3D9* WINAPI CreateD3D(UINT version)
+    struct FactoryCalls
     {
-        const auto d3d = createD3DHook.unsafe_stdcall<IDirect3D9*>(version);
-        if (d3d && !createDeviceHook)
-            createDeviceHook = safetyhook::create_inline((*reinterpret_cast<void***>(d3d))[16], CreateDevice);
-        return d3d;
-    }
+        void* preceding[16]{};
+        decltype(&CreateDevice) createDevice{ CreateDevice };
+    };
+
+    struct DeviceCalls
+    {
+        void* preceding[16]{};
+        decltype(&Reset) reset{ Reset };
+        decltype(&Present) present{ Present };
+    };
+
+    static_assert(offsetof(FactoryCalls, createDevice) == 0x40);
+    static_assert(offsetof(DeviceCalls, reset) == 0x40 && offsetof(DeviceCalls, present) == 0x44);
+    inline const FactoryCalls factoryCalls;
+    inline const DeviceCalls deviceCalls;
 
     inline void Init(int initialWidth, int initialHeight)
     {
@@ -325,10 +336,27 @@ export namespace PsiOpsWindow
         appliedMode = FixSettings().Int("MAIN.WindowMode");
         width = initialWidth;
         height = initialHeight;
-        CursorConfinement::SetEnabled(FixSettings().Bool("MAIN.ConfineCursor"));
+        const auto refreshCursor = []() { confineCursor = FixSettings().Bool("MAIN.ConfineCursor"); };
+        const auto refreshLimit = []() { fpsLimit = FixSettings().Int("MAIN.FPSLimit"); };
+        refreshCursor();
+        refreshLimit();
+        FixSettings().OnChange("MAIN.ConfineCursor", refreshCursor);
+        FixSettings().OnChange("MAIN.FPSLimit", refreshLimit);
+        CursorConfinement::SetEnabled(confineCursor);
         const auto user = GetModuleHandleW(L"user32.dll");
-        const auto d3d = LoadLibraryW(L"d3d9.dll");
         createWindowHook = safetyhook::create_inline(GetProcAddress(user, "CreateWindowExA"), CreateEngineWindow);
-        createD3DHook = safetyhook::create_inline(GetProcAddress(d3d, "Direct3DCreate9"), CreateD3D);
+
+        // Redirect the engine's indirect calls without changing the runtime's shared methods.
+        createSoftwareDeviceHook = safetyhook::create_mid(hook::pattern("51 FF 50 40 89 45 F0 83 7D F0 00 7D 07 B8 01 00 00 00 EB 3E").get_first(1),
+            [](SafetyHookContext& ctx) { ctx.eax = reinterpret_cast<uintptr_t>(&factoryCalls); });
+        createHardwareDeviceHook = safetyhook::create_mid(hook::pattern("52 FF 51 40 89 45 EC 83 7D EC 00 7D 07 B8 01 00 00 00 EB 02").get_first(1),
+            [](SafetyHookContext& ctx) { ctx.ecx = reinterpret_cast<uintptr_t>(&factoryCalls); });
+        resetHook = safetyhook::create_mid(hook::pattern("50 FF 52 40 85 C0 0F 8C ? ? ? ? C6 05 ? ? ? ? 01").get_first(1),
+            [](SafetyHookContext& ctx) { ctx.edx = reinterpret_cast<uintptr_t>(&deviceCalls); });
+        presentHook = safetyhook::create_mid(hook::pattern("51 FF 50 44 A3 ? ? ? ? 0F B6 15 ? ? ? ? 85 D2").get_first(1),
+            [](SafetyHookContext& ctx) { ctx.eax = reinterpret_cast<uintptr_t>(&deviceCalls); });
+        // The Sofdec player presents through its own loop and uses the same frame limiter.
+        moviePresentHook = safetyhook::create_mid(hook::pattern("6A 00 6A 00 6A 00 6A 00 8B 45 F8 8B 08 8B 55 F8 52 FF 51 44 8B E5 5D C3").get_first(17),
+            [](SafetyHookContext& ctx) { ctx.ecx = reinterpret_cast<uintptr_t>(&deviceCalls); });
     }
 }

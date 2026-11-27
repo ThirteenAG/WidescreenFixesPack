@@ -88,23 +88,15 @@
     {
       "id": "MAIN.CutsceneBorders",
       "type": "choice",
-      "default": 3,
+      "default": 2,
       "choices": [
         {
           "value": 0,
           "label": "@cutscene.off"
         },
         {
-          "value": 1,
-          "label": "@cutscene.letterbox"
-        },
-        {
           "value": 2,
           "label": "@cutscene.pillarbox"
-        },
-        {
-          "value": 3,
-          "label": "@cutscene.both"
         }
       ],
       "label": "@cutscene",
@@ -116,9 +108,9 @@
         "cycler"
       ],
       "presets": {
-        "vanilla": 1,
-        "recommended": 3,
-        "enhanced": 3
+        "vanilla": 0,
+        "recommended": 2,
+        "enhanced": 2
       }
     },
     {

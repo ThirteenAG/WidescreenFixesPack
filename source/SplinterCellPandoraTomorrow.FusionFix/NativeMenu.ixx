@@ -297,19 +297,22 @@ export namespace PTMenu
     {
         return { actualLeft(object, nullptr), actualTop(object, nullptr), actualWidth(object, nullptr), actualHeight(object, nullptr) };
     }
-    inline bool Position(void* object, Rect rect)
+    inline bool Position(void* object, Rect rect, bool parentRelative = false)
     {
-        bool no = false;
         if (!std::isfinite(rect.x) || !std::isfinite(rect.y) || !std::isfinite(rect.w) || !std::isfinite(rect.h) || rect.w <= 0 || rect.h <= 0 ||
             !Property(object, L"bBoundToParent", L"BoolProperty", 4) || !Property(object, L"bScaleToParent", L"BoolProperty", 4)) return false;
         for (auto name : { L"WinLeft", L"WinTop", L"WinWidth", L"WinHeight" })
             if (!Property(object, name, L"FloatProperty", 4)) return false;
-        // Native Actual* treats values <= 1 as fractions of the 640x480 canvas.
-        auto horizontal = [](float value) { return value > 1 ? value : value / 640.0f; };
-        auto vertical = [](float value) { return value > 1 ? value : value / 480.0f; };
-        Bool(object, L"bBoundToParent", &no); Bool(object, L"bScaleToParent", &no);
-        return Set(object, L"WinLeft", L"FloatProperty", horizontal(rect.x)) && Set(object, L"WinTop", L"FloatProperty", vertical(rect.y)) &&
-            Set(object, L"WinWidth", L"FloatProperty", horizontal(rect.w)) && Set(object, L"WinHeight", L"FloatProperty", vertical(rect.h));
+        if (!parentRelative)
+        {
+            // Native Actual* treats values <= 1 as fractions of the 640x480 canvas.
+            auto horizontal = [](float value) { return value > 1 ? value : value / 640.0f; };
+            auto vertical = [](float value) { return value > 1 ? value : value / 480.0f; };
+            rect = { horizontal(rect.x), vertical(rect.y), horizontal(rect.w), vertical(rect.h) };
+        }
+        Bool(object, L"bBoundToParent", &parentRelative); Bool(object, L"bScaleToParent", &parentRelative);
+        return Set(object, L"WinLeft", L"FloatProperty", rect.x) && Set(object, L"WinTop", L"FloatProperty", rect.y) &&
+            Set(object, L"WinWidth", L"FloatProperty", rect.w) && Set(object, L"WinHeight", L"FloatProperty", rect.h);
     }
     struct Placement
     {
@@ -332,7 +335,7 @@ export namespace PTMenu
         auto bound = saved.bound, scale = saved.scale;
         Bool(saved.object, L"bBoundToParent", &bound); Bool(saved.object, L"bScaleToParent", &scale);
     }
-    inline bool PlanTabs(Rect strip, const std::array<Rect, 3>& tabs, Rect& expanded, std::array<Rect, 3>& placed, Rect& entry)
+    inline bool PlanTabs(Rect strip, const std::array<Rect, 3>& tabs, std::array<Rect, 3>& placed, Rect& entry)
     {
         auto finite = [](Rect rect) { return std::isfinite(rect.x) && std::isfinite(rect.y) && std::isfinite(rect.w) && std::isfinite(rect.h); };
         if (!finite(strip) || strip.x < 0 || strip.y < 0 || strip.x + strip.w > 640 || strip.y + strip.h > 480 || strip.h < 12 || strip.h > 48) return false;
@@ -346,10 +349,10 @@ export namespace PTMenu
             if (!finite(rect) || std::abs(rect.w - width) > 1 || std::abs(rect.h - strip.h) > 1 ||
                 std::abs(rect.y - strip.y) > 1 || std::abs(rect.x - (strip.x + float(i) * width)) > 1) return false;
         }
-        expanded = strip;
-        width = strip.w / 4.0f;
-        for (size_t i = 0; i < order.size(); ++i) placed[order[i]] = { expanded.x + float(i) * width, strip.y, width, strip.h };
-        entry = { expanded.x + width * 3, strip.y, width, strip.h };
+        // Keep the native strip attached to its owner. All four buttons follow its position and size.
+        constexpr float quarter = 0.25f;
+        for (size_t i = 0; i < order.size(); ++i) placed[order[i]] = { float(i) * quarter, 0, quarter, 1 };
+        entry = { 3 * quarter, 0, quarter, 1 };
         return true;
     }
     inline std::wstring ReadString(void* object, const wchar_t* name)
@@ -963,7 +966,9 @@ export namespace PTMenu
         std::vector<void*> parentControls, tabs;
         if (!ArrayValues(parent, parentControls) || !ArrayValues(tabBox, tabs) ||
             std::find(tabs.begin(), tabs.end(), controls) == tabs.end() || std::find(tabs.begin(), tabs.end(), video) == tabs.end() ||
-            std::find(tabs.begin(), tabs.end(), sound) == tabs.end() || !Call(controls, L"InitComponent").function || !Call(controls, L"SetFocus").function)
+            std::find(tabs.begin(), tabs.end(), sound) == tabs.end() || Object(controls, L"MenuOwner") != tabBox ||
+            Object(video, L"MenuOwner") != tabBox || Object(sound, L"MenuOwner") != tabBox ||
+            !Call(controls, L"InitComponent").function || !Call(controls, L"SetFocus").function)
         { LogOnce("prepare", parent, "native controls/tab ownership contract unavailable"); return false; }
         auto first = Bounds(controls), last = Bounds(sound), body = Bounds(area);
         auto finite = [](Rect rect) { return std::isfinite(rect.x) && std::isfinite(rect.y) && std::isfinite(rect.w) && std::isfinite(rect.h); };
@@ -986,13 +991,13 @@ export namespace PTMenu
         host.pageRows = size_t(std::clamp(int((body.h - 50) / 22) - 1, 3, 8));
         if (50 + float(host.pageRows + 1) * 22 > body.h)
         { LogOnce("prepare", parent, "native body too short for bounded rows and help"); return false; }
-        Rect expandedStrip{}, entryRect{};
+        Rect entryRect{};
         std::array<Rect, 3> placedTabs{};
         std::array<Rect, 3> originalTabs{ host.stockTabs[0].second, host.stockTabs[1].second, host.stockTabs[2].second };
         // Keep the native strip inside its frame and share it between four tabs.
-        if (!PlanTabs(Bounds(tabBox), originalTabs, expandedStrip, placedTabs, entryRect))
+        if (!PlanTabs(Bounds(tabBox), originalTabs, placedTabs, entryRect))
         { LogOnce("prepare", parent, "native tab strip cannot fit four tabs"); return false; }
-        for (auto object : { tabBox, controls, video, sound })
+        for (auto object : { controls, video, sound })
         {
             Placement saved;
             if (!SavePlacement(object, saved)) return false;
@@ -1055,7 +1060,7 @@ export namespace PTMenu
             if (complete) { bool no = false; Bool(value, L"bTabStop", &no); host.labels.push_back(label); host.values.push_back(value); }
         }
         if (complete)
-            host.entry = create(tabClass, tabBox, entryRect, true, 1);
+            host.entry = create(tabClass, tabBox, host.stockTabs.back().second, true, 1);
         if (host.retired) return false;
         if (complete && !host.entry) LogOnce("prepare", parent, "native Plugins tab construction failed");
         complete = complete && host.entry && StringValue(host.entry, L"Caption", RWGTAMenu::PluginText(FixSettings(), Language(), "menu.plugins"), true);
@@ -1064,9 +1069,11 @@ export namespace PTMenu
             if (!host.retired) LogOnce("prepare", parent, "native row/tab creation failed");
             return false;
         }
-        bool positioned = Position(tabBox, expandedStrip);
-        for (size_t i = 0; positioned && i < host.stockTabs.size(); ++i) positioned = Position(host.stockTabs[i].first, placedTabs[i]);
-        if (!positioned) { LogOnce("prepare", parent, "native tab placement failed"); return false; }
+        for (size_t i = 0; i < host.stockTabs.size(); ++i)
+            if (!Position(host.stockTabs[i].first, placedTabs[i], true))
+            { LogOnce("prepare", parent, "native tab placement failed"); return false; }
+        if (Object(host.entry, L"MenuOwner") != tabBox || !Position(host.entry, entryRect, true))
+        { LogOnce("prepare", parent, "native Plugins tab placement failed"); return false; }
         Visible(host.entry, true);
         host.building = false; cleanup.committed = true;
         return true;

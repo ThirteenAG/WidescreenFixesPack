@@ -15,8 +15,8 @@
 - **Resolution list** — Every display mode of the monitor; screens narrower than 16:9 get a 16:9 picture.
 - **Display recovery** — If Direct3D temporarily loses the device during a display change, the game retries the reset once the device is ready.
 - **Ultrawide** — The game renders at the screen's own aspect with the same vertical view (Hor+). Menus and other 2D screens keep their 16:9 shape in the middle of the screen.
-- **HUD** — The player panel, objective, timer and messages stay where the game puts them; the minimap and the equipment panels sit at the screen's right edge. Markers on items, enemies and partners stay on their targets. Fades and damage overlays cover the whole screen.
-- **Cutscenes** — On screens wider than 16:9 cutscenes keep their original 16:9 framing with black bars at the sides (can be turned off).
+- **HUD** — Item pickup notices follow the left edge of the HUD box. Equipment, objectives and the minimap follow its right edge. Markers on items, enemies and partners stay on their targets. Fades and damage overlays cover the whole screen.
+- **Cutscenes** — On screens wider than 16:9 in-engine cutscenes keep their original 16:9 framing with black bars at the sides (can be turned off).
 - **Movies** — Shown whole at their own 16:9 shape, with black bars where the screen is wider or narrower; nothing is cut off or stretched.
 - **Local co-op** — Each player gets half of the screen, top and bottom or side by side.
 - **Film grain** — Keeps its size at high resolutions.
@@ -32,7 +32,7 @@ Open **Options → Plugins → Resident Evil Revelations 2 Fusion Fix** (the las
 |---|---|---|
 | Field of view | 0.5–2.0 for the ordinary third-person camera; aiming, scripted views and cutscenes keep theirs; live | 1.0 |
 | Controller icons | Auto (Xbox), Xbox, PlayStation or Nintendo button symbols; live | Auto |
-| Cutscene borders | Off, Letterbox (the game's cinematic bars), Pillarbox (16:9 framing on wider screens) or Both; live | Both |
+| Cutscene borders | Off or Pillarbox (16:9 framing on wider screens); live | Pillarbox |
 | HUD aspect ratio | Auto for the whole screen width, or 4:3, 16:9, 21:9, 32:9 or another ratio for a centered box; live | Auto |
 | Frame rate limit | Unlimited, the game window's monitor refresh rate, or 1–1000 FPS for the game's VARIABLE option. Applies live. | 120 FPS |
 | Window mode | Windowed or Borderless when the game's own Full Screen option is off; restart | Borderless |
@@ -48,7 +48,7 @@ Open **Options → Plugins → Resident Evil Revelations 2 Fusion Fix** (the las
 | Logitech RGB lighting | Shows both players' health on supported Logitech keyboards; restart | On |
 | Check for updates | Off makes no network request; live | Off |
 
-Vanilla shows the logos, startup notices and title prompt and keeps only the original cinematic bars; Recommended skips the startup screens and adds the cutscene side bars. Texts are available in English, French, German, Italian and Spanish.
+Vanilla shows the logos, startup notices and title prompt and cutscenes without side bars; Recommended skips the startup screens and adds the cutscene side bars. Texts are available in English, French, German, Italian and Spanish.
 
 With **Check for updates** on, the Plugins list shows a notice when a newer version is available; FusionFixHub opens after the game exits when it is installed in the game folder.
 

@@ -2,6 +2,7 @@ module;
 #include <stdafx.h>
 #include <d3d9.h>
 #include "FixSettings.hpp"
+#include <algorithm>
 #include <array>
 
 export module Movies;
@@ -13,6 +14,7 @@ import FloatingPoint;
 export namespace PsiOpsMovies
 {
     inline SafetyHookInline geometryHook;
+    inline SafetyHookMid textureSizeHook;
 
     inline uintptr_t __cdecl Geometry(uint8_t* vertices, int decodedWidth, int decodedHeight)
     {
@@ -43,6 +45,20 @@ export namespace PsiOpsMovies
         auto clear = hook::pattern("6A 00 68 00 00 80 3F 68 FF 00 00 FF 6A 07 6A 00 6A 00");
         geometryHook = safetyhook::create_inline(geometry.get_first(), Geometry);
         injector::WriteMemory<uint32_t>(clear.get_first<uint32_t>(8), D3DCOLOR_XRGB(0, 0, 0), true);
+
+        auto textureSize = hook::pattern("66 89 0D ? ? ? ? 8B 55 08 66 8B 82 CC 02 00 00 66 A3 ? ? ? ? 8B 4D 08 66 8B 91 CA 02 00 00 66 89 15 ? ? ? ? 8B 45 08 66 8B 88 C8 02 00 00 66 89 0D ? ? ? ? C7 45 FC 00 00 00 00");
+        static const auto uvHeight = injector::ReadMemory<uint16_t*>(textureSize.get_first(3));
+        static const auto uvWidth = injector::ReadMemory<uint16_t*>(textureSize.get_first(19));
+        static const auto textureHeight = injector::ReadMemory<uint16_t*>(textureSize.get_first(36));
+        static const auto textureWidth = injector::ReadMemory<uint16_t*>(textureSize.get_first(53));
+        textureSizeHook = safetyhook::create_mid(textureSize.get_first(57),
+            [](SafetyHookContext&)
+            {
+                // The bundled movies decode up to 640x480 even with a smaller backbuffer.
+                // Keep the texture allocation and the UV denominator in sync.
+                *uvWidth = *textureWidth = std::max<uint16_t>(*textureWidth, 640);
+                *uvHeight = *textureHeight = std::max<uint16_t>(*textureHeight, 480);
+            });
     }
 }
 

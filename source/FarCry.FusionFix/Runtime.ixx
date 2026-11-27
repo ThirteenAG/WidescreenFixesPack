@@ -213,11 +213,21 @@ export namespace FarCryRuntime
         auto limit = FarCryLive::Read().fps;
         if (limit == -1)
         {
-            const auto monitor = FarCryWindow::Monitor(FarCryWindow::CurrentMonitor());
-            DEVMODEW mode{};
-            mode.dmSize = sizeof(mode);
-            limit = EnumDisplaySettingsW(monitor.szDevice, ENUM_CURRENT_SETTINGS, &mode) &&
-                mode.dmDisplayFrequency > 1 ? int(mode.dmDisplayFrequency) : 60;
+            static HMONITOR previousMonitor = nullptr;
+            static ULONGLONG nextRefresh = 0;
+            static int refreshRate = 60;
+            const auto currentMonitor = FarCryWindow::CurrentMonitor();
+            const auto now = GetTickCount64();
+            if (currentMonitor != previousMonitor || now >= nextRefresh)
+            {
+                previousMonitor = currentMonitor;
+                nextRefresh = now + 2000;
+                const auto monitor = FarCryWindow::Monitor(currentMonitor);
+                DEVMODEW mode{ .dmSize = sizeof(DEVMODEW) };
+                refreshRate = EnumDisplaySettingsW(monitor.szDevice, ENUM_CURRENT_SETTINGS, &mode) &&
+                    mode.dmDisplayFrequency > 1 ? int(mode.dmDisplayFrequency) : 60;
+            }
+            limit = refreshRate;
         }
         else if (limit != 0)
             limit = std::clamp(limit, 30, 1000);
@@ -247,7 +257,10 @@ export namespace FarCryRuntime
     inline void Init()
     {
         D3D9Options::frame = Frame;
-        D3D9Options::limitDevice = [](IDirect3DDevice9* device) { return device == Device.load(); };
+        D3D9Options::limitDevice = [](IDirect3DDevice9* device)
+        {
+            return device == Device.load() && D3D9Options::frameLimit > 0;
+        };
         FarCryWindow::OnFrame = Bind;
         if constexpr (WFP::DeveloperOverlay)
         {

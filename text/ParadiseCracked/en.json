@@ -33,6 +33,6 @@
   "update.availablehub": "A new {name} version is available. Update it in FusionFixHub after closing the game.",
   "update.availablesite": "A new {name} version is available at {page}",
   "MAIN.TextLanguage": "Text language",
-  "MAIN.TextLanguage.description": "Language used for the fix settings in compatible editors. Auto follows the editor language.",
+  "MAIN.TextLanguage.description": "Language for the fix settings and update notices. Auto follows the editor language for settings and the Windows display language for notices.",
   "menu.auto": "Auto"
 }

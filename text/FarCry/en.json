@@ -58,7 +58,7 @@
   "SkipIntro": "Skip intro",
   "SkipIntro.description": "Skip the startup legal and publisher/engine logo movies. Story movies and the normal options/profile checks remain available.",
   "WindowMode": "Window mode",
-  "WindowMode.description": "Fullscreen, framed window or monitor-sized borderless. Changes use the native display reset at the next foreground frame. Alt+Enter switches fullscreen and the last window mode.",
+  "WindowMode.description": "Fullscreen, resizable window, or monitor-sized borderless. Drag the window frame to resize it. Alt+Enter switches between fullscreen and the last window mode.",
   "Fullscreen": "Fullscreen",
   "Windowed": "Windowed",
   "Borderless": "Borderless",

@@ -9,6 +9,8 @@ module;
 
 export module Video;
 
+import ComVars;
+
 namespace VideoGeometry
 {
     // picture: the share of the movie height that holds the picture; the rest is black bars in the file
@@ -70,10 +72,11 @@ public:
                 // The two story movies are 2.35:1 pictures with black bars in their 1280x720 frames
                 const auto path = (*reinterpret_cast<const char* (__thiscall***)(void*)>(source))[19](source);
                 const bool bars = path && (std::strstr(path, "e5110") || std::strstr(path, "e5120"));
-                const auto packed = Read<uint32_t>(texture, 32);
+                // The game stretches the intermediate movie target over the full output.
+                // Use the screen geometry, as the native movie draw does.
                 std::array<float, 16> geometry;
                 if (!VideoGeometry::Quad(geometry, Read<int>(movie, 104), Read<int>(movie, 108),
-                    packed & 65535, (packed >> 16) & 16383, videoMode.load(), bars ? 544.0f / 720.0f : 1.0f)) return;
+                    GetResX(), GetResY(), videoMode.load(), bars ? 544.0f / 720.0f : 1.0f)) return;
                 auto output = reinterpret_cast<float*>(regs.edi);
                 for (size_t i = 0; i < geometry.size(); ++i)
                     injector::WriteMemory(output + i, geometry[i], true);

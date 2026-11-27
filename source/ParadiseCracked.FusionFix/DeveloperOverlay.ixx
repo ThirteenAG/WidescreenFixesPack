@@ -22,7 +22,14 @@ export namespace ParadiseOverlay
     inline D3D7Overlay Overlay;
     inline bool HotkeyDown = false;
     inline bool InputSuspended = false;
-    inline HWND AttachedWindow = nullptr;
+    inline std::atomic<HWND> AttachedWindow{ nullptr };
+    inline GameRef<uint8_t*> Application;
+
+    inline UINT PauseSettingMessage()
+    {
+        static const auto message = RegisterWindowMessageW(L"WFP.ParadiseCracked.PauseSetting");
+        return message;
+    }
 
     inline HMODULE Module()
     {
@@ -87,6 +94,21 @@ export namespace ParadiseOverlay
         if ((message == WM_KEYDOWN || message == WM_SYSKEYDOWN || message == WM_KEYUP || message == WM_SYSKEYUP)
             && WFP::DeveloperOverlay && wParam == VK_F10)
             return 0;
+        if (const auto pause = PauseSettingMessage(); pause && message == pause)
+        {
+            if (const auto app = Application.get(); app && !app[16])
+                ParadiseDisplay::UpdateBackgroundPause(app, window);
+            return 0;
+        }
+        if (message == WM_CLOSE)
+        {
+            // Leave the window alive until the game's normal shutdown releases its renderer.
+            if (const auto app = Application.get())
+            {
+                app[16] = 1;
+                return 0;
+            }
+        }
         if (message == WM_DESTROY)
             RWGTA::UpdateCheck::OnExit();
         if (message == WM_NCDESTROY)
@@ -105,7 +127,7 @@ export namespace ParadiseOverlay
 
     inline void Attach(HWND window)
     {
-        if (window && window != AttachedWindow && SetWindowSubclass(window, Message, 0x5043, 0))
+        if (window && window != AttachedWindow.load() && SetWindowSubclass(window, Message, 0x5043, 0))
         {
             AttachedWindow = window;
             WindowCursor::Attach(window);
@@ -165,6 +187,20 @@ export namespace ParadiseOverlay
     inline void Init()
     {
         WindowCursor::Initialize(FixSettings());
+        auto app = hook::pattern("88 5E 10 88 5E 11 C7 06 ? ? ? ? E8 ? ? ? ? 89 35 ? ? ? ? E8 ? ? ? ? 8B CE");
+        Application.SetAddress(*app.get_first<uint8_t**>(19));
+        const auto readPause = []()
+        {
+            const bool enabled = FixSettings().Bool("MAIN.PauseOnFocusLoss");
+            ParadiseDisplay::PauseOnFocusLoss.store(enabled, std::memory_order_relaxed);
+            if (const auto window = AttachedWindow.load())
+            {
+                if (const auto message = PauseSettingMessage())
+                    PostMessageW(window, message, 0, 0);
+            }
+        };
+        readPause();
+        FixSettings().OnChange("MAIN.PauseOnFocusLoss", readPause);
         auto input = hook::pattern("8B 0D ? ? ? ? 8B 01 FF 50 10 8B 0D ? ? ? ? 8B 01 FF 50 10 8B 4E 08");
         MouseInput.SetAddress(*input.get_first<uint8_t**>(2));
         KeyboardInput.SetAddress(*input.get_first<uint8_t**>(13));

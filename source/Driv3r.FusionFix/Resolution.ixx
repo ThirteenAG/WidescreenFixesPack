@@ -257,6 +257,18 @@ void PublishMode(void* context)
 void __fastcall SetMode(uint8_t* _this, void* edx, int32_t width, int32_t height, int32_t index)
 {
     index = ResolveModeIndex(width, height, index);
+    // The game creates viewports inside SetMode, before it resets the device.
+    // Preserve the selected mode index, but build the viewports at the borderless client size.
+    if (Driv3rWindow::mode == 2)
+    {
+        int clientWidth = width;
+        int clientHeight = height;
+        if (Driv3rWindow::Dimensions(clientWidth, clientHeight))
+        {
+            width = clientWidth;
+            height = clientHeight;
+        }
+    }
     ChangingMode = true;
     ModeBuilt = false;
     shSetMode.unsafe_thiscall(_this, width, height, index);

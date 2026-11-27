@@ -31,11 +31,16 @@ void ResetMouseSample()
     bFirstFrame = true;
 }
 
-void Update()
+void ResetPadSample()
 {
     g_RightStick.RawX = g_RightStick.RawY = 32768;
     g_RightStick.X = g_RightStick.Y = 0.0f;
     bBothSticksClicked = false;
+}
+
+void Update()
+{
+    ResetPadSample();
     if (hWnd != GetForegroundWindow())
     {
         ResetMouseSample();
@@ -115,11 +120,23 @@ public:
 
             WFP::onGameProcessEvent() += []()
             {
-                fDeadzone = std::clamp(FixSettings().Float("GAMEPAD.RightStickDeadzone"), 0.0f, 50.0f) / 100.0f;
-                const bool useRawMouse = FixSettings().Bool("MAIN.RawInputMouse") && FixSettings().Bool("CAMERA.FreeLook");
+                static bool wasEnabled = false;
+                const bool enabled = FixSettings().Bool("CAMERA.FreeLook");
+                const bool useRawMouse = enabled && FixSettings().Bool("MAIN.RawInputMouse");
                 RawMouse::Enabled.store(useRawMouse);
                 RawMouse::Update(hWnd.get());
-                Update();
+                if (enabled)
+                {
+                    fDeadzone = std::clamp(FixSettings().Float("GAMEPAD.RightStickDeadzone"), 0.0f, 50.0f) / 100.0f;
+                    Update();
+                }
+                else if (wasEnabled)
+                {
+                    ResetPadSample();
+                    ResetMouseSample();
+                    g_Mouse.Raw = false;
+                }
+                wasEnabled = enabled;
             };
         };
     }

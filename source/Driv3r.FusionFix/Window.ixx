@@ -54,7 +54,7 @@ export namespace Driv3rWindow
             return false;
         const DWORD frameBits = WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU;
         DWORD style = DWORD(GetWindowLongW(window, GWL_STYLE)) & ~(frameBits | WS_POPUP);
-        style |= mode == 2 ? WS_POPUP : WS_CAPTION | WS_MINIMIZEBOX | WS_SYSMENU;
+        style |= mode == 2 ? WS_POPUP : WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_SYSMENU;
         SetWindowLongW(window, GWL_STYLE, LONG(style));
         SetWindowPos(window, nullptr, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
         const auto placement = WindowStyle::Place(window, width, height);
@@ -63,7 +63,7 @@ export namespace Driv3rWindow
             RECT actual{};
             if (GetWindowRect(window, &actual) && !EqualRect(&actual, &placement))
             {
-                // The fixed-size frame can be clamped to the monitor before its caption is moved off-screen.
+                // Windows can clamp the frame to the monitor when its caption lies off-screen.
                 SetWindowPos(window, nullptr, placement.left, placement.top, placement.right - placement.left,
                     placement.bottom - placement.top, SWP_NOACTIVATE | SWP_NOZORDER | SWP_NOSENDCHANGING);
             }

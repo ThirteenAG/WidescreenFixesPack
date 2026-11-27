@@ -77,7 +77,7 @@
   "menu.restoredefaultshelp": "Riporta le impostazioni di questa pagina ai valori predefiniti.",
   "menu.restartwarning": "Alcune impostazioni richiedono il riavvio del gioco.",
   "WindowMode": "Modalità finestra",
-  "WindowMode.description": "Schermo intero, finestra centrata alla risoluzione scelta o senza bordi alla risoluzione del monitor. Riavvio richiesto. Alt+Invio alterna schermo intero e l’ultima modalità finestra.",
+  "WindowMode.description": "Schermo intero, finestra ridimensionabile che si apre centrata alla risoluzione scelta o senza bordi alla risoluzione del monitor. Riavvio richiesto. Alt+Invio alterna schermo intero e l’ultima modalità finestra.",
   "WindowMode.0": "Schermo intero",
   "WindowMode.1": "Finestra",
   "WindowMode.2": "Senza bordi",

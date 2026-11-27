@@ -80,7 +80,7 @@ Installation:
 - Download and extract plugin archive to the root directory, where exe is located, keeping its `PLUGINS` folder.
 - Change the aspect ratio or window size of the emulator.
 - Launch the game.
-- Use a BIOS of the same region as the disc. The US disc stops with "Jump to unaligned address" after the logo video on a European BIOS, with or without the fix.
+- If the game reports "Jump to unaligned address" after the logo video, try a BIOS from the disc's region.
 
 ### Fixes
 
@@ -92,17 +92,18 @@ Installation:
 - **Cutscenes** — keep the original framing at any aspect ratio. Cutscene Borders chooses the bars: Off (the cutscene fills the screen), Letterbox (the original bars above and below), Pillarbox (the original 4:3 picture at full height, with bars at the sides) or Both (the original 4:3 picture with its bars, centered). The bars slide in and out like the original unless Animated Cutscene Borders is off.
 - **60 FPS** — the game runs at 60 frames per second; the one mission that needs the original speed keeps 30.
 - **Faster loading** — the emulator runs at full speed during startup and loading screens.
-- **Skip intro** — skips the logo video at startup. The memory card notice and the title screen stay.
+- **Skip intro** — skips the logo video at startup. The memory card notice stays.
+- **Skip Press Start** opens the main menu automatically at startup. Memory card prompts still wait for input.
 
 ### Settings
 
-The settings are stored in `PLUGINS/TrueCrimeNewYorkCity.PCSX2F.FusionFix.cfg`, which the fix creates on the first start. Change them in FusionFixHub or on fusionfix.io; the texts are in English, French, German, Italian and Spanish. The game's menus are built from its data files, so the fix adds no settings page inside the game. Display settings apply during play within about a second, and after loading a save state; Skip Intro, 60 FPS and Faster Loading apply the next time the emulated game starts.
+The settings are stored in `PLUGINS/TrueCrimeNewYorkCity.PCSX2F.FusionFix.cfg`, which the fix creates on the first start. Change them in FusionFixHub or on fusionfix.io. The texts are in English, French, German, Italian and Spanish. The game's menus are built from its data files, so the fix adds no settings page inside the game. Display settings apply during play within about a second and after loading a save state. Skip Intro, Skip Press Start, 60 FPS and Faster Loading apply the next time the emulated game starts.
 
-- **Presets** — Vanilla shows the logo video, keeps the original letterbox bars, 30 FPS and normal loading speed; Recommended (the default) and Enhanced skip the logo video, use Both for cutscene borders, 60 FPS and faster loading. Field of view, HUD, display aspect ratio and bar animation keep your choice.
+- **Presets** — Vanilla shows the logo video and the Press Start screen and keeps the original letterbox bars, 30 FPS and normal loading speed. Recommended and Enhanced skip the logo video and the Press Start screen, use Both for cutscene borders, and enable 60 FPS and faster loading. All three use Auto for the HUD aspect ratio by default. Switching presets in FusionFixHub keeps your field of view, display and HUD aspect ratios, and bar animation choices.
 
 ### Known limits
 
-- If the emulator window changes shape during play, the 3D view and the HUD size follow at once; the HUD elements already on screen return to their places after the pause menu is opened and closed or after the next loading screen.
+- The 3D view and HUD scale follow changes to the emulator window. HUD elements move as the game redraws them. If an element stays in its previous position, pause and resume or wait for the next scene to load.
 - On screens narrower than 4:3 the HUD and menus are fitted to the screen width.
 - Button prompts show the PlayStation 2 buttons.
 - Resolution, anti-aliasing and window modes are handled by the emulator.

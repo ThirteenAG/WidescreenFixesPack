@@ -14,6 +14,9 @@ namespace tcny::sites
     inline uintptr_t at_104C90() { return pattern.get(0, "50 FF BD 27 2D 68 C0 00 B0 00 A2 8F A0 00 B0 7F 90 00 B1 7F 2D 80 80 00", 0); }
     inline uintptr_t at_105948() { return pattern.get(0, "2D 20 40 02 2D 28 00 00 02 00 07 96 04 00 0C 96 3F 00 E2 24 2D 58 E0 00", 0); }
     inline uintptr_t at_111F08() { return pattern.get(0, "F0 FF BD 27 FF 0F 02 3C 00 00 BF FF FF FF 42 34 24 28 A2 00 00 20 03 3C 40 00 87 8C 25 28 A3 00 01 00 02 24 C4 00 E2 AC", 0); }
+    // Title menu handler and the modal-input flag read by its button message.
+    inline uintptr_t at_2587E0() { return pattern.get(0, "B0 FF BD 27 2D 40 E0 00 40 00 B0 7F 0E 00 A2 2C 30 00 B1 7F 2D 80 C0 00 20 00 B2 7F 2D 88 80 00", 0); }
+    inline uintptr_t at_258A38() { return pattern.get(0, "? ? 02 3C ? ? 43 8C 07 00 60 10 2D 20 20 02 2D 30 A0 00 2D 38 00 02 ? ? ? 0C 54 00 85 24", 0); }
     inline uintptr_t at_1FD788() { return pattern.get(0, "C0 26 05 8E ? ? ? ? BC 26 02 8E 09 F8 40 00", -8); }
     inline uintptr_t at_1FE0C4() { return pattern.get(0, "C0 26 00 AE ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? C3 01 03 92 ? ? ? ? BC 00 02 8E", -20); }
     inline uintptr_t at_4A1C60() { return pattern.get(0, "00 00 00 00 ? ? ? ? ? ? ? ? ? ? ? ? 23 10 46 00 2A 18 62 02", -12); }

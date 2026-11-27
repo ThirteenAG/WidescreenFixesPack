@@ -126,7 +126,7 @@
   "WFP_DESC_ANTIALIASING": "SMAA smooths the edges of each picture.",
   "WFP_DESC_HIDEAABUG": "Draws 1 pixel lines at the screen's edges to hide the antialiasing bug of MSAA.",
   "WFP_DESC_LANGUAGE": "The game's language. Only installed languages are offered.",
-  "WFP_DESC_RAINDROPLETS": "Size of the rain droplets on the screen. No effect with Xbox Rain Droplets installed.",
+  "WFP_DESC_RAINDROPLETS": "Size of the rain droplets on the screen. No effect with Fusion Rain Droplets installed.",
   "WFP_DESC_SUBTITLES": "Shows subtitles in the movies, in every language.",
   "WFP_WRITESETTINGS": "Settings in a File",
   "WFP_DESC_WRITESETTINGS": "Stores the game's registry settings in Settings.ini in the profile folder instead of the registry. Enter your CD key there when using this.",

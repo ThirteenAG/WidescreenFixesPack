@@ -33,6 +33,26 @@ namespace MatrixWindow
     SafetyHookInline RegisterRawMouseHook;
     SafetyHookMid MouseSampleHook;
     uint32_t MouseStateOffset = 0;
+    SafetyHookMid FrameEndHook, ResetResultHook, ResetTargetHook;
+    D3DPRESENT_PARAMETERS* NativeParameters = nullptr;
+    IDirect3DDevice9** NativeDevice = nullptr;
+    void (__cdecl* NativeReset)() = nullptr;
+    void*** LegacyMovie = nullptr;
+    void (__cdecl* ReleaseMovieTexture)(void*) = nullptr;
+    HRESULT (__cdecl* CreateMovieTexture)(void*) = nullptr;
+    uintptr_t AfterTargetRelease = 0;
+    bool Sizing = false;
+    bool Resizing = false;
+    SIZE PendingSize{};
+    D3DPRESENT_PARAMETERS PreviousParameters{};
+    HRESULT ResizeResult = D3D_OK;
+
+    void QueueSize(HWND window)
+    {
+        RECT client{};
+        if (GetClientRect(window, &client))
+            PendingSize = { client.right, client.bottom };
+    }
 
     BOOL WINAPI RegisterRawMouse(PCRAWINPUTDEVICE devices, UINT count, UINT size)
     {
@@ -97,11 +117,45 @@ namespace MatrixWindow
         {
             RemoveWindowSubclass(window, Procedure, SubclassId);
             auto current = window;
-            Window.compare_exchange_strong(current, nullptr);
+            if (Window.compare_exchange_strong(current, nullptr))
+            {
+                Sizing = false;
+                PendingSize = {};
+            }
             return DefSubclassProc(window, message, wParam, lParam);
         }
-        if (message == WM_SIZE && wParam == SIZE_MINIMIZED && window == Window.load())
-            CursorConfinement::Release();
+        if (window == Window.load())
+        {
+            if (Mode == 1 && message == WM_GETMINMAXINFO && lParam)
+            {
+                const auto result = DefSubclassProc(window, message, wParam, lParam);
+                const auto monitor = WindowStyle::MonitorRect(window);
+                const auto frame = WindowStyle::FrameOf(window);
+                auto& limits = *reinterpret_cast<MINMAXINFO*>(lParam);
+                limits.ptMaxTrackSize.x = std::max(limits.ptMaxTrackSize.x,
+                    monitor.right - monitor.left + frame.Width());
+                limits.ptMaxTrackSize.y = std::max(limits.ptMaxTrackSize.y,
+                    monitor.bottom - monitor.top + frame.Height());
+                return result;
+            }
+            if (message == WM_SIZE && wParam == SIZE_MINIMIZED)
+            {
+                PendingSize = {};
+                CursorConfinement::Release();
+            }
+            if (Mode == 1 && !Resizing)
+            {
+                if (message == WM_ENTERSIZEMOVE)
+                    Sizing = true;
+                if (message == WM_EXITSIZEMOVE)
+                {
+                    Sizing = false;
+                    QueueSize(window);
+                }
+                if (!Sizing && (message == WM_MOVE || (message == WM_SIZE && wParam != SIZE_MINIMIZED)))
+                    QueueSize(window);
+            }
+        }
         LRESULT result = 0;
         if (MatrixOverlay::Message(window, message, wParam, lParam, result))
             return result;
@@ -142,7 +196,8 @@ namespace MatrixWindow
     {
         if (width <= 0 || height <= 0 || IsIconic(window))
             return;
-        const DWORD style = Mode == 2 ? WS_POPUP : WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
+        const DWORD style = Mode == 2 ? WS_POPUP :
+            WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_THICKFRAME;
         RECT client{};
         GetClientRect(window, &client);
         const DWORD current = static_cast<DWORD>(GetWindowLongW(window, GWL_STYLE)) & ~(WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
@@ -197,10 +252,140 @@ namespace MatrixWindow
         Cutscenes::DisplayResized();
     }
 
-    void AfterReset(IDirect3DDevice9* device)
+    void* ActiveLegacyMovie(IDirect3DDevice9* device)
+    {
+        return LegacyMovie && device == *NativeDevice && *LegacyMovie ? **LegacyMovie : nullptr;
+    }
+
+    void BeforeReset(IDirect3DDevice9* device)
+    {
+        MatrixOverlay::BeforeReset(device);
+        if (auto* movie = ActiveLegacyMovie(device))
+            ReleaseMovieTexture(movie);
+    }
+
+    void PublishBackBuffer(IDirect3DDevice9* device)
     {
         const auto [width, height] = BackBufferSize(device);
         AcceptSize(width, height);
+    }
+
+    void AfterReset(IDirect3DDevice9* device)
+    {
+        if (!Resizing)
+            PublishBackBuffer(device);
+        if (auto* movie = ActiveLegacyMovie(device))
+            CreateMovieTexture(movie);
+    }
+
+    void FinishReset(SafetyHookContext& context)
+    {
+        if (!Resizing)
+            return;
+
+        ResizeResult = static_cast<HRESULT>(context.eax);
+        if (FAILED(ResizeResult))
+        {
+            // The renderer has already released its default-pool resources. Try the last working mode
+            // before giving control back to the code that recreates them.
+            *NativeParameters = PreviousParameters;
+            context.eax = (*NativeDevice)->Reset(NativeParameters);
+        }
+        // The game's device can be a proxy with its own Reset implementation.
+        if (SUCCEEDED(static_cast<HRESULT>(context.eax)))
+            PublishBackBuffer(*NativeDevice);
+    }
+
+    void ResizeAfterPresent(SafetyHookContext& context)
+    {
+        if (context.eax != D3D_OK || Sizing || Resizing ||
+            PendingSize.cx <= 0 || PendingSize.cy <= 0)
+            return;
+
+        const auto window = Window.load();
+        auto* device = *NativeDevice;
+        if (!window || !device || IsIconic(window) || !NativeParameters->Windowed)
+            return;
+
+        const auto size = std::exchange(PendingSize, {});
+        if (size.cx == Screen.nWidth && size.cy == Screen.nHeight)
+        {
+            Place(window, size.cx, size.cy, false);
+            return;
+        }
+
+        const bool wasDesktop = WindowStyle::CoversMonitor(WindowStyle::MonitorRect(window), Screen.nWidth, Screen.nHeight);
+        PreviousParameters = *NativeParameters;
+        PreviousParameters.BackBufferWidth = Screen.nWidth;
+        PreviousParameters.BackBufferHeight = Screen.nHeight;
+        NativeParameters->BackBufferWidth = size.cx;
+        NativeParameters->BackBufferHeight = size.cy;
+        NativeParameters->FullScreen_RefreshRateInHz = 0;
+
+        ResizeResult = D3D_OK;
+        Resizing = true;
+        NativeReset();
+
+        if (FAILED(ResizeResult))
+        {
+            const auto frame = WindowStyle::FrameOf(window);
+            SetWindowPos(window, nullptr, 0, 0, Screen.nWidth + frame.Width(), Screen.nHeight + frame.Height(),
+                SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
+        }
+        else
+        {
+            const bool desktop = WindowStyle::CoversMonitor(WindowStyle::MonitorRect(window), Screen.nWidth, Screen.nHeight);
+            if (wasDesktop && !desktop)
+                WindowStyle::Unplace(window);
+            Place(window, Screen.nWidth, Screen.nHeight, desktop);
+        }
+        Resizing = false;
+    }
+
+    void InstallResize()
+    {
+        if (Mode != 1)
+            return;
+
+        auto frame = hook::pattern("FF 50 44 3D 68 08 76 88 75 05 E8 ? ? ? ? 8B E5 5D C3 55 8B EC 83 EC ? 56");
+        auto reset = hook::pattern("68 ? ? ? ? 8B 15 ? ? ? ? 8B 02 8B 0D ? ? ? ? 51 FF 50 40 85 C0 74 12");
+        uint32_t deviceOffset = 7;
+        uint32_t resetResultOffset = 23;
+        if (reset.empty())
+        {
+            reset = hook::pattern("68 ? ? ? ? A1 ? ? ? ? 8B 08 8B 15 ? ? ? ? 52 FF 51 40 85 C0 74 12");
+            deviceOffset = 6;
+            resetResultOffset = 22;
+            auto release = hook::pattern("8B 12 51 FF 52 08 8B 45 EC C7 04 85 ? ? ? ? 00 00 00 00 EB C7 83 3D");
+            AfterTargetRelease = reinterpret_cast<uintptr_t>(release.get_first(6));
+            ResetTargetHook = safetyhook::create_mid(release.get_first(), [](SafetyHookContext& context)
+            {
+                if (!context.edx)
+                    context.eip = AfterTargetRelease;
+            });
+        }
+        else
+        {
+            auto release = hook::pattern("8B 09 50 FF 51 08 8B 55 EC C7 04 95 ? ? ? ? 00 00 00 00 EB C7 83 3D");
+            AfterTargetRelease = reinterpret_cast<uintptr_t>(release.get_first(6));
+            ResetTargetHook = safetyhook::create_mid(release.get_first(), [](SafetyHookContext& context)
+            {
+                if (!context.ecx)
+                    context.eip = AfterTargetRelease;
+            });
+
+            // The first release omits the active movie's texture from its device reset.
+            LegacyMovie = *hook::pattern("8B 45 08 8B 08 89 4D E4 8B 15 ? ? ? ? 3B 55 08 74 3A 83 3D").get_first<void***>(10);
+            ReleaseMovieTexture = reinterpret_cast<decltype(ReleaseMovieTexture)>(
+                hook::pattern("55 8B EC 8B 45 08 83 B8 10 01 00 00 00 74 25 8B 4D 08 8B 91 10 01 00 00 8B 45 08").get_first());
+            CreateMovieTexture = reinterpret_cast<decltype(CreateMovieTexture)>(
+                hook::pattern("55 8B EC 6A FF 68 ? ? ? ? 64 A1 00 00 00 00 50 64 89 25 00 00 00 00 81 EC 70 01 00 00 C7 85 90 FE FF FF 02 00 00 00 C7 85 94 FE FF FF 02 00 00 00").get_first());
+        }
+        NativeParameters = *reset.get_first<D3DPRESENT_PARAMETERS*>(1);
+        NativeDevice = *reset.get_first<IDirect3DDevice9**>(deviceOffset);
+        NativeReset = reinterpret_cast<decltype(NativeReset)>(injector::GetBranchDestination(frame.get_first(10)).as_int());
+        ResetResultHook = safetyhook::create_mid(reset.get_first(resetResultOffset), FinishReset);
+        FrameEndHook = safetyhook::create_mid(frame.get_first(3), ResizeAfterPresent);
     }
 
     // Every frame before Present
@@ -223,7 +408,7 @@ namespace MatrixWindow
             WindowCursor::Follow(window);
             CursorConfinement::Suspend(MatrixOverlay::Overlay.BlocksInput());
             CursorConfinement::Frame(window);
-            if (Mode != 0 || newWindow)
+            if (newWindow || Mode == 2)
             {
                 const auto [width, height] = BackBufferSize(device);
                 AcceptSize(width, height);
@@ -256,10 +441,12 @@ public:
                     PostMessageW(window, MatrixWindow::FocusSettingsMessage, 0, 0);
             });
             IATHook::Replace(GetModuleHandleW(nullptr), "USER32.dll", std::forward_as_tuple("AdjustWindowRect", MatrixWindow::AdjustRect));
+            MatrixWindow::InstallResize();
             MatrixOverlay::Init();
+            D3D9Options::limitDevice = [](IDirect3DDevice9*) { return D3D9Options::frameLimit > 0; };
             D3D9Options::presentParameters = MatrixWindow::PrepareWindow;
             D3D9Options::frame = MatrixWindow::Frame;
-            D3D9Options::beforeReset = MatrixOverlay::BeforeReset;
+            D3D9Options::beforeReset = MatrixWindow::BeforeReset;
             D3D9Options::afterReset = MatrixWindow::AfterReset;
             D3D9Options::HookCreation();
 

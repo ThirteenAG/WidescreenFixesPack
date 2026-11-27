@@ -45,10 +45,9 @@ export namespace CoCCamera
     // The factor widens the view up to 150 degrees across the screen; a wider native view stays as it is
     inline float Apply(const void* state, float verticalFOV, float factor, float aspect)
     {
-        if (!BaseGameplay(state) || !std::isfinite(verticalFOV) || verticalFOV <= 0.0f || verticalFOV >= 179.0f)
+        if (factor == 1.0f || !std::isfinite(factor) || !BaseGameplay(state) ||
+            !std::isfinite(verticalFOV) || verticalFOV <= 0.0f || verticalFOV >= 179.0f)
             return verticalFOV;
-        if (!std::isfinite(factor))
-            factor = 1.0f;
         constexpr float radians = 3.14159265f / 180.0f;
         const float widest = std::isfinite(aspect) && aspect > 0.0f ? 2.0f * std::atan(std::tan(75.0f * radians) / aspect) / radians : 179.0f;
         const float scaled = verticalFOV * std::clamp(factor, 0.5f, 2.0f);

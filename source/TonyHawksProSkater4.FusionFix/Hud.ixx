@@ -3,6 +3,7 @@ module;
 #include <stdafx.h>
 #include "FixSettings.hpp"
 #include "Shared/Console/Viewport.hpp"
+#include <atomic>
 #include <bit>
 
 export module Hud;
@@ -14,7 +15,7 @@ export namespace THPS4Hud
     inline std::array<SafetyHookMid, 4> ScaleHooks;
     inline SafetyHookInline TextHook, SpriteHook;
     inline float Width = 640.0f, Height = 480.0f, FrameWidth = 640.0f, Scale = 1.0f;
-    inline const std::string* Constraint = nullptr;
+    inline std::atomic<float> Constraint{ 0.0f };
     inline bool FullWidth = false;
 
     struct Placement
@@ -58,6 +59,12 @@ export namespace THPS4Hud
                     case Checksum("the_special_bar_special"):
                     case Checksum("the_special_bar_sprite"):
                     case Checksum("the_boardstance_sprite"):
+                    // The second player's panel script adds one to these five IDs.
+                    case Checksum("the_score") + 1:
+                    case Checksum("the_score_sprite") + 1:
+                    case Checksum("the_special_bar_special") + 1:
+                    case Checksum("the_special_bar_sprite") + 1:
+                    case Checksum("the_boardstance_sprite") + 1:
                     case Checksum("minigame_timer"):
                         result.anchor = -1;
                         break;
@@ -81,10 +88,17 @@ export namespace THPS4Hud
         return result;
     }
 
+    inline void UpdateConstraint()
+    {
+        Constraint.store(console::parse_hud_aspect(FixSettings().String("MAIN.HudAspectRatioConstraint").c_str()),
+            std::memory_order_relaxed);
+    }
+
     // Screen pixels to move the current element by
     inline float Offset()
     {
-        const float aspect = Constraint ? console::parse_hud_aspect(Constraint->c_str()) : 0.0f;
+        if (!Current.Active()) return 0.0f;
+        const float aspect = Constraint.load(std::memory_order_relaxed);
         const float anchor = static_cast<float>(Current.anchor);
         if (Current.player < 0 || CameraLayout != 1)
         {
@@ -132,14 +146,15 @@ export namespace THPS4Hud
         return result;
     }
 
-    inline void Install(float width, float height, const std::string* constraint, HMODULE module = GetModuleHandleW(nullptr))
+    inline void Install(float width, float height, HMODULE module = GetModuleHandleW(nullptr))
     {
         Width = width;
         Height = height;
         // The 640x480 frame: full height on wider screens, full width (letterboxed) on narrower ones
         FrameWidth = std::min(Width, Height * (4.0f / 3.0f));
         Scale = FrameWidth / Width;
-        Constraint = constraint;
+        UpdateConstraint();
+        FixSettings().OnChange("MAIN.HudAspectRatioConstraint", UpdateConstraint);
         const char* signatures[] =
         {
             "8B 44 24 04 8B 54 24 08 89 41 68 8B 01 89 51 6C FF 50 0C C2 08 00",
@@ -181,7 +196,7 @@ export void InstallHud()
 {
     hook::pattern pattern("");
     //HUD
-    THPS4Hud::Install(Screen.fWidth, Screen.fHeight, &FixSettings().String("MAIN.HudAspectRatioConstraint"));
+    THPS4Hud::Install(Screen.fWidth, Screen.fHeight);
     pattern = hook::pattern("C7 05 ? ? ? ? ? ? ? ? 83 E2 10 89 2D ? ? ? ? D9 1D ? ? ? ? DF 6C 24 ? A3 ? ? ? ? 89 0D ? ? ? ? 83 C2 10 D8 0D");
     injector::WriteMemory<int32_t>(pattern.get_first<int32_t>(6), static_cast<int32_t>(Screen.fHudOffsetReal) + 32, true);
     if (Screen.fHudOffsetY > 0.0f)

@@ -111,7 +111,7 @@ export namespace LARushWindow
     {
         const auto window = Window.load();
         const int state = GameState;
-        return window && (state == 14 || state == 170) && GetForegroundWindow() == window;
+        return window && (state == 14 || state == 15 || state == 170) && GetForegroundWindow() == window;
     }
 
     inline bool NoticeTargetReady(IDirect3DDevice9* device)

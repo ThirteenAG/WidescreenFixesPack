@@ -374,9 +374,9 @@ class WindowModule
 public:
     WindowModule()
     {
-        FixSettings().OnChange("MAIN.ConfineCursor", []() { LockCursor(); });
         WFP::onInitEvent() += []()
         {
+            FixSettings().OnChange("MAIN.ConfineCursor", []() { LockCursor(); });
             wndProcHook = safetyhook::create_inline(WindowProcedureAddress(), CustomWndProc);
             MessagePumpGuard::Install(GetModuleHandleW(nullptr));
             // Use the assembled report for this handle without reading its first packet again.

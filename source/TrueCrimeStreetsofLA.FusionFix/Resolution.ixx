@@ -176,6 +176,22 @@ export namespace TrueCrimeResolution
         Redirect(table + 4, reinterpret_cast<uintptr_t>(&Modes[0][1]));
         Redirect(count, reinterpret_cast<uintptr_t>(&ModeCount));
 
+        // The windowed startup path subtracts frame margins from the desktop size before clamping the requested
+        // client. The fix places the frame outside a desktop-sized client, so keep the requested dimensions.
+        auto windowed = hook::pattern("8B 46 08 39 44 24 20 57 76 04 89 44 24 24 8B 46 0C 8B 5C 24 28 "
+            "68 C0 00 00 00 68 ? ? ? ? 3B D8 6A 10 6A 44 0F 47 D8");
+        if (!windowed.empty()) // TrueCrime_.exe
+        {
+            injector::WriteMemory<uint8_t>(windowed.get_first(8), 0xEB, true);
+            injector::MakeNOP(windowed.get_first(0x25), 3, true);
+        }
+        else // TrueCrimeMB.exe
+        {
+            windowed = hook::pattern("8B 46 08 3B E8 57 76 02 8B E8 8B 46 0C 8B 5C 24 34 3B D8 76 02 8B D8 68 C0 00 00 00");
+            injector::WriteMemory<uint8_t>(windowed.get_first(6), 0xEB, true);
+            injector::WriteMemory<uint8_t>(windowed.get_first(0x13), 0xEB, true);
+        }
+
         FindModeHook = safetyhook::create_inline(hook::pattern("8B 41 1C 85 C0 56 74 21 8B 4C 24 10").get_first(), FindMode);
 
         // The game reads the resolution from TrueCrime.INI at start: it gets the startup resolution

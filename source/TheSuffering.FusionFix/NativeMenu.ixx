@@ -33,7 +33,34 @@ export namespace SufferingMenu
         int(__thiscall* setText)(Object, const wchar_t*){};
         int(__thiscall* addChild)(Object, Object){};
         int(__thiscall* select)(Object, int){};
+        int(__thiscall* pending)(Object, int, int){}; // a menu stack's input: is this message waiting
     };
+    struct MenuLayout
+    {
+        size_t tableSize;
+        size_t updateSlot;
+        // The menu stack pops the top page on Escape (polled, not sent to the page) when the page's slot 12 allows it
+        size_t escapeSlot;
+        int escape;
+        bool joinedGraphics;
+        int left, right, accept, back; // the sequel numbers its menu messages differently; it has no Back message
+        // The page's rows, title and help line as fractions of the Options page. The sequel's page is the whole title
+        // screen: its rows go in two columns on the paper strip below the logo, the title and help line on the logo's
+        // paper, where its dark text reads.
+        struct Box
+        {
+            float x, y, width;
+        };
+        Box rows;
+        float rowStep, columnStep;
+        int rowsPerColumn;
+        Box title, help;
+    };
+    inline constexpr MenuLayout Retail{ 29, 23, 12, 1027, true, 1006, 1007, 1020, 1021,
+        { 0.12f, 0.18f, 0.76f }, 0.075f, 0.0f, 8, { 0.08f, 0.06f, 0.84f }, { 0.08f, 0.84f, 0.84f } };
+    inline constexpr MenuLayout TiesThatBind{ 32, 26, 12, 1057, false, 1036, 1037, 1050, 0,
+        { 0.12f, 0.735f, 0.38f }, 0.047f, 0.4f, 4, { 0.62f, 0.245f, 0.25f }, { 0.2f, 0.458f, 1.05f } };
+    inline const MenuLayout* Layout = &Retail;
     inline Bindings api;
     inline HMODULE host{};
     inline std::string notice; // an update notice, shown in the fix page's help line while the row has no help
@@ -77,17 +104,17 @@ export namespace SufferingMenu
     {
         Object root{}, entry{}, help{}, title{};
         uintptr_t* originalTable{};
-        std::array<uintptr_t, 29> table{};
+        std::array<uintptr_t, TiesThatBind.tableSize> table{};
         Listener listener;
         RWGTAMenu::Model model;
         std::vector<Item> items;
         std::vector<Object> controls, privateChildren;
         std::vector<std::pair<Object, int>> stockStates;
         Object stockChildren{};
-        int stockCapacity{}, stockCount{}, stockSelection{};
+        int stockCapacity{}, stockCount{}, stockSelection{}, stockOrientation{};
         int page{ -1 }, command{ -1 }, direction{};
         size_t start{}, selected{};
-        bool open{}, video{};
+        bool open{}, video{}, escapeHeld{};
         std::string shownHelp;
         std::vector<std::pair<Object, RWGTAMenu::Row>> joined;
     };
@@ -153,6 +180,36 @@ export namespace SufferingMenu
         SetField<int>(object, 36, 4);
         return object;
     }
+    // The Options rows the Plugins entry goes between: retail puts it above Back, after Credits (Audio on the pause
+    // menu's page, which has no Credits); the sequel (Escape for Back) in the gap between Gameplay and Graphics on its
+    // upper row
+    inline std::pair<Object, Object> Neighbours(Object root)
+    {
+        if (!Layout->joinedGraphics)
+            return { Field<Object>(root, 124), Field<Object>(root, 144) };
+        const auto credits = Field<Object>(root, 144);
+        return { credits ? credits : Field<Object>(root, 132), Field<Object>(root, 148) };
+    }
+    // The sequel lays its rows out after the constructor, so its entry follows its neighbours every frame
+    inline void Place(Page& page)
+    {
+        const auto [previous, next] = Neighbours(page.root);
+        const auto source = Field<Object>(page.root, 120);
+        float x = Field<float>(source, 56);
+        float width = Field<float>(source, 64);
+        float y = (Field<float>(previous, 60) + Field<float>(next, 60)) * 0.5f;
+        if (!Layout->joinedGraphics)
+        {
+            // Labels start at their row's x; +168 is the measured label width, +184 its scale. The entry's label is
+            // centred between the end of the Gameplay label and the start of the Graphics label.
+            const auto label = [](Object control) { return Field<float>(control, 168) * Field<float>(control, 184); };
+            x = (Field<float>(previous, 56) + label(previous) + Field<float>(next, 56) - label(page.entry)) * 0.5f;
+            width = Field<float>(next, 56) - x;
+            if (width <= 0.0f)
+                return;
+        }
+        Geometry(page.entry, x, y, width, Field<float>(source, 68));
+    }
     inline void Restore(Page& page)
     {
         if (!page.open)
@@ -160,6 +217,7 @@ export namespace SufferingMenu
         SetField<Object>(page.root, 80, page.stockChildren);
         SetField<int>(page.root, 84, page.stockCapacity);
         SetField<int>(page.root, 88, page.stockCount);
+        SetField<int>(page.root, 44, page.stockOrientation);
         for (auto& [control, state] : page.stockStates)
             SetField<int>(control, 36, state);
         page.stockStates.clear();
@@ -227,11 +285,16 @@ export namespace SufferingMenu
     }
     inline void Open(Page& page)
     {
-        page.model.OpenPlugins(host, Language(), 5, { "MAIN.FOVFactor", "MAIN.CutsceneBorders" });
+        if (Layout->joinedGraphics)
+            page.model.OpenPlugins(host, Language(), 5, { "MAIN.FOVFactor", "MAIN.CutsceneBorders" });
+        else
+            page.model.OpenPlugins(host, Language(), 5);
         page.stockChildren = Field<Object>(page.root, 80);
         page.stockCapacity = Field<int>(page.root, 84);
         page.stockCount = Field<int>(page.root, 88);
         page.stockSelection = Field<int>(page.root, 8);
+        page.stockOrientation = Field<int>(page.root, 44);
+        SetField<int>(page.root, 44, 1); // a vertical list: Up/Down move, Left/Right change values
         auto stock = reinterpret_cast<Object*>(page.stockChildren);
         for (int i = 0; i < page.stockCount; ++i)
         {
@@ -341,17 +404,17 @@ export namespace SufferingMenu
         Object selected = index >= 0 && index < Field<int>(self, 88) ? children[index] : 0;
         if (page.open)
         {
-            if (message == 1021)
+            if (Layout->back && message == Layout->back)
             {
                 page.command = static_cast<int>(page.items.size() - 1);
                 page.direction = 0;
                 return 1;
             }
-            if ((message == 1006 || message == 1007) && index >= 0 && static_cast<size_t>(index) < page.items.size()
+            if ((message == Layout->left || message == Layout->right) && index >= 0 && static_cast<size_t>(index) < page.items.size()
                 && page.items[index].kind == Kind::Setting)
             {
                 page.command = index;
-                page.direction = message == 1006 ? -1 : 1;
+                page.direction = message == Layout->left ? -1 : 1;
                 return 1;
             }
         }
@@ -359,10 +422,10 @@ export namespace SufferingMenu
         {
             for (size_t i = 0; i < page.joined.size(); ++i)
             {
-                if (selected == page.joined[i].first && (message == 1020 || message == 1006 || message == 1007))
+                if (selected == page.joined[i].first && (message == Layout->accept || message == Layout->left || message == Layout->right))
                 {
                     page.command = static_cast<int>(i);
-                    page.direction = message == 1006 ? -1 : message == 1007 ? 1 : 0;
+                    page.direction = message == Layout->left ? -1 : message == Layout->right ? 1 : 0;
                     return 1;
                 }
             }
@@ -372,7 +435,18 @@ export namespace SufferingMenu
     inline int __fastcall Update(Object self, void*)
     {
         auto& page = *pages.at(self);
-        int result = reinterpret_cast<int(__thiscall*)(Object)>(page.originalTable[23])(self);
+        if (page.open || page.escapeHeld)
+        {
+            // Escape on the open fix page is its Back; the stack keeps the page until the key is let go
+            const bool pressed = api.pending(Field<Object>(self, 100) + 108, Layout->escape, 1) > 0;
+            if (pressed && page.open && !page.escapeHeld)
+            {
+                page.command = static_cast<int>(page.items.size() - 1);
+                page.direction = 0;
+            }
+            page.escapeHeld = pressed;
+        }
+        int result = reinterpret_cast<int(__thiscall*)(Object)>(page.originalTable[Layout->updateSlot])(self);
         if (page.command >= 0)
         {
             int command = std::exchange(page.command, -1);
@@ -412,6 +486,8 @@ export namespace SufferingMenu
                 page.shownHelp = std::move(help);
             }
         }
+        if (!page.open && page.entry && !Layout->joinedGraphics)
+            Place(page);
         if (page.open)
         {
             if (RWGTAMenu::Model::Changed().exchange(false))
@@ -441,6 +517,13 @@ export namespace SufferingMenu
             }
         }
         return result;
+    }
+    inline int __fastcall CanEscape(Object self, void*)
+    {
+        auto& page = *pages.at(self);
+        if (page.open || page.escapeHeld)
+            return 0;
+        return reinterpret_cast<int(__thiscall*)(Object)>(page.originalTable[Layout->escapeSlot])(self);
     }
     inline void Attach(Object root, bool video)
     {
@@ -502,44 +585,30 @@ export namespace SufferingMenu
         }
         else
         {
-            // Only the options page with its own Back and the row above it (the pause menu builds other variants)
             auto children = Field<Object*>(root, 80);
-            auto back = Field<Object>(root, 148);
-            auto previous = Field<Object>(root, 144);
-            int backIndex = -1;
-            bool previousFound = false;
-            for (int i = 0; children && i < Field<int>(root, 88); ++i)
-            {
-                if (children[i] == back)
-                    backIndex = i;
-                if (children[i] == previous)
-                    previousFound = true;
-            }
-            if (!back || !previous || backIndex < 0 || !previousFound)
+            const auto count = Field<int>(root, 88);
+            if (!children || count <= 0)
                 return;
+            const auto end = children + count;
+            const auto [previous, next] = Neighbours(root);
+            const auto insertion = std::find(children, end, next);
+            if (!previous || !next || insertion == end || std::find(children, end, previous) == end)
+                return;
+            const auto entryIndex = insertion - children;
             page->entry = Create(*page, source, true);
             if (!page->entry)
                 return;
-            Geometry(page->entry, Field<float>(source, 56),
-                (Field<float>(previous, 60) + Field<float>(back, 60)) * 0.5f,
-                Field<float>(source, 64), Field<float>(source, 68));
+            Place(*page);
             SetText(page->entry, Text("menu.plugins"));
-            api.addChild(root, page->entry);
-            if (backIndex >= 0)
-            {
-                children = Field<Object*>(root, 80);
-                for (int i = Field<int>(root, 88) - 1; i > backIndex; --i)
-                    children[i] = children[i - 1];
-                children[backIndex] = page->entry;
-            }
             for (int i = 0; i < 8; ++i)
             {
                 auto control = Create(*page, source, true);
                 if (!control)
                     return;
-                Geometry(control, Field<float>(root, 56) + Field<float>(root, 64) * 0.12f,
-                    Field<float>(root, 60) + Field<float>(root, 68) * (0.18f + i * 0.075f),
-                    Field<float>(root, 64) * 0.76f, Field<float>(source, 68));
+                const auto column = i / Layout->rowsPerColumn, row = i % Layout->rowsPerColumn;
+                Geometry(control, Field<float>(root, 56) + Field<float>(root, 64) * (Layout->rows.x + column * Layout->columnStep),
+                    Field<float>(root, 60) + Field<float>(root, 68) * (Layout->rows.y + row * Layout->rowStep),
+                    Field<float>(root, 64) * Layout->rows.width, Field<float>(source, 68));
                 page->controls.push_back(control);
                 page->privateChildren.push_back(control);
             }
@@ -548,20 +617,27 @@ export namespace SufferingMenu
             if (!page->help || !page->title)
                 return;
             SetText(page->help, "", false);
-            Geometry(page->help, Field<float>(root, 56) + Field<float>(root, 64) * 0.08f,
-                Field<float>(root, 60) + Field<float>(root, 68) * 0.84f,
-                Field<float>(root, 64) * 0.84f, Field<float>(root, 68) * 0.12f);
-            Geometry(page->title, Field<float>(root, 56) + Field<float>(root, 64) * 0.08f,
-                Field<float>(root, 60) + Field<float>(root, 68) * 0.06f,
-                Field<float>(root, 64) * 0.84f, Field<float>(source, 68));
+            Geometry(page->help, Field<float>(root, 56) + Field<float>(root, 64) * Layout->help.x,
+                Field<float>(root, 60) + Field<float>(root, 68) * Layout->help.y,
+                Field<float>(root, 64) * Layout->help.width, Field<float>(root, 68) * 0.12f);
+            Geometry(page->title, Field<float>(root, 56) + Field<float>(root, 64) * Layout->title.x,
+                Field<float>(root, 60) + Field<float>(root, 68) * Layout->title.y,
+                Field<float>(root, 64) * Layout->title.width, Field<float>(source, 68));
             page->privateChildren.push_back(page->help);
             page->privateChildren.push_back(page->title);
+
+            api.addChild(root, page->entry);
+            children = Field<Object*>(root, 80);
+            for (auto i = Field<int>(root, 88) - 1; i > entryIndex; --i)
+                children[i] = children[i - 1];
+            children[entryIndex] = page->entry;
         }
         page->originalTable = Field<uintptr_t*>(root, 0);
-        std::copy_n(page->originalTable, page->table.size(), page->table.begin());
+        std::copy_n(page->originalTable, Layout->tableSize, page->table.begin());
         page->table[0] = reinterpret_cast<uintptr_t>(Destroy);
         page->table[5] = reinterpret_cast<uintptr_t>(Input);
-        page->table[23] = reinterpret_cast<uintptr_t>(Update);
+        page->table[Layout->updateSlot] = reinterpret_cast<uintptr_t>(Update);
+        page->table[Layout->escapeSlot] = reinterpret_cast<uintptr_t>(CanEscape);
         SetField<uintptr_t*>(root, 0, page->table.data());
         pages.emplace(root, std::move(page));
     }
@@ -582,29 +658,39 @@ export namespace SufferingMenu
         RWGTAMenu::RestoreDefaults(FixSettings(), { "MAIN.FOVFactor", "MAIN.CutsceneBorders" });
         return defaultsHook.thiscall<int>(self);
     }
-    inline void Init()
+    inline void Init(const wchar_t* moduleName, const MenuLayout& layout)
     {
-        auto module = GetModuleHandleW(L"suffering.rfl");
+        auto module = GetModuleHandleW(moduleName);
         if (!module)
             return;
+        Layout = &layout;
         GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
             reinterpret_cast<const wchar_t*>(Init), &host);
         auto language = find_pattern(GetModuleHandleW(nullptr), "8D 44 24 10 50 6A 23 55 89 15 ? ? ? ? FF D6 8A 54 24 0C 33 C9 80 FA 30");
         languageCode.SetAddress(*reinterpret_cast<const uint32_t**>(static_cast<uint8_t*>(language) + 10));
         api.allocate = reinterpret_cast<decltype(api.allocate)>(find_pattern(module, "81 EC 80 00 00 00 53 8B 1D ? ? ? ? 55 56 57 8B BC 24 98 00 00 00 33 ED"));
         api.button = reinterpret_cast<decltype(api.button)>(find_pattern(module, "8B 44 24 04 56 50 8B F1 E8 ? ? ? ? C7 06 ? ? ? ? C7 86 C0 00 00 00 00 00 00 00 8B C6"));
-        api.text = reinterpret_cast<decltype(api.text)>(find_pattern(module, "6A FF 68 ? ? ? ? 64 A1 00 00 00 00 50 64 89 25 00 00 00 00 51 8B 44 24 14 53 56 8B F1 50 89 74 24 0C"));
+        api.text = reinterpret_cast<decltype(api.text)>(find_pattern(module, Layout->joinedGraphics
+            ? "6A FF 68 ? ? ? ? 64 A1 00 00 00 00 50 64 89 25 00 00 00 00 51 8B 44 24 14 53 56 8B F1 50 89 74 24 0C"
+            : "8B 44 24 04 53 56 50 8B F1 E8 ? ? ? ? 33 DB C7 06 ? ? ? ? 89 5E 70 89 5E 74 89 5E 6C 89 5E 7C"));
         api.setText = reinterpret_cast<decltype(api.setText)>(find_pattern(module, "53 55 8B 6C 24 0C 56 57 55 8B D9 FF 15 ? ? ? ? 8B F0 8B 43 6C 83 C4 04"));
         api.addChild = reinterpret_cast<decltype(api.addChild)>(find_pattern(module, "56 57 8B 7C 24 0C 8D 71 50 89 4F 64 8B 46 08 8B 4E 04 40 3B C8"));
         api.select = reinterpret_cast<decltype(api.select)>(find_pattern(module, "53 56 8B F1 8B 46 58 57 8B 7C 24 10 48 3B F8"));
-        auto options = find_pattern(module, "6A FF 68 ? ? ? ? 64 A1 00 00 00 00 50 64 89 25 00 00 00 00 51 8B 44 24 14 53 56 57 8B F1 50 89 74 24 10 E8 ? ? ? ? C7 46 6C ? ? ? ? 8B 4E 0C 33 DB 3B CB");
-        auto video = find_pattern(module, "6A FF 68 ? ? ? ? 64 A1 00 00 00 00 50 64 89 25 00 00 00 00 51 8B 44 24 14 53 56 57 8B F1 50 89 74 24 10 E8 ? ? ? ? C7 46 6C ? ? ? ? 33 DB C7 06");
-        auto defaults = find_pattern(module, "B8 01 00 00 00 C7 81 24 01 00 00 20 03 00 00 C7 81 28 01 00 00 58 02 00 00");
+        api.pending = reinterpret_cast<decltype(api.pending)>(find_pattern(module, Layout->joinedGraphics
+            ? "56 8B 74 24 0C 56 8B 74 24 0C 8B C1 8B 0D ? ? ? ? 8B 11 56 50 FF 92 AC 00 00 00 5E C2 08 00"
+            : "56 8B 74 24 0C 56 8B 74 24 0C 8B C1 8B 0D ? ? ? ? 8B 11 56 50 FF 92 B0 00 00 00 5E C2 08 00"));
+        auto options = find_pattern(module, Layout->joinedGraphics
+            ? "6A FF 68 ? ? ? ? 64 A1 00 00 00 00 50 64 89 25 00 00 00 00 51 8B 44 24 14 53 56 57 8B F1 50 89 74 24 10 E8 ? ? ? ? C7 46 6C ? ? ? ? 8B 4E 0C 33 DB 3B CB"
+            : "8B 44 24 04 55 56 50 8B F1 E8 ? ? ? ? C7 46 6C ? ? ? ? 8B 46 0C 85 C0 8D 6E 6C C7 06 ? ? ? ? C7 45 00");
         HMODULE pinned{};
         if (!GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_PIN,
             reinterpret_cast<const wchar_t*>(module), &pinned))
             return;
         optionsHook = safetyhook::create_inline(options, Options);
+        if (!Layout->joinedGraphics)
+            return;
+        auto video = find_pattern(module, "6A FF 68 ? ? ? ? 64 A1 00 00 00 00 50 64 89 25 00 00 00 00 51 8B 44 24 14 53 56 57 8B F1 50 89 74 24 10 E8 ? ? ? ? C7 46 6C ? ? ? ? 33 DB C7 06");
+        auto defaults = find_pattern(module, "B8 01 00 00 00 C7 81 24 01 00 00 20 03 00 00 C7 81 28 01 00 00 58 02 00 00");
         videoHook = safetyhook::create_inline(video, Video);
         defaultsHook = safetyhook::create_inline(defaults, Defaults);
     }

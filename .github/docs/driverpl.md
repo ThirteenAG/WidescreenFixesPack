@@ -32,7 +32,7 @@ On first launch the fix writes `scripts/DriverParallelLines.FusionFix.cfg`. The 
 SMAA requires the game's MSAA setting to be disabled.
 
 - **Skip Intro** - bypass startup logos and notices while preserving story movies
-- **Window Mode** - fullscreen, a centered framed window at the selected resolution, or borderless at the monitor resolution. For a custom framed size, set equal minimum and maximum widths and equal minimum and maximum heights in FusionFixHub, then restart. Alt+Enter switches between fullscreen and the last window mode when the selected size supports fullscreen.
+- **Window Mode** - fullscreen, a resizable framed window, or borderless at the monitor resolution. The framed window starts centered at the selected resolution. For a custom starting size, set matching minimum and maximum widths and heights in FusionFixHub, then restart. Alt+Enter switches between fullscreen and the last window mode and restores the framed window's size and position.
 - **Frame Rate Limit** - choose any whole number from 30 to 1000 FPS, Monitor or Unlimited. The default, Recommended and Enhanced use 60 FPS. Vanilla leaves the original uncapped rate. Higher rates can affect gameplay.
 - **Videos** - Movies keep their intended proportions, including anamorphic videos. Original shows them as the game does, whole inside its centred 4:3 frame with black bars around them; Fill fits the whole movie to the screen. Nothing is cut off or stretched. Default/Recommended/Enhanced use Fill; Vanilla uses Original aspect.
 - **Cutscene Borders** - Pillarbox preserves the 16:9 framing of in-engine cutscenes on wider screens. Choose Off for a wider view that fills the screen.

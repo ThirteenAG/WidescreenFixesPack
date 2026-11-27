@@ -15,7 +15,7 @@
 - **Aspect ratio** - Correct widescreen aspect ratio scaling; the cave and the hunting levels show more at the sides (Hor+), also after the window is resized.
 - **HUD** - The main gameplay HUD keeps its proportions and sits at the screen edges.
 - **Screens** - Loading pictures, the pause menu and the cave's dialogs keep their 4:3 design in the middle of the screen.
-- **Movies** - Movies keep their aspect and colours in windowed modes.
+- **Movies** - Full-screen movies keep their 4:3 aspect and colours in windowed modes, with black bars at the sides on wider screens.
 - **Large windows** - Windows wider than 2048 pixels render normally.
 - **Launcher** - The launcher stays readable at high display scaling and lists 32-bit display modes, so the game starts on systems that no longer offer 16-bit modes.
 
@@ -27,8 +27,7 @@
 - **Skip Intro** - Skip startup movies while retaining later movies.
 - **Confine Cursor** - Keep the pointer inside the active game window; it is released when the game loses focus.
 - **Pause on Focus Loss** - Pause gameplay while another window is active. Turn it off to keep gameplay running; sound stays muted until the game regains focus.
-- **Video Scaling** - Original fits the whole video inside the original 4:3 frame. Fill (the default) fits it to the screen. Neither mode cuts off or stretches the picture. The game's full-screen videos are 4:3, so the choices can look the same.
-- **Gamepad** - XInput controllers appear to the game's native joystick input through Xidi.
+- **Gamepad** - XInput controllers use the game's native joystick mapping through Xidi. The mouse takes over again when the pad returns to neutral.
 - **Check for Updates** - Off by default. When enabled, the fix checks once for a newer release and shows a notice in Plugins.
 
 ## Known limits

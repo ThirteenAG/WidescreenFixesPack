@@ -159,7 +159,7 @@ public:
             // The main loop empties the message queue each frame; a high polling rate mouse must not keep it going
             MessagePumpGuard::Install(GetModuleHandle(nullptr));
             if (!GetModuleHandleW(L"GInputSA.asi"))
-                GtaRawMouse::Install([] { return RsGlobal->ps ? *reinterpret_cast<HWND*>(RsGlobal->ps) : nullptr; }, []() { return !FrontendMenuManager->m_bMenuActive; }, Pad::ObserveMouseActivity);
+                GtaRawMouse::Install([] { return RsGlobal->ps ? *reinterpret_cast<HWND*>(RsGlobal->ps) : nullptr; }, Pad::ObserveMouseActivity);
         };
 
         WFP::onInitEvent() += []()

@@ -60,6 +60,8 @@ Install the official Max Payne 1.05 update before installing the fix. The includ
 
 ## Installation
 
+If you are upgrading from Max Payne Widescreen Fix, remove `MaxPayne.WidescreenFix.asi` from the game installation before extracting the new package. Fusion Fix includes the widescreen patches.
+
 1. Download the fix archive from this release.
 2. Extract the archive into the game folder, beside the game executable, preserving the folders in the archive.
 3. Launch the game once to create `scripts/MaxPayne.FusionFix.cfg`.

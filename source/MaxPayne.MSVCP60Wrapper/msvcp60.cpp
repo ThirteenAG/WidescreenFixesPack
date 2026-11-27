@@ -2,6 +2,7 @@
 #define IDR_MSVCP60 101
 
 #include <stdafx.h>
+#include <algorithm>
 #include <stdio.h>
 #include <string>
 #include "Shared/DirectSoundActivation.hpp"
@@ -11,6 +12,16 @@
 HINSTANCE mHinstDLL;
 HMEMORYMODULE memoryHinstDLL;
 FARPROC mProcs[2104];
+
+extern const unsigned int StringNpos{ 0xffffffffu };
+extern const char StringNull{ '\0' };
+
+// The MSVC x86 ABI stores the RTTI locator immediately before the vtable.
+// These ordered subsections keep it adjacent to the exported methods.
+#pragma section(".data$OutOfRangeA", read, write)
+#pragma section(".data$OutOfRangeB", read, write)
+__declspec(allocate(".data$OutOfRangeA")) const void* OutOfRangeLocator{};
+__declspec(allocate(".data$OutOfRangeB")) const void* OutOfRangeVtable[3]{};
 
 DEFINE_GUID(CLSID_DirectSound, 0x47d4d946, 0x62e8, 0x11cf, 0x93, 0xbc, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00);
 HRESULT WINAPI CustomCoCreateInstance(REFCLSID rclsid, LPUNKNOWN pUnkOuter, DWORD dwClsContext, REFIID riid, LPVOID* ppv)
@@ -564,10 +575,22 @@ LPCSTR mImportNames[] = {
     "wcsrtombs", "wctob", "wctrans", "wctype",
 };
 
+static bool InitOutOfRangeVtable(FARPROC address)
+{
+    const auto runtimeVtable = reinterpret_cast<const void* const*>(address);
+    if (!runtimeVtable)
+        return false;
+
+    OutOfRangeLocator = runtimeVtable[-1];
+    std::copy_n(runtimeVtable, std::size(OutOfRangeVtable), OutOfRangeVtable);
+    return true;
+}
+
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 {
     if (fdwReason == DLL_PROCESS_ATTACH)
     {
+        constexpr auto outOfRangeVtableName = "??_7out_of_range@std@@6B@";
         HRSRC hResource = FindResource(hinstDLL, MAKEINTRESOURCE(IDR_MSVCP60), RT_RCDATA);
         if (hResource)
         {
@@ -585,6 +608,9 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
                         {
                             for (size_t i = 0; i < std::size(mImportNames); ++i)
                                 mProcs[i] = MemoryGetProcAddress(memoryHinstDLL, mImportNames[i]);
+
+                            if (!InitOutOfRangeVtable(MemoryGetProcAddress(memoryHinstDLL, outOfRangeVtableName)))
+                                return FALSE;
 
                             CallbackHandler::RegisterCallback(L"rlmfc.dll", InitRLMFC);
                             CallbackHandler::RegisterCallback(L"sndmfc.dll", InitSNDMFC);
@@ -606,6 +632,9 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
 
         for (size_t i = 0; i < std::size(mImportNames); ++i)
             mProcs[i] = GetProcAddress(mHinstDLL, mImportNames[i]);
+
+        if (!InitOutOfRangeVtable(GetProcAddress(mHinstDLL, outOfRangeVtableName)))
+            return FALSE;
 
         CallbackHandler::RegisterCallback(L"rlmfc.dll", InitRLMFC);
         CallbackHandler::RegisterCallback(L"sndmfc.dll", InitSNDMFC);
@@ -1780,8 +1809,6 @@ __declspec(naked) void __stdcall decorated685() { __asm { jmp dword ptr[mProcs +
 __declspec(naked) void __stdcall decorated686() { __asm { jmp dword ptr[mProcs + 578 * 4] } }
 // const std::money_base::`vftable'
 __declspec(naked) void __stdcall decorated687() { __asm { jmp dword ptr[mProcs + 579 * 4] } }
-// const std::out_of_range::`vftable'
-__declspec(naked) void __stdcall decorated688() { __asm { jmp dword ptr[mProcs + 580 * 4] } }
 // const std::overflow_error::`vftable'
 __declspec(naked) void __stdcall decorated689() { __asm { jmp dword ptr[mProcs + 581 * 4] } }
 // const std::range_error::`vftable'
@@ -2248,8 +2275,6 @@ __declspec(naked) void __stdcall decorated811() { __asm { jmp dword ptr[mProcs +
 __declspec(naked) void __stdcall decorated812() { __asm { jmp dword ptr[mProcs + 812 * 4] } }
 // protected: void __thiscall std::ios_base::_Addstd(void)
 __declspec(naked) void __stdcall decorated813() { __asm { jmp dword ptr[mProcs + 813 * 4] } }
-// char const `private: static char const * __cdecl std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >::_Nullstr(void)'::`2'::_C
-__declspec(naked) void __stdcall decorated814() { __asm { jmp dword ptr[mProcs + 814 * 4] } }
 // unsigned short const `private: static unsigned short const * __cdecl std::basic_string<unsigned short,struct std::char_traits<unsigned short>,class std::allocator<unsigned short> >::_Nullstr(void)'::`2'::_C
 __declspec(naked) void __stdcall decorated815() { __asm { jmp dword ptr[mProcs + 815 * 4] } }
 // private: void __thiscall std::ios_base::_Callfns(enum std::ios_base::event)
@@ -3886,8 +3911,6 @@ __declspec(naked) void __stdcall decorated1631() { __asm { jmp dword ptr[mProcs 
 __declspec(naked) void __stdcall decorated1632() { __asm { jmp dword ptr[mProcs + 1631 * 4] } }
 // struct std::nothrow_t const std::nothrow
 __declspec(naked) void __stdcall decorated1633() { __asm { jmp dword ptr[mProcs + 1632 * 4] } }
-// public: static unsigned int const std::basic_string<char,struct std::char_traits<char>,class std::allocator<char> >::npos
-__declspec(naked) void __stdcall decorated1634() { __asm { jmp dword ptr[mProcs + 1633 * 4] } }
 // public: static unsigned int const std::basic_string<unsigned short,struct std::char_traits<unsigned short>,class std::allocator<unsigned short> >::npos
 __declspec(naked) void __stdcall decorated1635() { __asm { jmp dword ptr[mProcs + 1634 * 4] } }
 // public: class std::basic_filebuf<char,struct std::char_traits<char> > * __thiscall std::basic_filebuf<char,struct std::char_traits<char> >::open(char const *,short)

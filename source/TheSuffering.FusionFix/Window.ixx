@@ -22,6 +22,10 @@ HWND hGameWindow = nullptr;
 SafetyHookInline LoadDisplaySettingsHook, SizeWindowHook, WindowProcedureHook;
 SafetyHookMid SetupDialogHook;
 GameRef<uint32_t> SetupRequested;
+// The original game (not Ties That Bind) marks a minimise and, on the restore, sets its running flag even when it
+// wasn't running yet: minimised during the startup movies, its next frame used the missing front end and crashed.
+// A minimise before the game runs is no longer marked.
+GameRef<uint32_t> RunState, MinimisedWhileRunning;
 bool DisplaySettingsMissing = false;
 bool ShiftRequested = false;
 
@@ -127,6 +131,12 @@ void InitWindowMode()
     nWindowOffset = *size.get_first<uint8_t>(16);
     LoadDisplaySettingsHook = safetyhook::create_inline(load.get_first(), LoadDisplaySettings); //0x439A00
     SizeWindowHook = safetyhook::create_inline(size.get_first(), SizeWindow); //0x4B3BF0
+    if (!IsTiesThatBind())
+    {
+        auto minimise = hook::pattern("83 F8 01 75 47 A1 ? ? ? ? 85 C0 75 1D A1 ? ? ? ? 83 E0 FB 50");
+        MinimisedWhileRunning.SetAddress(*minimise.get_first<uint32_t*>(6)); //0x5DC0D8
+        RunState.SetAddress(*minimise.get_first<uint32_t*>(15)); //0x5C5C30
+    }
     auto setupRequest = hook::pattern("A1 ? ? ? ? 50 E8 ? ? ? ? 83 C4 04 85 C0 0F 84 ? ? ? ? 8B 8C 24");
     SetupRequested.SetAddress(*setupRequest.get_first<uint32_t*>(1));
     auto setupDialog = hook::pattern("6A 01 8B CE E8 ? ? ? ? 8B 1D ? ? ? ? 8B 2D ? ? ? ?");
@@ -146,6 +156,14 @@ LRESULT CALLBACK WindowProcedure(HWND window, UINT message, WPARAM wParam, LPARA
         return result;
     if (message == WM_DESTROY)
         RWGTA::UpdateCheck::OnExit();
+    if (message == WM_SIZE && wParam == SIZE_MINIMIZED && RunState.is_initialized())
+    {
+        const bool running = (RunState.get() & 4) != 0;
+        const auto result = WindowProcedureHook.unsafe_stdcall<LRESULT>(window, message, wParam, lParam);
+        if (!running)
+            MinimisedWhileRunning = 0;
+        return result;
+    }
     if (message == WM_ACTIVATE && LOWORD(wParam) == WA_INACTIVE && nWindowMode && !FixSettings().Bool("MAIN.PauseOnFocusLoss"))
     {
         CursorConfinement::Release();

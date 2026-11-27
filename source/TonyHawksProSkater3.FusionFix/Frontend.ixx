@@ -33,8 +33,7 @@ namespace THPS3Menu
         Component* next = nullptr;
     };
     struct Structure { Component* head = nullptr; Component* tail = nullptr; };
-    struct Array { uint32_t data = 0; uint8_t type = 0, reserved = 0; uint16_t count = 0; };
-    static_assert(sizeof(Component) == 16 && sizeof(Structure) == 8 && sizeof(Array) == 8);
+    static_assert(sizeof(Component) == 16 && sizeof(Structure) == 8);
 
     constexpr uint32_t Checksum(const char* text)
     {
@@ -53,8 +52,7 @@ namespace THPS3Menu
     static_assert(Checksum("textmenuelement") == 0x6B7AE77F);
     static_assert(Checksum("verticalmenu") == 0x87FCAE56);
 
-    // Borrowed synchronous inputs only. Native429630/4292B0 clone strings,
-    // structures and arrays before retention; native destructors never own this.
+    // The synchronous native calls copy strings before retaining them.
     class Parameters
     {
     public:
@@ -65,7 +63,6 @@ namespace THPS3Menu
         Parameters(Parameters&&) = delete;
         Parameters& operator=(Parameters&&) = delete;
         static uint32_t Pointer(const void* value) { return static_cast<uint32_t>(reinterpret_cast<uintptr_t>(value)); }
-        void Integer(const char* name, uint32_t number) { Add(1, Checksum(name), number); }
         void Float(const char* name, float number)
         {
             uint32_t bits;
@@ -80,8 +77,6 @@ namespace THPS3Menu
             strings.push_back(text);
             Add(3, Checksum(name), Pointer(strings.back().c_str()));
         }
-        void Nested(const char* name, Structure* nested) { Add(11, Checksum(name), Pointer(nested)); }
-        void List(const char* name, Array* array) { Add(12, Checksum(name), Pointer(array)); }
 
     private:
         std::deque<Component> components;
@@ -189,27 +184,16 @@ namespace THPS3Menu
     inline void* Lookup(void* manager, uint32_t id)
     {
         if (!Object(manager, Game().managerTable)) return nullptr;
-        // Do not call the native unbounded registry walk on damaged lists.
-        auto* entry = Read<void*>(manager, 0x138);
-        for (unsigned count = 0; entry && count < 4096; ++count)
-        {
-            uint32_t entryID;
-            void* object;
-            void* next;
-            std::memcpy(&entryID, entry, 4);
-            std::memcpy(&object, static_cast<uint8_t*>(entry) + 4, 4);
-            std::memcpy(&next, static_cast<uint8_t*>(entry) + 8, 4);
-            if (entryID == id) return object;
-            if (next == entry) return nullptr;
-            entry = next;
-        }
+        // The native lookup changes the manager's list cursor.
+        for (auto* entry = Read<void*>(manager, 0x138); entry; entry = Read<void*>(entry, 8))
+            if (Read<uint32_t>(entry) == id) return Read<void*>(entry, 4);
         return nullptr;
     }
     inline void* SelectedChild(void* parent)
     {
         if (!Object(parent, Game().containerTable) || Read<uint8_t>(parent, 700)) return nullptr;
         const auto index = Read<int32_t>(parent, 420);
-        if (index < 0 || index > 1024) return nullptr;
+        if (index < 0) return nullptr;
         // Container420 is an index; a vertical menu's field420 is a child ID.
         return reinterpret_cast<void*(__thiscall*)(void*, int32_t, uint32_t*)>(Game().childAt)(parent, index, nullptr);
     }
@@ -224,29 +208,22 @@ namespace THPS3Menu
         uint32_t screenID = 0, baseID = 0;
         bool pause = false;
 
-        static Context Discover(const char** failure = nullptr)
+        static Context Discover()
         {
             Context result;
-            auto refuse = [&](const char* reason) { if (failure) *failure = reason; return Context{}; };
-            if (failure) *failure = nullptr;
             result.frontend = NativeFrontend.get();
-            if (!result.frontend) return refuse("frontend unavailable");
-            if (Read<uint32_t>(result.frontend, 60)) return refuse("frontend transition");
+            if (!result.frontend || Read<uint32_t>(result.frontend, 60)) return {};
             result.screen = Read<void*>(result.frontend, 68);
             result.screenID = Read<uint32_t>(result.frontend, 64);
-            if (!ScreenObject(result.screen, result.screenID)) return refuse("screen identity");
-            if (!Read<uint8_t>(result.screen, 4)) return refuse("screen inactive");
+            if (!ScreenObject(result.screen, result.screenID)) return {};
             result.manager = Manager();
-            if (!result.manager) return refuse("manager identity");
+            if (!result.manager) return {};
             result.parent = Lookup(result.manager, ParentID);
-            if (!Object(result.parent, Game().containerTable) || !Read<uint8_t>(result.parent, 92)
-                || !Read<uint8_t>(result.parent, 93) || !Read<uint8_t>(result.parent, 94)) return refuse("parent identity/show/active/focus");
             result.base = SelectedChild(result.parent);
-            if (!Object(result.base, Game().menuTable) || !Read<uint8_t>(result.base, 92)
-                || !Read<uint8_t>(result.base, 93)) return refuse("selected child identity/show/active");
+            if (!Object(result.base, Game().menuTable)) return {};
             result.baseID = Read<uint32_t>(result.base, 52);
-            if (result.baseID != TitleID && result.baseID != PauseID) return refuse("selected child is outside Options/pause");
-            if (Lookup(result.manager, result.baseID) != result.base || Read<void*>(result.base, 4) != result.parent) return refuse("selected child ownership");
+            if ((result.baseID != TitleID && result.baseID != PauseID)
+                || Lookup(result.manager, result.baseID) != result.base) return {};
             result.pause = result.baseID == PauseID;
             return result;
         }
@@ -265,11 +242,11 @@ namespace THPS3Menu
         {
             return Alive() && Read<uint32_t>(parent, 424) == baseID && Read<uint8_t>(base, 92) && Read<uint8_t>(base, 93);
         }
-        bool PrivateCurrent(void* root, bool requireShown = true) const
+        bool PrivateCurrent(void* root) const
         {
             return Alive() && Object(root, Game().menuTable) && Read<uint32_t>(root, 52) == RootID
                 && Read<void*>(root, 4) == parent && Read<uint32_t>(parent, 424) == RootID
-                && (!requireShown || (Read<uint8_t>(root, 92) && Read<uint8_t>(root, 93)));
+                && Read<uint8_t>(root, 92) && Read<uint8_t>(root, 93);
         }
     };
 }
@@ -297,7 +274,7 @@ namespace THPS3Menu
     static_assert(sizeof(ControllerHeader) == 28);
     static_assert(offsetof(ControllerHeader, nodeValue) == 8 && offsetof(ControllerHeader, owner) == 24);
 
-    enum class Command { Open, Accept, Back, Left, Right, Focus, Enter };
+    enum class Command { Root, Accept, Back, Left, Right, Enter };
     struct Controller
     {
         ControllerHeader native;
@@ -423,16 +400,7 @@ namespace THPS3Menu
             Scope scope;
             return removeTree.unsafe_thiscall<uintptr_t>(node);
         }
-        static void Reset()
-        {
-            // Only startup rollback, before any native retained controllers.
-            removeTree.reset(); removeControllers.reset(); remove.reset();
-            destroy.reset(); task.reset(); input.reset(); parents.reset(); recursive.reset();
-            afterFrame = nullptr;
-            beforeDestroy = nullptr;
-            observe = nullptr;
-        }
-        static bool Install(void (*frame)(), void (*retire)(void*), void (*check)())
+        static void Install(void (*frame)(), void (*retire)(void*), void (*check)())
         {
             afterFrame = frame;
             beforeDestroy = retire;
@@ -445,7 +413,6 @@ namespace THPS3Menu
             remove = safetyhook::create_inline(reinterpret_cast<void*>(Game().remove), Remove);
             removeControllers = safetyhook::create_inline(reinterpret_cast<void*>(Game().removeControllers), RemoveControllers);
             removeTree = safetyhook::create_inline(reinterpret_cast<void*>(Game().removeTree), RemoveTree);
-            return true;
         }
     };
 }
@@ -454,7 +421,7 @@ namespace THPS3Menu
 {
     struct Caption
     {
-        std::string label, suffix, rendered;
+        std::string label, suffix;
         void* font = nullptr;
         void* render = nullptr;
         float width = 0.0f, height = 0.0f, spacing = 0.0f, border = 0.0f, nativeHeight = 0.0f;
@@ -534,7 +501,6 @@ namespace THPS3Menu
         caption.spacing = spacing;
         caption.border = border;
         caption.nativeHeight = nativeHeight;
-        caption.rendered = std::move(text);
         return true;
     }
 }
@@ -670,10 +636,10 @@ namespace THPS3Menu
         uint64_t generation = host.generation;
         bool open = host.open;
         void* root = host.root;
-        bool Current(bool shown = true) const
+        bool Current() const
         {
             return generation == host.generation && open == host.open && root == host.root && !host.invalid
-                && host.context.PrivateCurrent(root, shown);
+                && host.context.PrivateCurrent(root);
         }
     };
     inline bool UpdateRestart()
@@ -719,7 +685,7 @@ namespace THPS3Menu
         if (!host.baseRetiredWhilePrivate || !RecoveryOwner() || RecoveryCurrent()) return;
         int32_t index = -1;
         auto* child = reinterpret_cast<void*(__thiscall*)(void*, uint32_t, int32_t*)>(Game().childById)(host.context.parent, RootID, &index);
-        if (child != host.root || index < 0 || index > 1024 || !RecoveryOwner()) return;
+        if (child != host.root || index < 0) return;
         // Removing the earlier base leaves the parent's cached child index stale; restore it from the ID lookup.
         *reinterpret_cast<int32_t*>(reinterpret_cast<uint8_t*>(host.context.parent) + 420) = index;
     }
@@ -734,10 +700,9 @@ namespace THPS3Menu
         Event event{ type, id, &params.value };
         reinterpret_cast<void(__thiscall*)(void*, Event*)>(Game().launch)(host.context.manager, &event);
     }
-    inline bool Queue(Command command, size_t row = 0, bool beforeShow = false)
+    inline bool Queue(Command command, size_t row = 0)
     {
-        if (host.busy || host.invalid || !host.context.PrivateCurrent(host.root, !beforeShow)) return false;
-        if (command != Command::Open && !host.open) return false;
+        if (host.busy || host.invalid || !host.open || !host.context.PrivateCurrent(host.root)) return false;
         if (command == Command::Back && host.foreignDepth)
         {
             host.model.Close();
@@ -753,6 +718,15 @@ namespace THPS3Menu
         host.pending.push_back({ command, host.generation, host.page, host.start, host.rowStart, row, selected, widget });
         return true;
     }
+    inline void Invalidate()
+    {
+        ++host.generation;
+        host.invalid = true;
+        // Cancel foreign setting writes while native nodes await reclamation.
+        if (!host.modelOpening) host.model.Close();
+        host.open = false;
+    }
+
     inline void* __fastcall ControllerDestroyed(Controller* value, void*, uint32_t)
     {
         if (!value) return nullptr;
@@ -761,10 +735,7 @@ namespace THPS3Menu
         if (!value->retired && value->native.owner && value->native.owner != host.expectedDestroy
             && value->generation == host.generation)
         {
-            ++host.generation;
-            host.invalid = true;
-            if (!host.modelOpening) host.model.Close();
-            host.open = false;
+            Invalidate();
         }
         value->retired = true;
         value->native.owner = nullptr;
@@ -772,18 +743,21 @@ namespace THPS3Menu
     }
     inline void __fastcall ControllerInitialized(Controller* value, void*)
     {
-        const uint32_t rootEvents[] = { ShowEvent, PrepareEvent, BackEvent, PressEvent };
-        const uint32_t rowEvents[] = { ChooseEvent };
         auto subscribe = [&](uint32_t type)
         {
             reinterpret_cast<uint8_t(__thiscall*)(void*, uint32_t, uint8_t)>(Game().subscribe)(value->native.owner, type, 1);
             if (!reinterpret_cast<uint8_t(__thiscall*)(void*, uint32_t)>(Game().subscribed)(value->native.owner, type))
                 host.invalid = true;
         };
-        if (value->command == Command::Open)
-            for (auto event : rootEvents) subscribe(event);
+        if (value->command == Command::Root)
+        {
+            subscribe(ShowEvent);
+            subscribe(PrepareEvent);
+            subscribe(BackEvent);
+            subscribe(PressEvent);
+        }
         else
-            for (auto event : rowEvents) subscribe(event);
+            subscribe(ChooseEvent);
     }
     inline uint8_t __fastcall ControllerExecuted(Controller* value, void*, Event* event)
     {
@@ -791,7 +765,7 @@ namespace THPS3Menu
         // Native widgets accept their own target or broadcast1. A subscribed
         // controller sees foreign-target events too, so retain that same scope
         // before any private root routing or event consumption.
-        if (value->command == Command::Open && event->target != RootID && event->target != 1) return 0;
+        if (value->command == Command::Root && event->target != RootID && event->target != 1) return 0;
         if (value->command == Command::Enter)
         {
             if (!host.busy && !host.invalid && event->type == ChooseEvent && (event->target == EntryID || event->target == 1)
@@ -816,11 +790,9 @@ namespace THPS3Menu
                 host.nativeBackPending = true;
             return 0; // Physical Back goes through the original native route.
         }
-        if (value->command == Command::Open)
+        if (value->command == Command::Root)
         {
-            if (event->type == ShowEvent || event->type == PrepareEvent)
-                Queue(Command::Open, 0, true);
-            else if (event->type == BackEvent && Queue(Command::Back))
+            if (event->type == BackEvent && Queue(Command::Back))
                 Write(event, 0, HandledEvent);
             else if (event->type == PressEvent && host.open && event->params)
             {
@@ -880,13 +852,7 @@ namespace THPS3Menu
             || node == host.context.parent || node == host.context.screen
             || std::any_of(host.items.begin(), host.items.end(), [&](const Item& item) { return item.widget == node; })))
         {
-            ++host.generation;
-            host.invalid = true;
-            // Abort an in-flight preset burst immediately. Native node/list
-            // storage stays deferred, but the shared model's generation must
-            // change before another foreign plugin Set can be issued.
-            if (!host.modelOpening) host.model.Close();
-            host.open = false;
+            Invalidate();
         }
     }
     inline void Collect()
@@ -1267,10 +1233,7 @@ namespace THPS3Menu
             && Read<void*>(host.root, 4) == context.parent;
         if (!identity)
         {
-            ++host.generation;
-            host.invalid = true;
-            if (!host.modelOpening) host.model.Close();
-            host.open = false;
+            Invalidate();
             return;
         }
         if (host.open && (Read<uint32_t>(context.parent, 424) != RootID || !Read<uint8_t>(context.parent, 94))) Close(false);
@@ -1310,12 +1273,18 @@ namespace THPS3Menu
             {
                 int32_t index = -1;
                 if (reinterpret_cast<void*(__thiscall*)(void*, uint32_t, int32_t*)>(Game().childById)(parent, selectedID, &index) == selected
-                    && index >= 0 && index <= 1024)
+                    && index >= 0)
                     Write(parent, 420, index);
             }
         }
         std::erase_if(host.created, [](const Created& value) { return Lookup(host.context.manager, value.id) != value.node; });
     }
+    inline void DiscardPrepared()
+    {
+        CleanupCreated();
+        host.root = host.entry = nullptr;
+    }
+
     inline void Prepare(const Context& context)
     {
         if (!context.StockCurrent()) return;
@@ -1326,7 +1295,6 @@ namespace THPS3Menu
         host.baseRetiredWhilePrivate = false;
         ++host.generation;
         if (!DefaultDrawer()) { Diagnostic("stock default drawer/font identity unavailable"); return; }
-        if (!context.StockCurrent()) { Diagnostic("stock owner changed before preparation"); return; }
         if (Lookup(context.manager, RootID) || Lookup(context.manager, EntryID)) { Diagnostic("private ID already occupied"); return; }
         Busy busy;
         Parameters params;
@@ -1340,11 +1308,10 @@ namespace THPS3Menu
         if (!host.root || host.invalid || !context.StockCurrent())
         {
             Diagnostic("private root construction refused");
-            CleanupCreated();
-            host.root = host.entry = nullptr;
+            DiscardPrepared();
             return;
         }
-        Attach(host.root, Command::Open);
+        Attach(host.root, Command::Root);
         Emit(1533424852, RootID);
         constexpr uint32_t placeholder = Checksum("wfp_thps3_loading");
         auto* back = Text(placeholder, RWGTAMenu::PluginText(FixSettings(), Language(), "menu.back"), RootID, host.root, true);
@@ -1352,8 +1319,7 @@ namespace THPS3Menu
         if (!back || host.invalid || !context.StockCurrent())
         {
             Diagnostic("placeholder construction refused");
-            CleanupCreated();
-            host.root = host.entry = nullptr;
+            DiscardPrepared();
             return;
         }
         auto label = RWGTAMenu::PluginText(FixSettings(), Language(), "menu.plugins");
@@ -1361,8 +1327,7 @@ namespace THPS3Menu
         if (!host.entry || host.invalid || !context.StockCurrent())
         {
             Diagnostic("Plugins entry construction refused");
-            CleanupCreated();
-            host.root = host.entry = nullptr;
+            DiscardPrepared();
             return;
         }
         Attach(host.entry, Command::Enter);
@@ -1370,12 +1335,10 @@ namespace THPS3Menu
         if (host.invalid || !context.StockCurrent() || !Fit(host.entry, Read<float>(context.base, 76)))
         {
             Diagnostic("Plugins entry fitting refused");
-            CleanupCreated();
-            host.root = host.entry = nullptr;
+            DiscardPrepared();
             return;
         }
-        if (!host.invalid && context.StockCurrent())
-            reinterpret_cast<void(__thiscall*)(void*)>(Game().refresh)(context.base);
+        reinterpret_cast<void(__thiscall*)(void*)>(Game().refresh)(context.base);
     }
     inline void Frame()
     {
@@ -1439,10 +1402,7 @@ namespace THPS3Menu
             const auto now = GetTickCount64();
             if (now < nextDiscovery) return;
             nextDiscovery = now + 250;
-            const char* failure = nullptr;
-            auto context = Context::Discover(&failure);
-            Diagnostic(failure);
-            Prepare(context);
+            Prepare(Context::Discover());
             return;
         }
         if (host.enterGeneration)

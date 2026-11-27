@@ -1,6 +1,7 @@
 module;
 #include <stdafx.h>
 #include "FixSettings.hpp"
+#include "rawinput.hpp"
 #define DIRECTINPUT_VERSION 0x0700
 #include <dinput.h>
 
@@ -46,6 +47,7 @@ void InitializeGame()
     ParadiseCamera::Init();
     ParadiseHud::Init();
     ParadiseOverlay::Init();
+    MessagePumpGuard::Install(GetModuleHandleW(nullptr));
 
     // The exclusive DirectInput keyboard crashes inside dinput.dll when the game acquires it again on returning
     // from another window; the non-exclusive foreground keyboard (still without the Windows key) doesn't

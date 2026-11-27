@@ -32,8 +32,10 @@
   "FPSLimit.monitor": "Monitor",
   "FPSLimit.unlimited": "Unlimited",
   "CutsceneBorders": "Cutscene borders",
-  "CutsceneBorders.description": "Preserves the original story camera framing with side borders. Off shows a wider view. Applies immediately.",
+  "CutsceneBorders.description": "Letterbox keeps the original top and bottom strips. Pillarbox adds side borders on screens wider than 4:3. Both combines them. Applies immediately.",
   "CutsceneBorders.0": "Off",
+  "CutsceneBorders.1": "Letterbox",
+  "CutsceneBorders.2": "Pillarbox",
   "CutsceneBorders.3": "Both",
   "CheckForUpdates": "Check for updates",
   "CheckForUpdates.description": "Checks for a newer fix when enabled. A notice appears at the main menu. FusionFixHub opens the update page after the game exits, when installed beside the game. Disabled by default.",
@@ -45,7 +47,7 @@
   "SkipPressStart": "Skip press start",
   "SkipPressStart.description": "Continues past the startup Press Start screen automatically. Restart the game to apply.",
   "FMVWidescreenMode": "Video framing",
-  "FMVWidescreenMode.description": "Original fits the whole video inside the original 4:3 presentation. Fill preserves the picture and skips the black borders encoded in the intro and new game videos.",
+  "FMVWidescreenMode.description": "Original fits the whole video inside the original 4:3 presentation. Fill preserves the picture and skips the black borders encoded in the intro video.",
   "FMVWidescreenMode.original": "Original",
   "FMVWidescreenMode.fill": "Fill"
 }

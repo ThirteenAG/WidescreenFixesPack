@@ -26,7 +26,7 @@ namespace Rev2CameraFOV
 namespace
 {
     std::atomic<float> fovFactor{ 1.0f };
-    std::atomic<int> cutsceneBorders{ 3 };
+    std::atomic<int> cutsceneBorders{ 2 };
     enum class Cutscene { None, SinglePlayer, SplitScreen };
     std::atomic<Cutscene> cutscene{ Cutscene::None };
     GameRef<void*> demoManager;
@@ -34,7 +34,6 @@ namespace
     DemoCheck isDemoPlaying = nullptr;
     SafetyHookInline shSetPerspective;
     SafetyHookInline shEventProjection;
-    SafetyHookInline shCinemaScope;
     SafetyHookMid shGameplayFOV;
     SafetyHookMid shGameplayNear;
 
@@ -99,13 +98,6 @@ namespace
         auto result = shEventProjection.unsafe_thiscall<float*>(camera, matrix);
         aspect = original;
         return result;
-    }
-
-    int __fastcall DrawCinemaScope(void* scope, void*, void* context)
-    {
-        if (!(cutsceneBorders.load(std::memory_order_relaxed) & 1) && cutscene.load(std::memory_order_relaxed) != Cutscene::None)
-            return 0;
-        return shCinemaScope.unsafe_thiscall<int>(scope, context);
     }
 
     bool IsPlayer(const void* object)
@@ -243,7 +235,7 @@ export namespace Rev2Camera
 
     bool ShowPillarbox()
     {
-        return (cutsceneBorders.load(std::memory_order_relaxed) & 2) && cutscene.load(std::memory_order_relaxed) == Cutscene::SinglePlayer;
+        return cutsceneBorders.load(std::memory_order_relaxed) == 2 && cutscene.load(std::memory_order_relaxed) == Cutscene::SinglePlayer;
     }
 }
 
@@ -265,15 +257,13 @@ public:
             });
             BindLiveInt("MAIN.CutsceneBorders", [](int value)
             {
-                cutsceneBorders.store(std::clamp(value, 0, 3), std::memory_order_relaxed);
+                cutsceneBorders.store(std::clamp(value, 0, 2), std::memory_order_relaxed);
             });
             auto demo = hook::pattern("8B 0D ? ? ? ? 6A FF E8 ? ? ? ? 84 C0 0F 84 ? ? ? ? 8A 4E 06 8A 46 04");
             isDemoPlaying = reinterpret_cast<DemoCheck>(injector::GetBranchDestination(demo.get_first(8)).as_int());
             demoManager.SetAddress(*demo.get_first<void**>(2));
             auto eventProjection = hook::pattern("83 EC 10 56 8B F1 57 80 BE BC 01 00 00 00 F3 0F 10 86 C0 00 00 00");
             shEventProjection = safetyhook::create_inline(eventProjection.get_first(), EventProjection);
-            auto cinemaScope = hook::pattern("55 8B EC 83 E4 F0 81 EC 58 01 00 00 8B 55 08 56 0F B7 82 5A 01 00 00");
-            shCinemaScope = safetyhook::create_inline(cinemaScope.get_first(), DrawCinemaScope);
             auto perspective = hook::pattern("E8 ? ? ? ? 8B 44 24 04 C2 04 00 CC CC CC CC CC CC CC CC CC CC 8D 41 50");
             shSetPerspective = safetyhook::create_inline(injector::GetBranchDestination(perspective.get_first()).as_int(), SetPerspective);
 

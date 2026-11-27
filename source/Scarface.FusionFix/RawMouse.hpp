@@ -40,7 +40,7 @@ namespace ScarfaceRawMouse
 
     inline void Capture(const RAWINPUT& input)
     {
-        if (!Enabled.load() || !Focused() || input.header.dwType != RIM_TYPEMOUSE)
+        if (input.header.dwType != RIM_TYPEMOUSE || !Enabled.load() || !Focused())
             return;
         if (input.data.mouse.usFlags & MOUSE_MOVE_ABSOLUTE)
         {
@@ -60,6 +60,8 @@ namespace ScarfaceRawMouse
         if (!original)
             return UINT(-1);
         const auto result = original(input, command, data, size, headerSize);
+        if (!Enabled.load(std::memory_order_relaxed))
+            return result;
         const auto error = GetLastError();
         if (command == RID_INPUT && data && result != UINT(-1) && result >= sizeof(RAWINPUT) && headerSize == sizeof(RAWINPUTHEADER))
         {

@@ -12,6 +12,9 @@ namespace tcny
     {
         SafetyMipsMid spriteHook, splashHook;
         safetymips::GameInline<int32_t(uintptr_t, uintptr_t, int32_t)> pictureHook;
+        safetymips::GameInline<uint64_t(uintptr_t, uint64_t, uint64_t, uint64_t)> titleHook;
+        uintptr_t titleInputBlocked;
+        bool enteredMainMenu;
         constexpr unsigned maxWidth = 640, maxHeight = 512;
         alignas(16) uint32_t picture[maxWidth * maxHeight];
 
@@ -113,6 +116,23 @@ namespace tcny
             }
             return result;
         }
+
+        uint64_t Title(uintptr_t menu, uint64_t message, uint64_t buttons, uint64_t source)
+        {
+            constexpr uint64_t update = 0, buttonMessage = 9, start = 0x800;
+            constexpr uintptr_t phase = 0x68;
+            const auto result = titleHook.call(menu, message, buttons, source);
+            if (message == update && !enteredMainMenu)
+            {
+                // Let memory card and other modal screens handle input first.
+                if (Read<uint32_t>(menu + phase) == 0 && Read<uint32_t>(titleInputBlocked) == 0)
+                {
+                    titleHook.call(menu, buttonMessage, start, 0);
+                }
+                enteredMainMenu = Read<uint32_t>(menu + phase) != 0;
+            }
+            return result;
+        }
     } // namespace
 
     void InstallLauncher(uintptr_t sprite, uintptr_t picture, uintptr_t splash)
@@ -120,5 +140,11 @@ namespace tcny
         splashHook = safetymips::create_mid<&Splash>(splash + 8);
         spriteHook = safetymips::create_mid<&Sprite>(sprite);
         pictureHook = safetymips::create_inline_game(picture, Picture);
+    }
+
+    void InstallTitleSkip(uintptr_t handler, uintptr_t inputBlocked)
+    {
+        titleInputBlocked = inputBlocked;
+        titleHook = safetymips::create_inline_game(handler, Title);
     }
 } // namespace tcny

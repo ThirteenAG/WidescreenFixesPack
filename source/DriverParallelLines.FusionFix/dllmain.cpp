@@ -26,11 +26,11 @@ void Init()
     InitComVarsRequiredRefs();
     InitCameraRequiredRefs();
     InitRenderingRequiredRefs();
-    InitTurnIndicatorsRequiredRefs();
     FixSettings();
     DPLMenu::Init();
     DPLUpdates::Install();
     DPLFocus::Install();
+    DPLFrameRate::Install();
     DPLMouse::Install();
     DPLPad::Install();
     DPLIcons::Install();
@@ -86,21 +86,6 @@ void Init()
     pattern = hook::pattern("8B 45 ? 8B 48 ? 57");
     static auto MainLoopHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
-        static std::list<int64_t> times;
-        static const int64_t frequency = []()
-        {
-            LARGE_INTEGER value{};
-            QueryPerformanceFrequency(&value);
-            return value.QuadPart;
-        }();
-        LARGE_INTEGER time{};
-        QueryPerformanceCounter(&time);
-        if (times.size() == 50) times.pop_front();
-        times.push_back(time.QuadPart);
-        const double elapsed = static_cast<double>(times.back() - times.front());
-        fTimeStep = times.size() > 1 && elapsed > 0.0 && frequency > 0 ?
-            static_cast<float>(std::clamp(elapsed / ((times.size() - 1) * frequency), 0.001, 0.1)) : 1.0f / 60.0f;
-
         static std::once_flag of;
         std::call_once(of, []()
         {

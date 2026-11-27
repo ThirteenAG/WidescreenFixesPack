@@ -14,6 +14,8 @@ export struct Screen
     float fAspectRatio;
     float fHudScale;
     float fHudOffset;
+    float fHudScaleY;
+    float fHudOffsetY;
     float fTextOffset;
     float fFMVOffset;
     float fInvMenuHeartLineEnd; // On-Screen Range: -0.5 to 0.5

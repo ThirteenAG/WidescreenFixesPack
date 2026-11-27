@@ -2,6 +2,7 @@ module;
 #include <stdafx.h>
 #include <ddraw.h>
 #include <d3d.h>
+#include <array>
 #include "FixSettings.hpp"
 
 export module Hud;
@@ -26,8 +27,8 @@ export namespace KnightRider2Hud
 
     inline float BoxWidth(float width, float height)
     {
-        if (CockpitActive || (KnightRider2Camera::Cinematic && KnightRider2Camera::Borders.load(std::memory_order_relaxed) != 0))
-            return std::min(width, height * (4.0f / 3.0f));
+        if (CockpitActive || KnightRider2Camera::UseCinematicViewport(width / height))
+            return std::min(width, height * KnightRider2Camera::NativeAspect);
         const auto ratio = Constraint.load(std::memory_order_relaxed);
         return ratio > 0.0f ? std::min(width, height * ratio) : width;
     }
@@ -62,10 +63,33 @@ export namespace KnightRider2Hud
         return InspectHook.thiscall<int>(object, frame, pass);
     }
 
-    inline int __fastcall Dialogue(void* object, void*, int frame, int pass)
+    inline void __fastcall Dialogue(uint8_t* property, void*, int frame, int pass)
     {
         const Scope scope{ -1 };
-        return DialogueHook.thiscall<int>(object, frame, pass);
+        const auto camera = *reinterpret_cast<uint8_t**>(property + 68);
+        if (pass != 1 || !camera || !KnightRider2Camera::Cinematic ||
+            (KnightRider2Camera::Borders.load(std::memory_order_relaxed) & 1))
+            return DialogueHook.thiscall<void>(property, frame, pass);
+
+        // The dialogue camera has separate top and bottom strip polygons. Keep its other
+        // geometry and the independent caption and speaker draws active.
+        const std::array bars{ *reinterpret_cast<void**>(property + 16), *reinterpret_cast<void**>(property + 24) };
+        std::array<void**, 2> hidden{};
+        const auto polygons = *reinterpret_cast<void***>(camera + 368);
+        const auto polygonCount = *reinterpret_cast<uint16_t*>(camera + 374);
+        for (size_t i = 0; i < polygonCount; ++i)
+        {
+            const auto bar = std::find(bars.begin(), bars.end(), polygons[i]);
+            if (polygons[i] && bar != bars.end())
+            {
+                hidden[bar - bars.begin()] = &polygons[i];
+                polygons[i] = nullptr;
+            }
+        }
+        DialogueHook.thiscall<void>(property, frame, pass);
+        for (size_t i = 0; i < hidden.size(); ++i)
+            if (hidden[i])
+                *hidden[i] = bars[i];
     }
 
     inline int __fastcall Info(uint8_t* property, void*, int frame, int pass)

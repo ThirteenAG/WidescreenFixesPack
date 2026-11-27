@@ -128,9 +128,12 @@ public:
                 state->wheel = current.lZ;
                 MouseRead::X = current.lX;
                 MouseRead::Y = current.lY;
-                Total::X += current.lX;
-                Total::Y += current.lY;
-                Total::Wheel += current.lZ;
+                if (RawMouseEnabled)
+                {
+                    Total::X += current.lX;
+                    Total::Y += current.lY;
+                    Total::Wheel += current.lZ;
+                }
                 std::copy(std::begin(current.rgbButtons), std::end(current.rgbButtons), state->buttons);
                 regs.eip = ReadDone;
             });

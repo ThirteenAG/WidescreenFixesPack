@@ -25,6 +25,11 @@
       "section": "camera"
     },
     {
+      "id": "compatibility",
+      "title": "@page.compatibility",
+      "section": "compatibility"
+    },
+    {
       "id": "advanced",
       "title": "@page.advanced",
       "section": "advanced"
@@ -114,7 +119,7 @@
       ],
       "label": "@TextLanguage",
       "description": "@TextLanguage.description",
-      "page": "advanced",
+      "page": "compatibility",
       "visibility": "editor",
       "apply": "live"
     },

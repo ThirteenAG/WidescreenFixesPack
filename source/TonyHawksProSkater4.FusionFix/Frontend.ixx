@@ -214,8 +214,6 @@ namespace THPS4Menu
     struct Event { uint32_t type, source, target, flags; Structure* data; };
     static_assert(sizeof(Event) == 20);
     // All calls require the native UI thread.
-    // No owned CFunction is published as an event script:422D00 requires the
-    // nonzero script result which4137E0 deliberately does not return for type8.
     inline void* Symbol(uint32_t name)
     {
         if (!NativeSymbols.get()) return nullptr;
@@ -226,13 +224,10 @@ namespace THPS4Menu
         auto* symbol = Symbol(Checksum(name));
         return Read<uint8_t>(symbol, 1) == 7 && Read<uintptr_t>(symbol, 12) != 0;
     }
-    inline bool Run(const char* name, const Parameters& parameters)
+    inline void Run(const char* name, const Parameters& parameters)
     {
-        if (!ScriptAvailable(name)) return false;
-        //413090's result is allocator cleanup, not a semantic helper result.
-        // Only proved no-wait helpers; validate every created native identity.
-        reinterpret_cast<int (__cdecl*)(uint32_t, const Structure*, void*, char, const char*)>(Game().run)(Checksum(name), &parameters.value, nullptr, 0, name);
-        return true;
+        // The dispatcher returns its cleanup result. Check the controls created by the script.
+        reinterpret_cast<void (__cdecl*)(uint32_t, const Structure*, void*, char, const char*)>(Game().run)(Checksum(name), &parameters.value, nullptr, 0, name);
     }
     inline bool Spawn(const char* name, const Parameters& parameters, uint32_t id)
     {
@@ -258,16 +253,12 @@ namespace THPS4Menu
         void Find(uint32_t id)
         {
             Reset();
-            //4748F0 explicitly replaces ECX with native5CD25C internally,
-            // unlike the manager-thiscall named-param lookup4749B0.
             reinterpret_cast<WeakSlot* (__stdcall*)(WeakSlot*, uint32_t, int)>(Game().findWeak)(&slot, id, 0);
             if (slot.element) return;
-            // AssignAlias publishes into the registry's separate alias table.
-            // Resolve that name as the stock named-param lookup does, then let
-            // the ordinary constructor register a weak reference to its ID.
+            // Resolve aliases to an element ID before registering the weak reference.
             auto* registry = NativeRegistry.get();
             auto* aliases = Read<void*>(registry, 12);
-            if (!aliases || Read<uint32_t>(aliases) > 24 || !Read<void*>(aliases, 4)) return;
+            if (!aliases || !Read<void*>(aliases, 4)) return;
             auto* alias = reinterpret_cast<void* (__thiscall*)(void*, uint32_t)>(Game().alias)(registry, id);
             if (!alias) return;
             reinterpret_cast<WeakSlot* (__stdcall*)(WeakSlot*, uint32_t, int)>(Game().findWeak)(&slot, Read<uint32_t>(alias, 20), 0);
@@ -280,32 +271,25 @@ namespace THPS4Menu
         if (!parameters) return false;
         auto* component = parameters->head;
         auto hash = *name ? Checksum(name) : 0;
-        for (size_t n = 0; component && n < 256; ++n)
+        for (; component; component = component->next)
         {
             if (component->type == 13 && component->name == hash) { value = component->value; return true; }
-            component = component->next;
         }
         return false;
     }
-    inline bool Properties(const Parameters& parameters)
+    inline bool SetProperties(const Parameters& parameters)
     {
-        uint32_t id;
-        if (!Name(&parameters.value, "id", id)) return false;
-        Weak target;
-        target.Find(id);
-        if (!target.Get()) return false;
         return reinterpret_cast<char (__cdecl*)(const Structure*)>(Game().setProps)(&parameters.value) != 0;
     }
     inline bool Destroy(uint32_t id);
-    inline bool Create(uint32_t type, uint32_t id, const Parameters& parameters)
+    inline bool CreateCaption(uint32_t id, uint32_t parentId, const Parameters& parameters)
     {
+        constexpr auto type = Checksum("TextElement");
         auto* manager = NativeManager.get();
-        if (!manager || (type != Checksum("TextElement") && type != Checksum("ContainerElement"))) return false;
         Weak existing, parent;
         existing.Find(id);
-        uint32_t parentId;
-        if (existing.Get() || !Name(&parameters.value, "parent", parentId)) return false;
         parent.Find(parentId);
+        if (!manager || existing.Get()) return false;
         if (!parent.Get()) return false;
         WeakSlot slot;
         reinterpret_cast<WeakSlot* (__thiscall*)(void*, WeakSlot*, uint32_t, uint32_t, const Structure*)>(Game().create)(manager, &slot, type, id, &parameters.value);
@@ -326,8 +310,6 @@ namespace THPS4Menu
         if (!target.Get()) return false;
         Parameters parameters;
         parameters.Name("id", id);
-        //475BC0 ->4746E0 ->4754D0 recursion only uses the optional script in
-        // guarded non-null4115A0 detachment; engine owns every node deletion.
         return reinterpret_cast<char (__cdecl*)(const Structure*, void*)>(Game().destroy)(&parameters.value, nullptr) != 0;
     }
     inline bool Fire(const char* event, uint32_t target, Structure* data = nullptr)
@@ -336,8 +318,7 @@ namespace THPS4Menu
         Weak object;
         object.Find(target);
         if (!manager || !object.Get()) return false;
-        //Direct manager Event dispatch: CFN428070 always dereferences script.
-        //427C10 builds a synchronous20-byte event and invokes target virtual16.
+        // Dispatch directly to the native target without a script context.
         return reinterpret_cast<bool (__thiscall*)(void*, uint32_t, uint32_t, uint32_t, Structure*)>(Game().broker)(manager, Checksum(event), target, target, data);
     }
     struct Extent { float width = 0, height = 0; };
@@ -443,9 +424,7 @@ namespace THPS4Menu
             case 6: return "it";
             case 7: return "nl";
             case 8: return "pt";
-            default:
-                LogOnce("native language has no verified tag; auto falls back to English");
-                return "en";
+            default: return "en";
         }
     }
     inline std::string NativeText(const std::string& utf8)
@@ -503,8 +482,7 @@ namespace THPS4Menu
         uint32_t serial = 0;
         bool pause = false, retired = false, rebuilding = false, constructing = false, returnPending = false;
         size_t page = SIZE_MAX, rootStart = 0, rowStart = 0, selected = 0;
-        std::string language;
-        std::vector<Item> items;
+            std::vector<Item> items;
         bool details = false;
         size_t detailStart = 0, detailSelection = 0;
         std::vector<std::string> detailLines;
@@ -565,11 +543,10 @@ namespace THPS4Menu
         // Storage remains process-long even after a logical Context retires.
         std::array<uintptr_t, 10> words{};
         uintptr_t Pointer() const { return reinterpret_cast<uintptr_t>(words.data() + 1); }
-        bool Prepare()
+        void Prepare()
         {
             std::memcpy(words.data(), reinterpret_cast<void*>(original - 4), sizeof(words));
-            words[5] = reinterpret_cast<uintptr_t>(&ControlEvent); // vfptr+16
-            return true;
+            words[5] = reinterpret_cast<uintptr_t>(&ControlEvent); // Native event handler
         }
         bool Bind(void* object) const
         {
@@ -586,13 +563,15 @@ namespace THPS4Menu
 
     inline void Color(uint32_t id, bool selected, bool enabled)
     {
-        // Native skutils do_scale_up/down palette, without their spawned blur
-        // loop. These remain the game's own text-control colors and renderer.
+        Weak target;
+        target.Find(id);
+        if (!target.Get()) return;
+        // Use the native focus palette without spawning the blur animation.
         ArrayView rgba(1, enabled ? selected ? std::vector<uint32_t>{127,102,0,100} : std::vector<uint32_t>{88,105,112,128} : std::vector<uint32_t>{70,70,70,120});
         Parameters parameters;
         parameters.Name("id", id);
         parameters.List("rgba", &rgba.value);
-        Properties(parameters);
+        SetProperties(parameters);
     }
 
     inline void Retire(const std::shared_ptr<Context>& owner)
@@ -633,7 +612,7 @@ namespace THPS4Menu
         parameters.List("just", &just.value);
         parameters.XY("scale", scale, scale);
         parameters.Flag("not_focusable");
-        return Create(Checksum("TextElement"), id, parameters);
+        return CreateCaption(id, privateAnchor, parameters);
     }
     // Startup settings as the game started with them: the restart line shows while one of them differs
     inline std::map<std::pair<HMODULE, std::string>, std::string> restartBaseline;
@@ -688,11 +667,9 @@ namespace THPS4Menu
                 auto enabled = Foreign([&] { return owner->model.Enabled(row, owner->pause); });
                 if (!Current(owner)) return false;
                 auto label = owner->model.Label(row);
-                if (!Current(owner)) return false;
                 auto value = enabled ? Foreign([&] { return owner->model.Value(row); }) : owner->model.Text("menu.unavailable");
                 if (!Current(owner)) return false;
                 auto description = owner->model.Help(row);
-                if (!Current(owner)) return false;
                 items.push_back({ Kind::Row, i, enabled, std::move(label), std::move(value), std::move(description) });
                 if (!items.back().description.empty())
                     items.push_back({ Kind::Details, i, true, owner->model.Text("menu.details") });
@@ -702,20 +679,15 @@ namespace THPS4Menu
         }
         items.push_back({ Kind::Back, 0, true, owner->model.Text("menu.back") });
         const bool restart = RestartPending(owner);
-        if (!Current(owner) || items.empty() || items.size() > 10) return false;
+        if (!Current(owner) || items.size() > 10) return false;
         owner->serial = Serial(); // Row-pool generation rejects queued old-page input.
         owner->rebuilding = true;
         owner->constructing = true;
         auto oldAnchor = Read<uint32_t>(owner->anchor.Get(), 20);
         Destroy(oldAnchor);
-        if (context != owner || owner->retired || !owner->window.Get() || Modal())
-        {
-            owner->rebuilding = false;
-            return false;
-        }
         Weak replacement;
         replacement.Find(Checksum("current_menu_anchor"));
-        if (replacement.Get())
+        if (context != owner || owner->retired || !owner->window.Get() || Modal() || replacement.Get())
         {
             owner->rebuilding = false;
             return false;
@@ -733,11 +705,11 @@ namespace THPS4Menu
         root.XY("pos", 120, 108);
         root.XY("dims", 440, 280);
         root.Text("menu_title", "");
-        auto issued = Run("make_new_menu", root);
+        Run("make_new_menu", root);
         owner->anchor.Find(privateAnchor);
         owner->menu.Find(privateMenu);
         owner->rebuilding = false;
-        if (!issued || !Current(owner) || Read<uint32_t>(owner->menu.Get(), 24) != Checksum("VMenu") || Read<uintptr_t>(owner->menu.Get()) != Game().menuTable) return false;
+        if (!Current(owner) || Read<uint32_t>(owner->menu.Get(), 24) != Checksum("VMenu") || Read<uintptr_t>(owner->menu.Get()) != Game().menuTable) return false;
         // Install escape before population; a later font/row failure can still
         // return through the native parent even with only a partial page.
         if (!containerTable.Bind(owner->anchor.Get()) || !menuTable.Bind(owner->menu.Get())) return false;
@@ -771,13 +743,14 @@ namespace THPS4Menu
             row.Text("text", EscapeNativeText(fitted, true));
             row.Flag("no_choose_sound");
             if (item.kind == Kind::Text) row.Flag("not_focusable");
-            auto issued = Run("make_text_sub_menu_item", row);
-            Weak created;
-            created.Find(item.id);
-            if (!issued || !created.Get() || Read<uintptr_t>(created.Get()) != Game().textTable || Read<uint32_t>(created.Get(), 24) != Checksum("TextElement")
-                || Read<void*>(created.Get(), 64) != owner->menu.Get())
+            Run("make_text_sub_menu_item", row);
+            item.native = std::make_shared<Weak>();
+            item.native->Find(item.id);
+            auto* created = item.native->Get();
+            if (!created || Read<uintptr_t>(created) != Game().textTable || Read<uint32_t>(created, 24) != Checksum("TextElement")
+                || Read<void*>(created, 64) != owner->menu.Get())
             {
-                if (created.Get() && Read<uint32_t>(created.Get(), 20) == item.id) Destroy(item.id);
+                if (created && Read<uint32_t>(created, 20) == item.id) Destroy(item.id);
                 return false;
             }
             if (!Current(owner)) return false;
@@ -785,9 +758,7 @@ namespace THPS4Menu
             scale.Name("id", item.id);
             scale.XY("scale", xScale, xScale);
             if (item.kind == Kind::Text) scale.Flag("not_focusable");
-            if (!Properties(scale)) return false;
-            item.native = std::make_shared<Weak>();
-            item.native->Find(item.id);
+            if (!SetProperties(scale)) return false;
             if (!textTable.Bind(item.native->Get())) return false;
             Color(item.id, i == owner->selected, item.enabled);
         }
@@ -804,7 +775,7 @@ namespace THPS4Menu
 
     inline bool Active(const std::shared_ptr<Context>& owner, size_t index)
     {
-        return Current(owner) && !Modal() && index < owner->items.size()
+        return Current(owner) && index < owner->items.size()
             && owner->items[index].native && owner->items[index].native->Get()
             && Read<uint32_t>(owner->items[index].native->Get(), 20) == owner->items[index].id
             && Read<void*>(owner->items[index].native->Get(), 64) == owner->menu.Get()
@@ -887,23 +858,19 @@ namespace THPS4Menu
         if (!ready || nativeThread != GetCurrentThreadId() || context) return;
         uint32_t id = 0;
         if (!Name(parameters, "id", id)) return;
-        const bool optionsCall = id == Checksum("ss_setup_options_menu") || id == Checksum("options_menu");
         uint32_t scriptName = 0;
         if (!Name(parameters, "", scriptName) || scriptName != Checksum("animate_in"))
-        {
-            if (optionsCall) LogOnce("Options dispatch has no inline animate_in checksum");
             return;
-        }
         Weak currentAnchor;
         currentAnchor.Find(Checksum("current_menu_anchor"));
-        if (!currentAnchor.Get()) { if (optionsCall) LogOnce("Options current anchor unavailable"); return; }
+        if (!currentAnchor.Get()) return;
         auto sourceId = Read<uint32_t>(currentAnchor.Get(), 20);
         auto pause = sourceId == Checksum("options_menu");
         auto title = sourceId == Checksum("ss_setup_options_menu");
         if ((!pause && !title) || (id != sourceId && id != Checksum("current_menu_anchor")))
-        { if (optionsCall) LogOnce("Options animate_in anchor identity unavailable"); return; }
+            return;
         if (!ScriptAvailable("make_new_menu") || !ScriptAvailable("make_text_sub_menu_item")
-            || !ScriptAvailable("nullscript") || !ScriptAvailable(title ? "main_menu_add_item" : "make_text_sub_menu_item"))
+            || !ScriptAvailable("nullscript") || (title && !ScriptAvailable("main_menu_add_item")))
         { LogOnce("Options row helper scripts unavailable"); return; }
         Weak existing;
         existing.Find(entryId);
@@ -915,11 +882,10 @@ namespace THPS4Menu
         if (!source->menu.Get() || !source->anchor.Get() || !source->window.Get()
             || Read<uint32_t>(source->menu.Get(), 24) != Checksum("VMenu")
             || Read<uintptr_t>(source->menu.Get()) != Game().menuTable || Modal())
-        { LogOnce("Options native menu/window/type authority unavailable"); return; }
+            return;
         Weak alias;
         alias.Find(Checksum("current_menu"));
-        if (alias.Get() != source->menu.Get() || currentAnchor.Get() != source->anchor.Get())
-        { LogOnce("Options current menu alias unavailable"); return; }
+        if (alias.Get() != source->menu.Get() || currentAnchor.Get() != source->anchor.Get()) return;
         auto sourceAnchor = source->anchor.Get();
         auto sourceMenu = source->menu.Get();
         auto sourceWindow = source->window.Get();
@@ -937,7 +903,7 @@ namespace THPS4Menu
         row.Name("pad_choose_script", "nullscript");
         row.Flag("no_sound");
         if (!title) row.Name("parent_menu_id", Read<uint32_t>(sourceMenu, 20));
-        auto issued = Run(title ? "main_menu_add_item" : "make_text_sub_menu_item", row);
+        Run(title ? "main_menu_add_item" : "make_text_sub_menu_item", row);
         source->entry.Find(entryId);
         alias.Find(Checksum("current_menu"));
         currentAnchor.Find(Checksum("current_menu_anchor"));
@@ -950,7 +916,7 @@ namespace THPS4Menu
         auto correctEntry = source->entry.Get() && Read<uint32_t>(source->entry.Get(), 20) == entryId
             && Read<uint32_t>(source->entry.Get(), 24) == Checksum(title ? "ContainerElement" : "TextElement")
             && Read<void*>(source->entry.Get(), 64) == sourceMenu;
-        if (!issued || !sameSource || !correctEntry || !((title ? containerTable : textTable).Bind(source->entry.Get())))
+        if (!sameSource || !correctEntry || !((title ? containerTable : textTable).Bind(source->entry.Get())))
         {
             // The id was absent before this synchronous helper. Remove only
             // its exact observed result; never leave a visible inert category.
@@ -1047,8 +1013,7 @@ namespace THPS4Menu
         auto owner = std::make_shared<Context>();
         owner->serial = Serial();
         owner->pause = host->pause;
-        owner->language = Language();
-        owner->model.OpenPlugins(module, owner->language, 4096);
+        owner->model.OpenPlugins(module, Language(), 4096);
         if (!owner->model.IsOpen()) return; // Discovery may logically cancel.
         current.Find(Checksum("current_menu"));
         anchor.Find(Checksum("current_menu_anchor"));
@@ -1063,12 +1028,7 @@ namespace THPS4Menu
         owner->menu.Find(Read<uint32_t>(sourceMenu, 20));
         owner->window.Find(Checksum("root_window"));
         context = owner;
-        if (!Build(owner))
-        {
-            LogOnce("private page commit rejected");
-            Cleanup(owner, true);
-            return;
-        }
+        if (!Build(owner)) Cleanup(owner, true);
     }
     inline void Act(const Pending& action)
     {
@@ -1078,7 +1038,7 @@ namespace THPS4Menu
         if (action.action == Action::Back)
         {
             if (owner->retired) { Cleanup(owner, true); return; }
-            if (!Current(owner) || Modal() || Read<uint8_t>(owner->menu.Get(), 332) == 0) return;
+            if (!Current(owner) || Read<uint8_t>(owner->menu.Get(), 332) == 0) return;
             if (owner->details)
             {
                 owner->details = false;
@@ -1096,7 +1056,7 @@ namespace THPS4Menu
             else Cleanup(owner, true);
             return;
         }
-        if (!Current(owner) || Modal() || action.index >= owner->items.size()) return;
+        if (!Current(owner) || action.index >= owner->items.size()) return;
         auto item = owner->items[action.index];
         if (!item.native || !item.native->Get() || Read<uint32_t>(item.native->Get(), 20) != item.id
             || Read<void*>(item.native->Get(), 64) != owner->menu.Get()) return;
@@ -1114,7 +1074,9 @@ namespace THPS4Menu
             if (!Measure(fitted, extent)) return;
             description.Text("text", EscapeNativeText(fitted, true));
             description.XY("scale", scale, scale);
-            Properties(description);
+            Weak caption;
+            caption.Find(descriptionId);
+            if (caption.Get()) SetProperties(description);
             return;
         }
         if (!item.enabled) return;

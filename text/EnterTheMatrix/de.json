@@ -11,7 +11,7 @@
   "page.game": "Spiel",
   "page.compatibility": "Kompatibilität",
   "WindowMode": "Fenstermodus",
-  "WindowMode.description": "Vollbild, ein Fenster oder ein randloses Fenster über den ganzen Monitor. Fenster nutzt die in MatrixOptions gewählte Auflösung, Randlos die des Monitors. Erfordert einen Neustart.",
+  "WindowMode.description": "Vollbild, ein Fenster oder ein randloses Fenster über den ganzen Monitor. Das Fenster startet mit der in MatrixOptions gewählten Auflösung und lässt sich am Rahmen vergrößern oder verkleinern. Erfordert einen Neustart.",
   "WindowMode.fullscreen": "Vollbild",
   "WindowMode.windowed": "Fenster",
   "WindowMode.borderless": "Randlos",

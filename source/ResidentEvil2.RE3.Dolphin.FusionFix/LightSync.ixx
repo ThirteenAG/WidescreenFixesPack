@@ -1,6 +1,9 @@
 module;
 
 #include <stdafx.h>
+#include <locale>
+#include <memory>
+#include <ostream>
 #include "FixSettings.hpp"
 #include <dolphin/dolphin.h>
 #include <LEDEffects.h>
@@ -8,6 +11,52 @@ module;
 export module LightSync;
 
 import Game;
+
+namespace
+{
+    constexpr wchar_t lightingSdk[] = L"sdk_legacy_led_x64.dll";
+    decltype(&LoadLibraryW) loadLibrary;
+    decltype(&std::locale::classic) classicLocale;
+    // The MSVC x64 member call places the returned locale in a caller-provided buffer.
+    std::locale* (*imbueStream)(std::ios*, void*, const std::locale*);
+
+    template<class Number>
+    std::ostream& (*writeNumber)(std::ostream*, Number);
+
+    template<class Number>
+    std::ostream& WriteProtocolNumber(std::ostream* stream, Number number)
+    {
+        // The SDK serializes its local port and hexadecimal integration ID with integer stream operators.
+        // Give those SDK streams the classic locale so Dolphin's digit grouping stays out of the protocol.
+        alignas(std::locale) std::byte previous[sizeof(std::locale)];
+        std::destroy_at(imbueStream(static_cast<std::ios*>(stream), previous, &classicLocale()));
+        return writeNumber<Number>(stream, number);
+    }
+
+    HMODULE WINAPI LoadLightingSdk(LPCWSTR path)
+    {
+        const auto library = loadLibrary(path);
+        if (!library || library != GetModuleHandleW(lightingSdk))
+            return library;
+
+        const auto runtime = GetModuleHandleW(L"MSVCP140.dll");
+        if (!runtime)
+            return library;
+
+        constexpr char shortOutput[] = "??6?$basic_ostream@DU?$char_traits@D@std@@@std@@QEAAAEAV01@G@Z";
+        constexpr char longOutput[] = "??6?$basic_ostream@DU?$char_traits@D@std@@@std@@QEAAAEAV01@_K@Z";
+        classicLocale = reinterpret_cast<decltype(classicLocale)>(GetProcAddress(runtime, "?classic@locale@std@@SAAEBV12@XZ"));
+        imbueStream = reinterpret_cast<decltype(imbueStream)>(GetProcAddress(runtime,
+            "?imbue@?$basic_ios@DU?$char_traits@D@std@@@std@@QEAA?AVlocale@2@AEBV32@@Z"));
+        writeNumber<unsigned short> = reinterpret_cast<decltype(writeNumber<unsigned short>)>(GetProcAddress(runtime, shortOutput));
+        writeNumber<uint64_t> = reinterpret_cast<decltype(writeNumber<uint64_t>)>(GetProcAddress(runtime, longOutput));
+        if (classicLocale && imbueStream && writeNumber<unsigned short> && writeNumber<uint64_t>)
+            IATHook::Replace(library, "MSVCP140.dll",
+                std::forward_as_tuple(shortOutput, reinterpret_cast<void*>(&WriteProtocolNumber<unsigned short>)),
+                std::forward_as_tuple(longOutput, reinterpret_cast<void*>(&WriteProtocolNumber<uint64_t>)));
+        return library;
+    }
+}
 
 // Logitech LIGHTSYNC (MAIN.LightSyncRGB): the player's health as the keyboard colour and a cardiogram, purple when
 // poisoned.
@@ -18,6 +67,12 @@ export namespace LightSync
     {
         if (!FixSettings().Bool("MAIN.LightSyncRGB"))
             return;
+
+        // The signed SDK wrapper loads G HUB's library on its first initialization.
+        const auto module = module_path_detail::ThisModule();
+        loadLibrary = &LoadLibraryW;
+        if (module)
+            IATHook::Replace(module, "KERNEL32.dll", std::forward_as_tuple("LoadLibraryW", reinterpret_cast<void*>(&LoadLightingSdk)));
 
         LEDEffects::Inject([]()
         {

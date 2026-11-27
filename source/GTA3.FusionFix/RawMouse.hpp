@@ -5,9 +5,8 @@ namespace GtaRawMouse
 {
     inline SafetyHookMid MouseHook;
 
-    inline void Install(HWND (*gameWindow)(), bool (*playing)())
+    inline void Install(HWND (*gameWindow)())
     {
-        Playing = playing;
         // Replace the native relative packet before its invert-axis handling.
         // Buttons, wheel, menu cursor and the game's sensitivity remain native.
         auto packet = hook::pattern("8B 44 24 ? 0F AF C3 89 04 24 8B 44 24 ? 0F AF C5 DB 04 24 D9 1D");

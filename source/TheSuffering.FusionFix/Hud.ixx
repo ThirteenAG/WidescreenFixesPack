@@ -41,6 +41,59 @@ float HudShift(float left, float width)
     return Screen.fHudOffsetReal;
 }
 
+// Text comes as one quad per glyph, drawn from the end of the line. A glyph takes the side of its whole line, as the
+// line was in the previous frame (glyphs on one row, each at most a couple of spaces from the next), so a line isn't
+// split between the sides by where its words sit.
+struct TextLine
+{
+    float y, left, right;
+};
+std::vector<TextLine> TextLines, LastTextLines;
+
+float TextLineShift(float left, float top, float width, float height)
+{
+    if (height > Screen.fHeight * 0.06f || width > height * 2.0f)
+        return HudShift(left, width);
+    const float gap = height * 2.0f;
+    const auto touches = [&](const TextLine& line) { return std::abs(line.y - top) < 1.0f && left + width >= line.left - gap && left <= line.right + gap; };
+    if (auto line = std::find_if(TextLines.begin(), TextLines.end(), touches); line != TextLines.end())
+    {
+        line->left = std::min(line->left, left);
+        line->right = std::max(line->right, left + width);
+    }
+    else
+        TextLines.push_back({ top, left, left + width });
+    const auto whole = std::find_if(LastTextLines.begin(), LastTextLines.end(), touches);
+    return whole != LastTextLines.end() ? HudShift(whole->left, whole->right - whole->left) : HudShift(left, width);
+}
+
+// Ties That Bind's HUD sprites (the health bar): laid out in 640x448 from the viewport's left edge, scaled by the
+// smaller of the two axes, so they keep their shape and stay in the left part of a wide screen. In play a sprite on
+// the left keeps its distance from the left side of the HUD box, one on the right (of that layout or of the screen)
+// its distance from the right side; centred ones stay where the game puts them.
+float SpriteShift(float left, float right)
+{
+    if (!InGameplay())
+        return 0.0f;
+    const float layoutWidth = 640.0f * std::min(Screen.fWidth / 640.0f, Screen.fHeight / 448.0f);
+    const float centre = (left + right) * 0.5f;
+    const float boxWidth = std::min(Screen.fWidth, Screen.fHeight * fHudAspect.load());
+    const float boxLeft = (Screen.fWidth - boxWidth) * 0.5f;
+    if (centre > layoutWidth)
+        return boxLeft + boxWidth - Screen.fWidth;
+    if (centre < layoutWidth / 3.0f)
+        return boxLeft;
+    if (centre > layoutWidth * 2.0f / 3.0f)
+        return boxLeft + boxWidth - layoutWidth;
+    return 0.0f;
+}
+
+void EndTextFrame()
+{
+    std::swap(LastTextLines, TextLines);
+    TextLines.clear();
+}
+
 // The 3D weapon and item icons: the game clears the depth of the icon's stretched 4:3 rectangle, draws the model
 // with the scene camera at a spot worked out for a stretched 4:3 view, then sets the camera's field of view back.
 // The cleared rectangle now goes where the HUD puts that box, and until the field of view is set back the camera has
@@ -71,7 +124,7 @@ void RebuildCamera(uintptr_t camera)
 {
     using SetViewportFn = void(__thiscall*)(uintptr_t camera, int32_t x, int32_t y, int32_t width, int32_t height);
     const auto viewport = reinterpret_cast<int32_t*>(camera + nIconViewportOffset);
-    (*reinterpret_cast<SetViewportFn**>(camera))[0](camera, viewport[0], viewport[1], viewport[2], viewport[3]);
+    (*reinterpret_cast<SetViewportFn**>(camera))[CameraViewportSlot()](camera, viewport[0], viewport[1], viewport[2], viewport[3]);
 }
 
 template<typename T> T& CameraField(uintptr_t camera, uint32_t offset)
@@ -188,7 +241,8 @@ void __cdecl sub_44A390(uintptr_t a1, float a2, float a3, float a4, float a5, fl
     }
     else
     {
-        a2 = a2 / Screen.fAspectRatioDiff + HudShift(a2, a4);
+        const float shift = TextLineShift(a2, a3, a4, a5);
+        a2 = a2 / Screen.fAspectRatioDiff + shift;
         a4 /= Screen.fAspectRatioDiff;
     }
 
@@ -290,6 +344,27 @@ void InitHud()
     injector::MakeCALL(pattern.get_first(0), sub_44A390, true); //0x44A6C0
     pattern = hook::pattern("E8 ? ? ? ? 8B 0D ? ? ? ? 83 C4 38 51");
     injector::MakeCALL(pattern.get_first(0), sub_44A390, true); //0x44AB58
+
+    if (IsTiesThatBind())
+    {
+        // The sprite's four screen-space vertices (x first, 0x20 apart), handed to its texture's draw
+        pattern = hook::pattern("8B 06 6A 04 8D 8C 24 ? ? ? ? 51 8B CE FF 90 88 00 00 00");
+        static auto SpriteDraw = safetyhook::create_mid(pattern.get_first(14), [](SafetyHookContext& regs)
+        {
+            const auto vertices = *reinterpret_cast<uint8_t**>(regs.esp);
+            const auto count = *reinterpret_cast<uint32_t*>(regs.esp + 4);
+            const auto x = [&](uint32_t i) -> float& { return *reinterpret_cast<float*>(vertices + i * 0x20); };
+            float left = x(0), right = x(0);
+            for (uint32_t i = 1; i < count; ++i)
+            {
+                left = std::min(left, x(i));
+                right = std::max(right, x(i));
+            }
+            const float shift = SpriteShift(left, right);
+            for (uint32_t i = 0; i < count; ++i)
+                x(i) += shift;
+        }); //0x43F44C
+    }
 
     // 3D icons
     pattern = hook::pattern("8B 0D ? ? ? ? 85 C9 53 55 56 57 74 ? 8B 74 24 14 8B 7C 24 1C 3B F7");

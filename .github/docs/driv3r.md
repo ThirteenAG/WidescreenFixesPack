@@ -61,7 +61,7 @@
 
 <img src="https://thirteenag.github.io/screens/driv3r/indicators.gif" width="400" alt="Turn indicators">
 
-**Turn indicators** activate automatically when making a turn. Manual turn indicators (two keyboard keys, or LB and RB on the controller) can be turned on on fusionfix.io or in FusionFixHub.
+**Turn indicators** activate automatically when turning a vehicle equipped with indicator lamps. Enable manual control in the game's Plugins menu, on fusionfix.io, or in FusionFixHub. Tap the configured keys or controller buttons to signal. Tap both together for the hazard lights.
 
 </div>
 
@@ -84,7 +84,7 @@
 
 Open **Options → Plugins → DRIV3R Fusion Fix** from the main menu, or **Pause → Plugins → DRIV3R Fusion Fix** while playing. Press **F1** for the selected option's help; use **Up / Down** to scroll long help and **F1 / Esc** to return. FusionFixHub and fusionfix.io offer the same settings. The first launch creates `scripts/Driv3r.FusionFix.cfg`.
 
-Window Mode offers Fullscreen, a fixed-size centered Windowed mode, and Borderless at the monitor resolution. Restart to change it. The game remembers the selected resolution and refresh rate.
+Window Mode offers Fullscreen, a resizable window that starts centered, and Borderless at the monitor resolution. Restart to apply the setting. Alt+Enter switches between fullscreen and the last window mode. The game remembers the selected resolution and refresh rate.
 
 The gameplay FOV multiplier can be changed while playing. A value of 1.0 keeps the corrected default view; the horizontal field of view is capped at 150 degrees. Confine Cursor keeps the pointer inside the active game window and releases it when the game loses focus. Modern Controls applies to new profiles and when resetting the game's controls.
 
@@ -98,7 +98,7 @@ Check for Updates is optional and disabled by default. When enabled, an availabl
 
 The added settings text is available in English, French, German, Italian and Spanish. Choose Text Language in FusionFixHub to override the automatic choice. If the game language cannot be identified, English is used.
 
-Recommended uses the default setup. Vanilla and Enhanced offer alternative presets; none changes Modern Controls or the refresh-rate list setting. Settings marked for restart take effect on the next launch. If Plugins is unavailable in your game version, use FusionFixHub or the generated `.cfg` file.
+Recommended uses the default setup. Vanilla uses the game's original control defaults and disables the free camera, intro skipping, turn indicators, and additional graphics effects. Enhanced keeps the modern control defaults and increases draw distance. Presets keep your refresh-rate list setting. Settings marked for restart apply on the next launch. If Plugins is unavailable in your game version, use FusionFixHub or the generated `.cfg` file.
 
 ## Installation
 

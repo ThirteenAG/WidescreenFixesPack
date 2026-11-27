@@ -3,60 +3,12 @@ module;
 #include "stdafx.h"
 #include "FixSettings.hpp"
 #include <d3d9.h>
-#include <fstream>
-#include <sstream>
-#include <map>
-#include <set>
 
 export module Frontend;
 
 import ComVars;
 
 import Screen;
-
-bool bTraceScreenEffects = false;
-// Reject repeated draws before constructing strings or touching the log file.
-bool BeginScreenEffectTrace(const std::array<uintptr_t, 6>& key)
-{
-    static std::set<std::array<uintptr_t, 6>> seen;
-    return seen.insert(key).second;
-}
-
-void TraceScreenEffect(const std::string& key, const std::string& entry)
-{
-    // Bound each rendering source independently, so animated menu coordinates
-    // cannot stop diagnostics before a gameplay effect is encountered.
-    static std::map<std::string, uint32_t> entries;
-    auto& count = entries[key];
-    if (count >= 8)
-        return;
-    ++count;
-    static std::ofstream log(GetThisModulePath() / "USM.ScreenEffects.log", std::ios::trunc);
-    log << GetTickCount64() << ' ' << entry << std::endl;
-}
-
-SafetyHookInline shDrawComicColor;
-void __fastcall DrawComicColor(uintptr_t component, void*, float* info)
-{
-    auto color = reinterpret_cast<float*>(component + 8);
-    if (bTraceScreenEffects && *reinterpret_cast<uint8_t*>(component + 0x1C) &&
-        color[3] * info[78] > 0.0f &&
-        BeginScreenEffectTrace({ 1, component, std::bit_cast<uint32_t>(color[0]),
-            std::bit_cast<uint32_t>(color[1]), std::bit_cast<uint32_t>(color[2]), 0 }))
-    {
-        std::ostringstream entry;
-        entry << "ComicColor backbuffer=" << IsBackBufferScene() << " rgb=" << color[0] << ',' << color[1] << ',' << color[2]
-            << " rect=" << info[69] << ',' << info[70] << ',' << info[71] << ',' << info[72]
-            << " matrix=";
-        for (int i = 0; i < 16; ++i)
-            entry << info[i] << ',';
-        std::ostringstream key;
-        key << "ComicColor " << component << ' ' << IsBackBufferScene();
-        entry << " alpha=" << color[3] * info[78];
-        TraceScreenEffect(key.str(), entry.str());
-    }
-    shDrawComicColor.thiscall<void>(component, info);
-}
 
 SafetyHookInline shListAddMesh;
 void __cdecl ListAddMesh(uintptr_t mesh, const float* matrix, void* params, void* shaderParams)
@@ -497,43 +449,8 @@ void DrawMenuPillarboxes()
     }
 }
 
-void TraceQuad(const NGLQuad* quad, uintptr_t caller)
-{
-    if (bTraceScreenEffects && quad)
-    {
-        float left = quad->vertices[0].x, right = left;
-        float top = quad->vertices[0].y, bottom = top;
-        bool visible = false;
-        for (const auto& vertex : quad->vertices)
-        {
-            left = std::min(left, vertex.x);
-            right = std::max(right, vertex.x);
-            top = std::min(top, vertex.y);
-            bottom = std::max(bottom, vertex.y);
-            visible |= (vertex.color >> 24) != 0;
-        }
-        uintptr_t shape = static_cast<uintptr_t>(visible) | ((right - left >= 300.0f) << 1) | ((bottom - top >= 200.0f) << 2) |
-            ((left <= 1.0f && right >= 639.0f && top <= 1.0f && bottom >= 479.0f) << 3);
-        if (!BeginScreenEffectTrace({ 4, caller, reinterpret_cast<uintptr_t>(quad->texture),
-            quad->blendMode, quad->vertices[0].color & 0xFFFFFF, shape | (static_cast<uintptr_t>(IsBackBufferScene()) << 4) }))
-            return;
-        std::ostringstream key, entry;
-        entry << "Quad caller=" << reinterpret_cast<void*>(caller) << " backbuffer=" << IsBackBufferScene()
-            << " texture=" << quad->texture << " blend=" << quad->blendMode << " vertices=";
-        for (auto& vertex : quad->vertices)
-            entry << vertex.x << ',' << vertex.y << ',' << vertex.color << ';';
-        key << "Quad " << reinterpret_cast<void*>(caller) << ' ' << IsBackBufferScene() << ' '
-            << quad->texture << ' ' << quad->blendMode << ' ' << (quad->vertices[0].color & 0xFFFFFF)
-            << ' ' << visible << ' ' << (right - left >= 300.0f) << ' ' << (bottom - top >= 200.0f)
-            << ' ' << (left <= 1.0f && right >= 639.0f && top <= 1.0f && bottom >= 479.0f);
-        TraceScreenEffect(key.str(), entry.str());
-    }
-}
-
 void __cdecl ListAddQuad(const NGLQuad* quad)
 {
-    if (bTraceScreenEffects)
-        TraceQuad(quad, reinterpret_cast<uintptr_t>(_ReturnAddress()));
     if (!quad || !IsBackBufferScene())
         return shListAddQuad.ccall<void>(quad);
 
@@ -652,37 +569,6 @@ public:
             };
             settings.OnChange("MAIN.FMVWidescreenMode", refreshMovieFraming);
             refreshMovieFraming();
-            // Developer diagnostic, compiled in only on request
-#ifdef USM_DEBUG_TRACE_SCREEN_EFFECTS
-            bTraceScreenEffects = true;
-#endif
-            if (bTraceScreenEffects)
-            {
-                auto colorPattern = hook::pattern("83 EC 10 56 8B F1 8A 46 1D 84 C0 57 8B 7C 24 1C"); //0x73D9F0
-                shDrawComicColor = safetyhook::create_inline(colorPattern.get_first(), DrawComicColor);
-                auto rectPattern = hook::pattern("64 A1 00 00 00 00 6A FF 68 ? ? ? ? 50 64 89 25 00 00 00 00 83 EC 38 55 8B 6C 24 50 D9 45 0C"); //0x73ADB0
-                static auto traceColorRect = safetyhook::create_mid(rectPattern.get_first(), [](SafetyHookContext& regs)
-                {
-                    auto args = reinterpret_cast<uintptr_t*>(regs.esp);
-                    auto rect = reinterpret_cast<float*>(args[1]);
-                    auto color = reinterpret_cast<float*>(args[2]);
-                    auto matrix = reinterpret_cast<float*>(args[3]);
-                    if (color[3] <= 0.0f || !BeginScreenEffectTrace({ 3, args[0],
-                        std::bit_cast<uint32_t>(color[0]), std::bit_cast<uint32_t>(color[1]),
-                        std::bit_cast<uint32_t>(color[2]), IsBackBufferScene() }))
-                        return;
-                    std::ostringstream key, entry;
-                    key << "ColorRect " << args[0] << ' ' << IsBackBufferScene() << ' '
-                        << color[0] << ',' << color[1] << ',' << color[2];
-                    entry << key.str() << " alpha=" << color[3] << " rect=";
-                    for (int i = 0; i < 4; ++i)
-                        entry << rect[i] << ',';
-                    entry << " matrix=";
-                    for (int i = 0; i < 16; ++i)
-                        entry << matrix[i] << ',';
-                    TraceScreenEffect(key.str(), entry.str());
-                });
-            }
             auto meshPattern = hook::pattern("83 EC 64 53 8B 5C 24 6C 85 DB 55 56 57"); //0x770360
             shListAddMesh = safetyhook::create_inline(meshPattern.get_first(), ListAddMesh);
             auto pattern = hook::pattern("83 EC ? 56 8B F1 8B 46 ? 85 C0 0F 84 ? ? ? ? 8B 46 ? 85 C0 0F 84 ? ? ? ? 8B 46 ? ? ? 6A"); //0x583D20

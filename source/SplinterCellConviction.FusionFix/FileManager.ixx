@@ -1037,12 +1037,21 @@ export void InitFileManager()
 
     ModuleList dlls;
     dlls.Enumerate(ModuleList::SearchLocation::LocalOnly);
+    // With two loader copies installed (e.g. dinput8.dll and version.dll) only one sets up the overload folder;
+    // the other one finds no files, so use the copy that has an overload folder
     for (auto& e : dlls.m_moduleList)
     {
         auto m = std::get<HMODULE>(e);
-        if (IsModuleUAL(m))
+        if (!IsModuleUAL(m))
+            continue;
+        auto getFilePath = (decltype(GetOverloadedFilePathA))GetProcAddress(m, "GetOverloadedFilePathA");
+        auto getRoot = (bool(WINAPI*)(char*, size_t))GetProcAddress(m, "GetOverloadPathA");
+        char root[MAX_PATH];
+        if (!GetOverloadedFilePathA)
+            GetOverloadedFilePathA = getFilePath;
+        if (getFilePath && getRoot && getRoot(root, sizeof(root)))
         {
-            GetOverloadedFilePathA = (decltype(GetOverloadedFilePathA))GetProcAddress(m, "GetOverloadedFilePathA");
+            GetOverloadedFilePathA = getFilePath;
             break;
         }
     }

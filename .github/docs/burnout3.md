@@ -12,13 +12,14 @@
 
 ## Fixes
 
-- **Aspect ratio** - follows the emulator's aspect ratio or window size, from 4:3 to 32:9; Display Aspect Ratio sets a ratio instead. The view widens on wide screens (the height of the picture stays as in the original) and nothing is stretched.
+- **Aspect ratio** - follows the emulator's aspect ratio or window size, from 5:4 to 32:9. Display Aspect Ratio can override it. The view widens on wide screens while keeping the original vertical field of view.
 - **Field of view** - Field of View (0.5–2.0) widens or narrows the driving camera. Replays and crash cameras keep their own framing.
 - **HUD** - position, lap, speed and boost meter sit at the screen edges in their original size. HUD Size changes their size. HUD Box (Auto, 4:3, 16:9, 21:9, 32:9 or a custom ratio) keeps them inside a centered area on wide screens; Auto uses the whole screen. Changing the emulator's aspect ratio or window size during a race moves the HUD at once.
 - **Menus** - menus, dialogs, the Crash Nav map and loading screens keep their 4:3 proportions in the middle of the screen; the menu frame and its bands reach the screen edges.
 - **Videos** - Original shows a video as the game does, inside its 4:3 picture. Fill shows the whole video as large as the screen allows at its own aspect ratio, with nothing cut off. Covers the startup videos, the menu background and the training videos.
 - **60 FPS** - Frame Rate (`MAIN.FPSLimit` in the cfg) runs the game at 60 FPS with races, timers and videos at their normal speed; Original keeps the game's own rate.
-- **Skip intro** - skips the legal notice, the Criterion logo and the opening video, straight to the Press START screen.
+- **Skip intro** - skips the legal notice, the Criterion logo and the opening video.
+- **Skip Press START** - continues to profile selection when a controller is connected.
 - **Camera look** - the right stick looks around while driving; the view returns when you release it. Gamepad Camera Speed and Invert Gamepad Y adjust it.
 
 ## Installation
@@ -37,17 +38,15 @@
 
 ## Settings
 
-Open **Plugins** in the main menu. The first page has Display Aspect, HUD Box, HUD Size, Field of View and Movies; **More** has Skip Intro, Preset, FPS and **Controls** (mouse and gamepad camera, side-by-side split screen). Left and right change a value. The same settings are in FusionFixHub, on fusionfix.io and in `PLUGINS/Burnout3.PCSX2F.FusionFix.cfg`, which the fix creates on the first start. Display settings apply during play within about a second and after loading a save state; Skip Intro and Frame Rate apply the next time the game starts, and the game says so when you change them.
+Open **Plugins** in the main menu. The first page has Display Aspect, HUD Box, HUD Size, Field of View and Movies. **More** has Skip Intro, Skip Press START, Preset, FPS, Language and **Controls** (mouse and gamepad camera, side-by-side split screen). Left and right change a value. Press Triangle to go back. The same settings are in FusionFixHub, on fusionfix.io and in `PLUGINS/Burnout3.PCSX2F.FusionFix.cfg`, which the fix creates on the first start. Display settings apply during play within about a second and after loading a save state. Skip Intro, Skip Press START and Frame Rate apply the next time the game starts. The game shows a restart notice when you change them.
 
-- **Presets** - Vanilla shows the startup videos, plays videos as the game does and keeps the original frame rate; Recommended (the default) and Enhanced skip the startup videos, use Fill for videos and 60 FPS. The in-game presets keep your HUD box.
-- **Side-by-side split screen** - places the two players' views side by side in the next split-screen race instead of above each other.
+- **Presets** - Vanilla shows the startup videos and Press START screen, plays videos as the game does and keeps the original frame rate. Recommended (the default) and Enhanced skip the startup videos and Press START screen, use Fill for videos and enable 60 FPS. The in-game presets keep your HUD box.
+- **Side-by-side split screen** - places the two players' views side by side. Editing the setting in the cfg during a split-screen race switches the layout as you play.
 - **Mouse camera** - Mouse Sensitivity and Invert Mouse Y adjust looking around with the mouse while driving.
 - **Menu language** - Find Language under More in the Plugins menu. Auto follows the game's language. Choose English, French, German, Italian or Spanish to set the Fusion Fix menu language directly.
 
 ## Known limits
 
-- The Press START screen stays; press Start to continue.
-- After changing the emulator's aspect ratio or window size while the game runs, the d-pad icon in the menu button bar keeps the old width until the game is restarted. The HUD, menus and videos follow at once.
 - Burnout 3 has no story cutscenes, so there are no cutscene border options.
 - Button prompts show the PlayStation 2 buttons.
 - Resolution, anti-aliasing and window modes are handled by the emulator.

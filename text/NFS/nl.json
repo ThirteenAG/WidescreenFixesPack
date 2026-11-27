@@ -149,7 +149,7 @@
   "WFP_DESC_ANTIALIASING": "SMAA verzacht randen.",
   "WFP_DESC_HIDEAABUG": "Verbergt de MSAA-randfout met lijnen van één pixel.",
   "WFP_DESC_LANGUAGE": "De speltaal. Alleen geïnstalleerde talen zijn beschikbaar.",
-  "WFP_DESC_RAINDROPLETS": "Grootte van regendruppels op het scherm. Geen effect met Xbox Rain Droplets.",
+  "WFP_DESC_RAINDROPLETS": "Grootte van regendruppels op het scherm. Geen effect met Fusion Rain Droplets.",
   "WFP_DESC_SUBTITLES": "Toont ondertitels in video's, in elke taal.",
   "WFP_WRITESETTINGS": "Instellingen in een bestand",
   "WFP_DESC_WRITESETTINGS": "Bewaart registerinstellingen in Settings.ini in de profielmap. Voer daar je cd-sleutel in.",

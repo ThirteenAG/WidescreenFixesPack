@@ -81,5 +81,6 @@ namespace tcny
     void InstallCutscene(uintptr_t barsBegin, uintptr_t barsHeight, uintptr_t barsEnd, uintptr_t barsReset);
     void InstallCamera(uintptr_t projectionCall);
     void InstallLauncher(uintptr_t sprite, uintptr_t picture, uintptr_t splash);
+    void InstallTitleSkip(uintptr_t handler, uintptr_t inputBlocked);
     void PollSettings();
 } // namespace tcny

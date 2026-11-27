@@ -72,7 +72,7 @@
       },
       "apply": "live",
       "visibility": "menu",
-      "min": -1,
+      "min": 30,
       "max": 1000,
       "step": 1,
       "unit": "fps",
@@ -84,23 +84,6 @@
         {
           "value": -1,
           "label": "@fps.monitor"
-        }
-      ],
-      "suggestions": [
-        {
-          "value": 30
-        },
-        {
-          "value": 60
-        },
-        {
-          "value": 120
-        },
-        {
-          "value": 144
-        },
-        {
-          "value": 240
         }
       ]
     },

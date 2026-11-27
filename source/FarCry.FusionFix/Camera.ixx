@@ -162,7 +162,9 @@ export namespace FarCryCinematics
     inline float Camera(float encoded, float aspect)
     {
         const auto options = FarCryLive::Read();
-        return FarCryCinematicFrame::Camera(encoded, aspect, options.borders, Progress(options.animatedBorders));
+        const auto progress = (options.borders & 1) && aspect < FarCryCinematicFrame::Reference ?
+            Progress(options.animatedBorders) : 0.0f;
+        return FarCryCinematicFrame::Camera(encoded, aspect, options.borders, progress);
     }
 
     inline void Draw(IDirect3DDevice9* device)
@@ -170,8 +172,10 @@ export namespace FarCryCinematics
         if (!Ready || !DeviceReady || !DrawReady || !device)
             return;
         const auto options = FarCryLive::Read();
+        if (!options.borders)
+            return;
         const auto progress = Progress(options.animatedBorders);
-        if (progress <= 0.0f || !options.borders)
+        if (progress <= 0.0f)
             return;
         IDirect3DSurface9* backbuffer = nullptr;
         if (FAILED(device->GetBackBuffer(0, 0, D3DBACKBUFFER_TYPE_MONO, &backbuffer)))

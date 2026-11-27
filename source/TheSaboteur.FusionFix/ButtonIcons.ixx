@@ -14,7 +14,7 @@ export namespace SaboteurButtons
 
     inline void* __fastcall Load(void* self, void* edx, const char* name, void* format, void* usage)
     {
-        if (Family && name)
+        if (name)
         {
             const auto stem = std::filesystem::path(name).stem().string();
             static constexpr std::string_view names[] = {
@@ -44,6 +44,8 @@ export namespace SaboteurButtons
     inline void Install()
     {
         Family = FixSettings().Int("MAIN.GamepadIcons");
+        if (!Family)
+            return;
         HMODULE module = nullptr;
         GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
             reinterpret_cast<LPCWSTR>(&Install), &module);

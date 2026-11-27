@@ -11,6 +11,40 @@ import FrameRate;
 
 std::once_flag of;
 
+namespace
+{
+    UINT CursorUpdateMessage = 0;
+    std::atomic<HWND> CursorUpdatePending{ nullptr };
+
+    void RequestCursorUpdate()
+    {
+        const auto window = hWnd.get();
+        if (!window || !CursorUpdateMessage || CursorUpdatePending.exchange(window) == window)
+            return;
+        if (!PostMessageA(window, CursorUpdateMessage, 0, 0))
+        {
+            auto pending = window;
+            CursorUpdatePending.compare_exchange_strong(pending, nullptr);
+        }
+    }
+
+    LRESULT WINAPI DispatchGameMessage(const MSG* message)
+    {
+        if (CursorUpdateMessage && message->message == CursorUpdateMessage && message->hwnd)
+        {
+            if (message->hwnd == hWnd.get())
+            {
+                CursorConfinement::Suspend(DeveloperOverlay::BlocksInput());
+                CursorConfinement::Frame(message->hwnd);
+            }
+            auto pending = message->hwnd;
+            CursorUpdatePending.compare_exchange_strong(pending, nullptr);
+            return 0;
+        }
+        return DispatchMessageA(message);
+    }
+}
+
 namespace fb
 {
     namespace Main
@@ -34,8 +68,8 @@ namespace fb
                 fb::GameTimer::frameDeltaTime = std::min(float(double(now.QuadPart - last.QuadPart) / double(frequency.QuadPart)), 0.1f);
             last = now;
 
-            CursorConfinement::Suspend(DeveloperOverlay::BlocksInput());
-            CursorConfinement::Frame(hWnd.get());
+            if (CursorConfinement::Enabled.load())
+                RequestCursorUpdate();
             WFP::onGameProcessEvent().executeAll();
 
             shinternalUpdate.unsafe_fastcall(Main, edx, lowLatencyUpdate);
@@ -49,6 +83,12 @@ void Init()
 
     auto pattern = hook::pattern("A1 ? ? ? ? 85 C0 74 ? 50 FF 15 ? ? ? ? 85 C0");
     hWnd.SetAddress(*pattern.get_first<HWND*>(1));
+
+    // The native window runs its message pump on a different thread from the game update.
+    // Install and update confinement on the thread that owns the window subclass.
+    CursorUpdateMessage = RegisterWindowMessageW(L"NFSTheRun.FusionFix.CursorConfinement");
+    IATHook::Replace(GetModuleHandleW(nullptr), "USER32.DLL", std::forward_as_tuple("DispatchMessageA", DispatchGameMessage));
+    FixSettings().OnChange("MAIN.ConfineCursor", RequestCursorUpdate);
 
     pattern = hook::pattern("81 EC ? ? ? ? 53 55 56 57 8B F1 E8 ? ? ? ? 88 44 24");
     fb::Main::shinternalUpdate = safetyhook::create_inline(pattern.get_first(), fb::Main::internalUpdate);

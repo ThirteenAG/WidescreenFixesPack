@@ -25,15 +25,16 @@
 | Pause in background | On pauses the game while another window is active, as the original does; Off keeps it running; live | On |
 | Confine cursor | Keeps the cursor inside the active game window; live | On |
 | Check for updates | Off makes no network request; live | Off |
+| Text language | Auto or a language for the fix settings and update notices. Changes apply live. | Auto |
 
-Vanilla shows the intro and the movies as the game does; Recommended and Enhanced skip the intro and fill the screen with the movies. The title movie can still be watched in the **Video** menu. Texts are available in English, French, German, Italian and Spanish.
+Vanilla shows the intro and the movies as the game does; Recommended and Enhanced skip the intro and fill the screen with the movies. The title movie can still be watched in the **Video** menu. Texts are available in English, French, German, Italian and Spanish. Auto uses the editor language for settings and the Windows display language for update notices.
 
 ## What the fix does
 
 - **Any resolution and aspect ratio** from 5:4 to 32:9 with square pixels. The resolution of the fix replaces the one set in the game's options program; the default is the desktop resolution. The mission view keeps the original vertical view and shows more at the sides.
-- **Menus** are the game's 800x600 picture, shown at the full screen height in the middle of the screen with black sides; the mouse cursor and the buttons stay where they are drawn.
+- **Menus** keep the game's 800x600 picture centered and fit it to the available width or height. The mouse cursor and buttons stay aligned with the picture.
 - **Mission interface:** with **HUD aspect ratio** on Auto, the squad panel and the weapon panel sit at the left edge, the journal and its button at the right edge, and dialogs stay in the middle, as the game lays them out for any resolution. A ratio keeps the panels in a centred box of that shape. Nothing is stretched.
-- **Loading screens** fill the screen height in the middle of the screen.
+- **Loading screens** keep their 4:3 picture centered and fit it to the available width or height.
 - **Movies** are never cut off or stretched: Original shows them as the game does, inside its centred 4:3 picture; Fill shows the whole movie as large as the screen allows.
 - **Window modes** at any Windows display scaling, without rounded corners: Windowed opens a centred window with exactly the chosen picture size (a window as large as the monitor puts its frame outside the screen), Borderless covers the monitor. The window keeps its size when the game switches between menus, movies and missions, and isn't minimized when another window becomes active.
 - **Update notice:** with **Check for updates** on, a new version is announced at the main menu; FusionFixHub opens after the game exits when it is installed.
@@ -43,7 +44,7 @@ Vanilla shows the intro and the movies as the game does; Recommended and Enhance
 - **In-game settings page:** the game's option screens are fixed layouts loaded from its data; the settings are on fusionfix.io and in FusionFixHub.
 - **Controller:** the game is played with the mouse (turn-based tactics) and has no controller support.
 - **Cutscene borders:** the story is told in movies and dialog windows; there are no in-engine cutscenes.
-- **Frame rate:** the game's own frame limiter (about 66 FPS) stays.
+- **Frame rate:** the game keeps its original frame limiter.
 
 ## Known limits
 

@@ -45,7 +45,7 @@
 - **Pause in background** — On by default: the game pauses while another window is active. Off keeps it running in Windowed and Borderless mode (Fullscreen always pauses); controller input is ignored until the game is focused again.
 - **Confine cursor** — Keeps the mouse cursor inside the game window while the game is active.
 - **Check for updates** — Off by default. When on, the fix asks fusionfix.io once per start whether a newer version is out; FusionFixHub opens when you close the game.
-- **Resolution width / height** — Only in the cfg and FusionFixHub's text editor: a fixed start resolution instead of the one chosen in the game. 0 uses the game's choice.
+- **Resolution width / height** — Set a fixed startup resolution in the cfg or FusionFixHub's text editor. Use 0 for the resolution saved by the game, or the desktop resolution on first start.
 
 ## Controller
 
@@ -75,7 +75,7 @@ The PC version only reads keyboard and mouse during play. The fix adds any XInpu
 
 ## Settings and hub
 
-The fix creates `scripts/TrueCrimeStreetsofLA.FusionFix.cfg` on first start; FusionFixHub and fusionfix.io can change it, also while the game runs. Vanilla shows the intro, keeps the game's own cutscene bars, plays the logo videos with black bars, leaves the frame rate unlimited and turns SMAA off; Recommended and Enhanced skip the intro, add side bars in cutscenes, fit the logo videos to the screen, limit the frame rate to 60 and use SMAA; Enhanced adds console gamma. Window, resolution and mouse settings aren't changed by presets. Texts are available in English, French, German, Italian and Spanish.
+The fix creates `scripts/TrueCrimeStreetsofLA.FusionFix.cfg` on first start; FusionFixHub and fusionfix.io can change it, also while the game runs. Vanilla shows the intro, keeps the game's own cutscene bars, plays the logo videos with black bars, leaves the frame rate unlimited and turns SMAA off; Recommended and Enhanced skip the intro, add side bars in cutscenes, fit the logo videos to the screen, limit the frame rate to 60 and use SMAA; Enhanced adds console gamma. FusionFixHub preserves your custom window, resolution and mouse settings when applying a preset. A preset export from fusionfix.io starts from the defaults for those settings. Texts are available in English, French, German, Italian and Spanish.
 
 ## Known limits
 

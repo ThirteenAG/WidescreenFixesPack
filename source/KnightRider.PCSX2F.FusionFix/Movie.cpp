@@ -26,9 +26,10 @@ void DecoderOpen(SafetyMipsContext& regs)
             return ('A' <= l && l <= 'Z' ? l + ('a' - 'A') : l) == r;
         });
     };
+    // Scene J's flash transition uses the entire frame. Keep that clip's framing throughout.
     const bool letterboxed = sameName("intro") || sameName("outro") || sameName("scenea") ||
         sameName("sceneb") || sameName("scenee") || sameName("scenef") || sameName("sceneg") ||
-        sameName("sceneh") || sameName("scenej");
+        sameName("sceneh");
     letterboxedDecoder = letterboxed ? uintptr_t(regs.a0) : 0;
 }
 

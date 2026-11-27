@@ -24,14 +24,23 @@ export namespace SaboteurCutscenes
         return movie && HUD->get() && *reinterpret_cast<uintptr_t*>(HUD->get() + 2688) == movie;
     }
 
+    inline bool LetterboxRequested(uintptr_t hud)
+    {
+        // The native conversation code sets this flag on HUD widget 19 (WSHUDButtonPrompt).
+        const auto widgets = reinterpret_cast<const uintptr_t*>(hud + 52);
+        const auto prompt = widgets[19];
+        return prompt && (*reinterpret_cast<const uint8_t*>(prompt + 3212) & 1);
+    }
+
     inline bool Active()
     {
-        if (CameraCount->get() <= 0 || !Camera->get() || !HUD->get() || !Movies->get())
+        const auto hud = HUD->get();
+        if (CameraCount->get() <= 0 || !Camera->get() || !hud || !Movies->get())
             return false;
-        if (!*reinterpret_cast<uintptr_t*>(HUD->get() + 2688) || *reinterpret_cast<uintptr_t*>(Movies->get() + 16))
+        if (!*reinterpret_cast<uintptr_t*>(hud + 2688) || *reinterpret_cast<uintptr_t*>(Movies->get() + 16))
             return false;
         const auto mode = *reinterpret_cast<int*>(Camera->get() + 44);
-        return mode == 1 || mode == 2 || (mode == 0 && (*reinterpret_cast<uint8_t*>(HUD->get() + 3212) & 1));
+        return mode == 1 || mode == 2 || (mode == 0 && LetterboxRequested(hud));
     }
 
     inline void Install()

@@ -142,9 +142,10 @@ public:
                 injector::MakeCALL(cutsceneFOVEvent, Camera::Projection, true);
                 Camera::CutsceneFOVCapture = safetyhook::create_mid(cutsceneFOVCapture, Camera::CaptureCutsceneFOV);
 
-                const auto cinematicBars = hook::get_pattern<uint8_t>("83 ? ? DB ? ? ? ? ? A1 ? ? ? ? 83 ? ? D9"); //600570
-                injector::WriteMemory<const float*>(reinterpret_cast<const float**>(cinematicBars + 0x51), &Camera::CinematicAspect, true);
-                Camera::CinematicBars = safetyhook::create_inline(cinematicBars, Camera::DrawCinematicBars);
+                const auto cinematicBars = hook::get_pattern<uint8_t>("D9 5C 24 04 83 F8 02 0F 8C ? ? ? ? 83 F8 05 0F 8F ? ? ? ? 56 57 E8", 4);
+                Camera::UpdateCinematicBars();
+                settings.OnChange("MAIN.CutsceneBorders", Camera::UpdateCinematicBars);
+                Camera::CinematicBars = safetyhook::create_mid(cinematicBars, Camera::ApplyCinematicBars);
             }
 
             Screen.fHudOffset = (Screen.fWidth - Screen.Width43) / 2.0f;

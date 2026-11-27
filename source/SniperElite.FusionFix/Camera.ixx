@@ -11,10 +11,10 @@ import Hud;
 export namespace Camera
 {
     constexpr float AspectRatio43 = 4.0f / 3.0f;
-    float CinematicAspect = AspectRatio43;
+    std::atomic<bool> ShowCinematicBars{ true };
     float NativeHalf = 0.0f, AdjustedHalf = 0.0f;
     SafetyHookMid CutsceneFOVCapture;
-    SafetyHookInline CinematicBars;
+    SafetyHookMid CinematicBars;
     void(__cdecl* SetProjection)(float, float) = nullptr;
 
     void DrawRect(float x0, float y0, float x1, float y1, uint32_t color);
@@ -38,13 +38,16 @@ export namespace Camera
         regs.eax = reinterpret_cast<uintptr_t>(&native) - 0x4C;
     }
 
-    int32_t __cdecl DrawCinematicBars()
+    void UpdateCinematicBars()
     {
-        const bool mode = FixSettings().Bool("MAIN.CutsceneBorders");
-        CinematicAspect = mode ? AspectRatio43 : 0.0f; //4:3 cinematic bars; Off collapses them to null
+        ShowCinematicBars.store(FixSettings().Int("MAIN.CutsceneBorders") != 0, std::memory_order_relaxed);
+    }
 
-        const auto result = CinematicBars.unsafe_ccall<int32_t>();
-        return result;
+    void ApplyCinematicBars(SafetyHookContext& context)
+    {
+        // Modes 2–4 draw cinematic bars. Mode 5 is the full-screen fade and keeps its native height.
+        if (context.eax >= 2 && context.eax <= 4 && !ShowCinematicBars.load(std::memory_order_relaxed))
+            *reinterpret_cast<float*>(context.esp + 4) = 0.0f;
     }
 }
 

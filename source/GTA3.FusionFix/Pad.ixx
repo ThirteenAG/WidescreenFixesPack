@@ -372,6 +372,11 @@ namespace
 
     enum class Context { Frontend, Classic, ModernFoot, ModernScope, ModernVehicle };
 
+    bool IsScopeMode(int16_t mode)
+    {
+        return mode == MODE_SNIPER || mode == MODE_ROCKETLAUNCHER || mode == MODE_M16_1STPERSON;
+    }
+
     Context CurrentContext()
     {
         if (CMenuManager::m_bIsActive)
@@ -381,8 +386,7 @@ namespace
             return Context::Classic;
         if (InVehicle())
             return Context::ModernVehicle;
-        auto mode = ActiveCameraMode();
-        if (mode == MODE_SNIPER || mode == MODE_ROCKETLAUNCHER || mode == MODE_M16_1STPERSON)
+        if (IsScopeMode(ActiveCameraMode()))
             return Context::ModernScope;
         return Context::ModernFoot;
     }
@@ -428,13 +432,15 @@ namespace
         float lx, ly, rx, ry;
         Stick(g.sThumbLX, g.sThumbLY, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE, lx, ly);
         Stick(g.sThumbRX, g.sThumbRY, XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE, rx, ry);
+        const bool inVehicle = context != Context::Frontend && InVehicle();
+        const bool classicScope = context == Context::Classic && !inVehicle && IsScopeMode(ActiveCameraMode());
         // The PlayStation 2 sticks: down is positive. The game's cameras look up on a positive right stick Y; vehicles
         // keep the console's sign (the guns, flying)
         float look = RWGTA::PadOptions::LookUp(ry);
         s.LeftStickX = ToAxis(lx);
-        s.LeftStickY = ToAxis(-ly);
+        s.LeftStickY = ToAxis(classicScope ? RWGTA::PadOptions::LookUp(ly) : -ly);
         s.RightStickX = ToAxis(rx);
-        s.RightStickY = ToAxis(context == Context::Frontend ? -ry : InVehicle() ? -look : look);
+        s.RightStickY = ToAxis(context == Context::Frontend ? -ry : inVehicle ? -look : look);
 
         const To* layout = LayoutClassic;
         switch (context)

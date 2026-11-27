@@ -74,6 +74,7 @@ int Install() {
     if (installed || !BeginWithNotice()) return installed ? 0 : -1;
     // Validate the loaded game before writing interdependent hooks.
     constexpr const char* sitesToCheck[] = {
+        Geometry::scriptHudSignature,
         "FF 00 DE 33 ? ? ? ? 25 20 20 02 25 20 C0 02 ? ? ? ? 25 28 C0 03 03 00 C4 92 03 00 80 10",
         "91 3E 06 3C 11 11 C6 34 00 80 86 44 02 63 10 46 80 3F 06 3C 00 88 86 44 43 8C 0C 46 AA 3E 06 3C",
         "90 FF BD 27 54 00 B0 AF 25 80 80 00 4C 3D 04 3C CD CC 84 34 48 00 B4 E7 00 60 84 44 A8 01 14 C6",

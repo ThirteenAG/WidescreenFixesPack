@@ -18,7 +18,8 @@ namespace MenuConstraintHooks
     // The menu frame limiter replaces the first call with a mid-hook jump.
     constexpr const char* DrawSignature = "53 89 CB FF 35 ? ? ? ? ? ? ? ? ? 83 BB 48 05 00 00 00 59 75 22";
     constexpr const char* InputSignature = "53 56 57 55 83 EC 70 83 3D ? ? ? ? 00 89 CD 74 0E";
-    constexpr const char* MouseSignature = "8B 85 48 05 00 00 83 F8 1E 74 ? 83 F8 36 74 ? 83 F8 37";
+    // The first page dispatch branch may be redirected by a menu mod.
+    constexpr const char* MouseSignature = "8B 85 48 05 00 00 ? ? ? ? ? 83 F8 36 74 ? 83 F8 37";
     void* MouseManager(SafetyHookContext& regs) { return reinterpret_cast<void*>(regs.ebp); }
     constexpr const char* VideoSignature = "6A 00 E8 ? ? ? ? 59 B9 ? ? ? ? E8 ? ? ? ? 8B 44 24 04 50 E8 ? ? ? ? 50 E8";
     constexpr const char* FontSignature = "A1 ? ? ? ? 50 E8 ? ? ? ? A1 ? ? ? ? 59 40 50 E8 ? ? ? ? A1 ? ? ? ? 59 83 C0 02";

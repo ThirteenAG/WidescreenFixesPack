@@ -10,7 +10,7 @@ import ComVars;
 
 // The game draws everything into one back buffer of its current mode: the 800x600 menus and movies, and the
 // chosen resolution in missions. The fix keeps those modes and shows the back buffer in the window (or on the
-// display) at its own aspect ratio, centred with black bars, so the menus are a 4:3 picture at the screen's height.
+// display) at its own aspect ratio, centred with black bars where needed.
 export namespace ParadiseDisplay
 {
     inline int Mode = 0;                    // 0 Fullscreen, 1 Windowed, 2 Borderless
@@ -28,6 +28,7 @@ export namespace ParadiseDisplay
     inline IDirectDrawSurface7* Copy = nullptr;
     inline SIZE CopySize{};
     inline uintptr_t SwitchReturn = 0;
+    inline uintptr_t PausedUpdate = 0;
 
     inline SafetyHookMid ModeHook, SwitchHook, ReleaseHook;
     inline SafetyHookInline WindowedPresentHook, FlipHook, FullscreenHook, MovieHook, ShowHook, PauseHook;
@@ -314,6 +315,23 @@ export namespace ParadiseDisplay
         PauseHook.thiscall<void>(application);
     }
 
+    inline void UpdateBackgroundPause(uint8_t* application, HWND window)
+    {
+        if (Mode == 0 || GetForegroundWindow() == window)
+            return;
+        const bool paused = *reinterpret_cast<uintptr_t*>(application + 12) == PausedUpdate;
+        const bool enabled = PauseOnFocusLoss.load(std::memory_order_relaxed);
+        if (paused == enabled)
+            return;
+        if (enabled)
+            PauseHook.thiscall<void>(application);
+        else
+        {
+            using Resume = int(__thiscall*)(uint8_t*);
+            (*reinterpret_cast<Resume**>(application))[2](application);
+        }
+    }
+
     // d3dim700.dll refuses render targets wider or taller than 2048 pixels
     inline void RaiseRenderTargetLimit()
     {
@@ -334,10 +352,6 @@ export namespace ParadiseDisplay
         const auto readMovies = []() { MovieMode.store(std::clamp(FixSettings().Int("MAIN.FMVWidescreenMode"), 0, 1)); };
         readMovies();
         FixSettings().OnChange("MAIN.FMVWidescreenMode", readMovies);
-        const auto readPause = []() { PauseOnFocusLoss.store(FixSettings().Bool("MAIN.PauseOnFocusLoss")); };
-        readPause();
-        FixSettings().OnChange("MAIN.PauseOnFocusLoss", readPause);
-
         RaiseRenderTargetLimit();
 
         // lpDD, primary, back buffer, Direct3D, device, width, height getters
@@ -403,6 +417,7 @@ export namespace ParadiseDisplay
         ShowHook = safetyhook::create_inline(show.get_first(), ShowInterface);
 
         auto pause = hook::pattern("C7 41 0C ? ? ? ? E9 ? ? ? ?");
+        PausedUpdate = *pause.get_first<uintptr_t>(3);
         PauseHook = safetyhook::create_inline(pause.get_first(), Pause);
 
         IATHook::Replace(GetModuleHandleW(nullptr), "USER32.dll",

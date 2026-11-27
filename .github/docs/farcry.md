@@ -27,7 +27,7 @@
 - **HUD Aspect Ratio Constraint** - Keeps the HUD inside a centered 4:3, 16:9, 21:9, 32:9 or custom area. Auto uses the full window width.
 - **Skip intro** - skip the five startup logo/legal movies while retaining story videos and normal startup checks. Enabled by default; changes require restart.
 - **Movie framing** - Movies keep their proportions. Original shows them as the game does, whole inside its centred 4:3 frame with black bars around them; Fill fits the whole movie to the screen. Nothing is cut off or stretched. Changes apply while playing.
-- **Window mode** - Choose Fullscreen, Windowed or Borderless while playing. Alt+Enter switches between fullscreen and your last window mode. Window placement is remembered.
+- **Window mode** - Choose Fullscreen, Windowed or Borderless while playing. Drag the frame to resize a window. Alt+Enter switches between fullscreen and your last window mode. The game remembers your window position.
 - **Confine cursor** - Keeps the pointer inside the active game window and releases it when you switch away or turn the setting off. Changes apply while playing.
 - **FOV Factor** - Scales the gameplay view from 0.5 to 2.0; 1.0 is neutral. The final horizontal view is limited to 150 degrees.
 - **Frame rate limit** - 0 is unlimited, -1 follows the monitor refresh rate, and positive values use 30–1000 FPS. Native Vertical Sync can impose a lower limit.
@@ -77,7 +77,7 @@ Movie framing also respects smaller videos embedded in menus: they are shown who
 
 Skip intro removes only the startup logos. Story videos, menu music and normal startup checks remain.
 
-Window mode supports framed, borderless and fullscreen output. Framed placement is remembered, and the game restores the previous mode if a change fails.
+Window mode supports framed, borderless and fullscreen output. Framed windows resize when you release the frame. If a display change fails, the game restores the previous size and mode.
 
 Cursor confinement follows focus and releases the pointer when disabled. Compatibility can depend on other input wrappers installed alongside the fix.
 

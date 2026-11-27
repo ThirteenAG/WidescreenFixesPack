@@ -11,7 +11,7 @@
   "page.game": "Game",
   "page.compatibility": "Compatibility",
   "WindowMode": "Window mode",
-  "WindowMode.description": "Fullscreen, a window, or a borderless window covering the monitor. Windowed uses the resolution chosen in MatrixOptions; Borderless uses the monitor's. Needs a restart.",
+  "WindowMode.description": "Fullscreen, Windowed, or a borderless window covering the monitor. Windowed starts at the resolution chosen in MatrixOptions. Drag the frame to resize it. Requires a restart.",
   "WindowMode.fullscreen": "Fullscreen",
   "WindowMode.windowed": "Windowed",
   "WindowMode.borderless": "Borderless",

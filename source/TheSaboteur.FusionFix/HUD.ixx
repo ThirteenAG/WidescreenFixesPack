@@ -178,6 +178,17 @@ export namespace SaboteurHUD
     };
     inline thread_local std::optional<Scope> Current;
 
+    // The native minimap markers and the Flash HUD share the same picture bounds.
+    inline float HudInset(uint32_t width, uint32_t height, bool pillarboxed)
+    {
+        const auto aspect = static_cast<float>(width) / height;
+        const auto constraint = Constraint.load();
+        auto chosen = constraint ? ClampHudAspectRatio(constraint, aspect) : aspect;
+        if (pillarboxed)
+            chosen = std::min(chosen, 16.0f / 9.0f);
+        return (width - height * chosen) * 0.5f;
+    }
+
     inline void __fastcall UpdateMinimap(uintptr_t self, void* edx, float deltaTime)
     {
         NativeOffsets offsets;
@@ -185,16 +196,19 @@ export namespace SaboteurHUD
         if (hud->get() && SaboteurCutscenes::Ready() && !Current && Renderer->get() &&
             *reinterpret_cast<uintptr_t*>(hud->get() + 52 + 22 * 4) == self)
         {
-            const auto constraint = Constraint.load();
             const auto width = *reinterpret_cast<uint32_t*>(Renderer->get() + 1652);
             const auto height = *reinterpret_cast<uint32_t*>(Renderer->get() + 1656);
-            if (constraint && width && height)
+            if (width && height)
             {
-                const auto chosen = ClampHudAspectRatio(constraint, static_cast<float>(width) / height);
-                const auto inset = (width - height * chosen) * 0.5f;
-                offsets.Move(reinterpret_cast<float*>(self + 144), inset);
-                offsets.Move(MinimapBounds->get_ptr(), inset);
-                offsets.Move(MinimapBounds->get_ptr() + 2, inset);
+                const auto borders = SaboteurCutscenes::Borders.load();
+                const auto pillarboxed = (borders & 2) && SaboteurCutscenes::Active();
+                const auto inset = HudInset(width, height, pillarboxed);
+                if (inset > 0.0001f)
+                {
+                    offsets.Move(reinterpret_cast<float*>(self + 144), inset);
+                    offsets.Move(MinimapBounds->get_ptr(), inset);
+                    offsets.Move(MinimapBounds->get_ptr() + 2, inset);
+                }
             }
         }
         MinimapUpdateHook.unsafe_fastcall(self, edx, deltaTime);
@@ -214,7 +228,6 @@ export namespace SaboteurHUD
     {
         Current.reset();
         Frame.reset();
-        const auto constraint = Constraint.load();
         if (!manager || !Renderer->get() || !*reinterpret_cast<void**>(manager + 2688))
             return;
         EnsureInterface(*reinterpret_cast<void**>(manager + 2688));
@@ -224,17 +237,18 @@ export namespace SaboteurHUD
         if (!width || !height || !std::isfinite(scale) || scale <= 0.0f)
             return;
         const auto movie = *reinterpret_cast<void**>(manager + 2688);
-        if (SaboteurCutscenes::Ready() && Invoke(movie, "_global.FFCinemaBegin", {
-            { 3, 0, static_cast<double>(SaboteurCutscenes::Borders.load()) },
+        const auto ready = SaboteurCutscenes::Ready();
+        const auto cinematic = ready && SaboteurCutscenes::Active();
+        const auto borders = SaboteurCutscenes::Borders.load();
+        if (ready && Invoke(movie, "_global.FFCinemaBegin", {
+            { 3, 0, static_cast<double>(borders) },
             { 3, 0, SaboteurCutscenes::Animated.load() ? 1.0 : 0.0 },
-            { 3, 0, SaboteurCutscenes::Active() ? 1.0 : 0.0 },
-            { 3, 0, static_cast<double>(*reinterpret_cast<uint8_t*>(manager + 3212) & 1) },
+            { 3, 0, cinematic ? 1.0 : 0.0 },
+            { 3, 0, SaboteurCutscenes::LetterboxRequested(manager) ? 1.0 : 0.0 },
             { 3, 0, (1280.0 - width / scale) * 0.5 }, { 3, 0, (720.0 - height / scale) * 0.5 },
             { 3, 0, width / scale }, { 3, 0, height / scale } }))
             Frame.emplace(movie);
-        const auto aspect = static_cast<float>(width) / height;
-        const auto chosen = constraint ? ClampHudAspectRatio(constraint, aspect) : aspect;
-        const auto inset = (width - height * chosen) * 0.5f / scale;
+        const auto inset = HudInset(width, height, cinematic && (borders & 2)) / scale;
         if (inset > 0.0001f || std::abs(*reinterpret_cast<float*>(manager + 48204)) > 0.0001f)
             Current.emplace(manager, inset, scale);
     }

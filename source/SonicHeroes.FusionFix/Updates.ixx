@@ -23,6 +23,10 @@ namespace Updates
     IDirect3DDevice8* ActiveDevice = nullptr;
     ComPtr<IDirect3DTexture8> Texture;
     std::wstring Notice;
+    std::string NoticeVersion;
+    bool NoticeUsesHub = false;
+    std::atomic<bool> Enabled{ false };
+    std::atomic<bool> LanguageChanged{ false };
     ULONGLONG Until = 0;
     DWORD CanvasWidth = 0, CanvasHeight = 0, TextureWidth = 0, TextureHeight = 0;
     int TextWidth = 0, TextHeight = 0;
@@ -31,6 +35,29 @@ namespace Updates
     {
         const auto state = UpdateGameState.get();
         return state && *reinterpret_cast<int32_t*>(state + 0x38) == 1;
+    }
+
+    std::wstring FormatNotice()
+    {
+        // Automatic follows the Windows display language.
+        auto language = FixSettings().Get("MAIN.TextLanguage");
+        if (language.empty() || language == "auto")
+        {
+            switch (PRIMARYLANGID(GetUserDefaultUILanguage()))
+            {
+                case LANG_FRENCH: language = "fr"; break;
+                case LANG_GERMAN: language = "de"; break;
+                case LANG_ITALIAN: language = "it"; break;
+                case LANG_SPANISH: language = "es"; break;
+                default: language = "en"; break;
+            }
+        }
+        auto texts = FixSettings().GetTexts();
+        texts.Select(language);
+        using RWGTA::UpdateCheck::detail::Replace;
+        auto line = texts.Resolve(NoticeUsesHub ? "@update.availablehub" : "@update.availablesite");
+        line = Replace(line, "{name}", texts.Resolve("@plugin.name"));
+        return asi_settings::text::Widen(Replace(line, "{version}", NoticeVersion));
     }
 
     bool CreateNoticeTexture(IDirect3DDevice8* device, DWORD width, DWORD height)
@@ -113,15 +140,7 @@ namespace Updates
 
     void DrawNotice(IDirect3DDevice8* device)
     {
-        if (Notice.empty())
-            return;
-        if (GetTickCount64() >= Until)
-        {
-            Notice.clear();
-            Texture.Reset();
-            return;
-        }
-        if (!InFrontend())
+        if (!Enabled.load(std::memory_order_relaxed) || Notice.empty() || GetTickCount64() >= Until || !InFrontend())
             return;
 
         ComPtr<IDirect3DSurface8> backbuffer, target, depth;
@@ -197,9 +216,27 @@ namespace Updates
 
     void Frame()
     {
+        const bool enabled = Enabled.load(std::memory_order_relaxed);
+        if ((ActiveDevice || !Notice.empty()) && (!enabled || Notice.empty() || GetTickCount64() >= Until))
+        {
+            Notice.clear();
+            if (ActiveDevice)
+            {
+                Texture.Reset();
+                PresentHook.reset();
+                ActiveDevice = nullptr;
+            }
+        }
+        if (!enabled)
+            return;
         RWGTA::UpdateCheck::Tick();
         if (Notice.empty() || !HudDevice.is_initialized())
             return;
+        if (LanguageChanged.load(std::memory_order_relaxed) && LanguageChanged.exchange(false, std::memory_order_acquire))
+        {
+            Notice = RWGTA::UpdateCheck::ReplacePage(FormatNotice());
+            Texture.Reset();
+        }
         const auto device = HudDevice.get();
         if (device && ActiveDevice != device)
         {
@@ -233,26 +270,9 @@ void InitUpdates()
     };
     config.format = [](const std::string& latest, bool hub)
     {
-        // Automatic: the Windows display language when the texts have it, else English
-        auto language = FixSettings().Get("MAIN.TextLanguage");
-        if (language.empty() || language == "auto")
-        {
-            switch (PRIMARYLANGID(GetUserDefaultUILanguage()))
-            {
-                case LANG_FRENCH: language = "fr"; break;
-                case LANG_GERMAN: language = "de"; break;
-                case LANG_ITALIAN: language = "it"; break;
-                case LANG_SPANISH: language = "es"; break;
-                default: language = "en"; break;
-            }
-        }
-        auto texts = FixSettings().GetTexts();
-        texts.Select(language);
-        auto line = texts.Resolve(hub ? "@update.availablehub" : "@update.availablesite");
-        for (const auto& [key, value] : { std::pair<std::string, std::string>{ "{name}", texts.Resolve("@plugin.name") }, { "{version}", latest } })
-            if (const auto at = line.find(key); at != std::string::npos)
-                line.replace(at, key.size(), value);
-        return asi_settings::text::Widen(line);
+        Updates::NoticeVersion = latest;
+        Updates::NoticeUsesHub = hub;
+        return Updates::FormatNotice();
     };
     config.show = [](const std::wstring& line)
     {
@@ -261,6 +281,13 @@ void InitUpdates()
         Updates::Until = GetTickCount64() + 12000;
     };
     RWGTA::UpdateCheck::Init(std::move(config));
+    const auto updateEnabled = []()
+    {
+        Updates::Enabled.store(FixSettings().Bool("MAIN.CheckForUpdates"), std::memory_order_relaxed);
+    };
+    updateEnabled();
+    FixSettings().OnChange("MAIN.CheckForUpdates", updateEnabled);
+    FixSettings().OnChange("MAIN.TextLanguage", []() { Updates::LanguageChanged.store(true, std::memory_order_release); });
     WFP::onGameProcessEvent() += Updates::Frame;
     IATHook::Replace(GetModuleHandleW(nullptr), "KERNEL32.dll", std::forward_as_tuple("ExitProcess", Updates::Exit));
 }

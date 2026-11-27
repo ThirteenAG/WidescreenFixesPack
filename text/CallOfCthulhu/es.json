@@ -63,6 +63,6 @@
   "ConfineCursor.description": "Mantiene el cursor del ratón dentro de la ventana del juego mientras el juego está activo.",
   "CheckForUpdates": "Buscar actualizaciones",
   "CheckForUpdates.description": "Una vez por inicio, pregunta a fusionfix.io si hay una versión más reciente del parche y la muestra aquí. Desactivado no hace ninguna petición de red.",
-  "update.availablehub": "{name} {version} está disponible. FusionFixHub se abrirá al cerrar el juego.",
-  "update.availablesite": "{name} {version} está disponible en {page}"
+  "update.availablehub": "Actualización {version}. El Hub se abre al salir.",
+  "update.availablesite": "Actualización {version} en {page}."
 }

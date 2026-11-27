@@ -33,52 +33,35 @@ export namespace DeerCamera
     };
     inline View view;
 
-    // The scope (and the close-up aim view) draw a 4:3 model through a camera of their own over the world. That camera
-    // gets the screen's shape like the main one, so the model keeps its proportions in the middle of the screen, and
-    // the sides beside its 4:3 area are black.
     inline void** overlayCameras[2]{};
+    inline View overlayViews[2];
     inline SafetyHookInline scopeDrawHook, aimDrawHook;
 
-    inline bool Overlay(void* camera)
+    inline void OverlayBars(void* camera)
     {
-        for (auto slot : overlayCameras)
-            if (slot && *slot == camera)
-                return true;
-        return false;
-    }
-
-    inline void OverlaySides(void* camera)
-    {
-        if (!camera)
-            return;
         const auto raster = DeerMenu::Read<void*>(reinterpret_cast<uintptr_t>(camera) + 96);
         if (!raster)
             return;
-        auto surface = DeerMovie::Surface(raster);
-        const int width = DeerMenu::Read<int>(reinterpret_cast<uintptr_t>(raster) + 12);
-        const int height = DeerMenu::Read<int>(reinterpret_cast<uintptr_t>(raster) + 16);
-        const int side = (width - height * 4 / 3) / 2;
-        if (!surface || side <= 0)
+        const auto address = reinterpret_cast<uintptr_t>(raster);
+        const int width = DeerMenu::Read<int>(address + 12);
+        const int height = DeerMenu::Read<int>(address + 16);
+        DeerMovie::Layout layout;
+        if (!DeerMovie::Geometry(4, 3, width, height, layout))
             return;
-        DDBLTFX fx{};
-        fx.dwSize = sizeof(fx);
-        RECT left{ 0, 0, side, height }, right{ width - side, 0, width, height };
-        surface->Blt(&left, nullptr, nullptr, DDBLT_COLORFILL | DDBLT_WAIT, &fx);
-        surface->Blt(&right, nullptr, nullptr, DDBLT_COLORFILL | DDBLT_WAIT, &fx);
-    }
-
-    inline void __cdecl ScopeDraw()
-    {
-        scopeDrawHook.ccall();
-        OverlaySides(*overlayCameras[0]);
-    }
-
-    inline void __cdecl AimDraw()
-    {
-        const bool active = game_aim.get() != 0;
-        aimDrawHook.ccall();
-        if (active)
-            OverlaySides(*overlayCameras[1]);
+        const auto& box = layout.destination;
+        if (box.left == 0 && box.right == width && box.top == 0 && box.bottom == height)
+            return;
+        const auto surface = DeerMovie::Surface(raster);
+        if (!surface)
+            return;
+        DDBLTFX fill{};
+        fill.dwSize = sizeof(fill);
+        for (auto rect : { RECT{ 0, 0, box.left, height }, RECT{ box.right, 0, width, height },
+            RECT{ 0, 0, width, box.top }, RECT{ 0, box.bottom, width, height } })
+        {
+            if (rect.right > rect.left && rect.bottom > rect.top)
+                surface->Blt(&rect, nullptr, nullptr, DDBLT_COLORFILL | DDBLT_WAIT, &fill);
+        }
     }
 
     inline bool Extents(float x, float y)
@@ -98,17 +81,40 @@ export namespace DeerCamera
         return float(width) / float(height);
     }
 
+    // The mask has its own camera. Apply the current raster aspect when drawing it, including after live resize.
+    inline void FitOverlay(void* camera, View& overlay)
+    {
+        const auto address = reinterpret_cast<uintptr_t>(camera);
+        const float x = DeerMenu::Read<float>(address + 104), y = DeerMenu::Read<float>(address + 108);
+        const float aspect = Aspect(camera);
+        if (!Extents(x, y) || aspect <= 0.0f)
+            return;
+        if (overlay.camera != camera || x != overlay.lastX || y != overlay.lastY)
+            overlay = { camera, x, y, x, y };
+
+        constexpr float design = 4.0f / 3.0f;
+        float extent[]{ overlay.x * std::max(1.0f, aspect / design), overlay.y * std::max(1.0f, design / aspect) };
+        if (x != extent[0] || y != extent[1])
+            setView(camera, extent);
+        overlay.lastX = extent[0];
+        overlay.lastY = extent[1];
+    }
+
+    inline void __cdecl ScopeDraw()
+    {
+        FitOverlay(*overlayCameras[0], overlayViews[0]);
+        scopeDrawHook.ccall();
+    }
+
+    inline void __cdecl AimDraw()
+    {
+        if (game_aim.get() != 0)
+            FitOverlay(*overlayCameras[1], overlayViews[1]);
+        aimDrawHook.ccall();
+    }
+
     inline void Correct(void* camera)
     {
-        if (!applying && camera && Overlay(camera))
-        {
-            const auto address = reinterpret_cast<uintptr_t>(camera);
-            const float x = DeerMenu::Read<float>(address + 104), y = DeerMenu::Read<float>(address + 108);
-            const float aspect = Aspect(camera);
-            if (Extents(x, y) && aspect > 0.0f && std::abs(x / y - 4.0f / 3.0f) <= 0.001f)
-                *reinterpret_cast<float*>(address + 104) = y * aspect;
-            return;
-        }
         if (applying || !camera || !cameraPrimary.is_initialized() || cameraPrimary.get() != camera)
             return;
         auto address = reinterpret_cast<uintptr_t>(camera);
@@ -152,7 +158,6 @@ export namespace DeerCamera
         const auto address = reinterpret_cast<uintptr_t>(camera);
         const float currentX = DeerMenu::Read<float>(address + 104);
         const float currentY = DeerMenu::Read<float>(address + 108);
-        const float baseX = std::abs(view.x / view.y - 4.0f / 3.0f) <= 0.001f ? view.y * aspect : view.x;
         if (view.adjusted && (currentX != view.lastX || currentY != view.lastY))
         {
             view = {};
@@ -160,12 +165,13 @@ export namespace DeerCamera
         }
         const bool normalExtent = std::abs(view.x / view.y - 4.0f / 3.0f) <= 0.001f;
         const float factor = normalExtent && Gameplay() && std::isfinite(wanted) ? std::clamp(wanted, 0.5f, 2.0f) : 1.0f;
-        float extent[2]{ baseX, view.y };
+        float extent[2]{ normalExtent ? view.y * aspect : view.x, view.y };
         if (factor != 1.0f)
         {
+            // Scale the native vertical angle before deriving the horizontal extent for this raster.
             constexpr float maxHalfAngle = 1.56206968f;
-            extent[0] = std::tan(std::min(std::atan(baseX) * factor, maxHalfAngle));
-            extent[1] = view.y * extent[0] / baseX;
+            extent[1] = std::tan(std::min(std::atan(view.y) * factor, maxHalfAngle));
+            extent[0] = extent[1] * aspect;
         }
         if (!Extents(extent[0], extent[1]) || (currentX == extent[0] && currentY == extent[1]))
             return;
@@ -187,7 +193,15 @@ export namespace DeerCamera
         return beginHook.ccall<void*>(camera);
     }
 
-    inline bool Init(HMODULE game = GetModuleHandleW(nullptr))
+    inline void* __cdecl ResumeAfterOverlay(void* camera)
+    {
+        // The main camera owns the current back buffer, which can alternate between raster objects.
+        // Fill the bars after the overlay ends and before starting another scene on that buffer.
+        OverlayBars(camera);
+        return Begin(camera);
+    }
+
+    inline void Init(HMODULE game = GetModuleHandleW(nullptr))
     {
         auto owner = hook::pattern(game, "A1 ? ? ? ? 68 ? ? ? ? 50 E8 ? ? ? ? 83 C4 34 EB ? D9 05");
         auto setter = hook::pattern(game, "D9 05 ? ? ? ? D8 73 68 D9 05 ? ? ? ? D8 73 6C D9 C9");
@@ -224,6 +238,9 @@ export namespace DeerCamera
         game_aim.SetAddress(*aim.get_first<int*>(1));
         scopeDrawHook = safetyhook::create_inline(scopeDraw, ScopeDraw);
         aimDrawHook = safetyhook::create_inline(aim.get_first(), AimDraw);
-        return true;
+        auto scopeResume = hook::pattern(game, "8B 15 ? ? ? ? 52 E8 ? ? ? ? A1 ? ? ? ? 50 E8 ? ? ? ? 83 C4 18 C3");
+        auto aimResume = hook::pattern(game, "8B 15 ? ? ? ? 52 E8 ? ? ? ? A1 ? ? ? ? 50 E8 ? ? ? ? 83 C4 34 C3");
+        injector::MakeCALL(scopeResume.get_first(18), ResumeAfterOverlay, true);
+        injector::MakeCALL(aimResume.get_first(18), ResumeAfterOverlay, true);
     }
 }

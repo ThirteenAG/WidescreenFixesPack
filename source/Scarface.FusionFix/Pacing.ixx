@@ -17,6 +17,7 @@ export namespace ScarfacePacing
         LONGLONG frequency = 0, next = 0, remainder = 0;
         int previousFPS = 0;
         HANDLE timer = nullptr;
+        bool timerAttempted = false;
 
         static LONGLONG Now()
         {
@@ -31,6 +32,11 @@ export namespace ScarfacePacing
             const auto spin = std::max<LONGLONG>(1, frequency / 5000);
             if (remaining > spin)
             {
+                if (!timerAttempted)
+                {
+                    timerAttempted = true;
+                    timer = CreateWaitableTimerExW(nullptr, nullptr, CREATE_WAITABLE_TIMER_HIGH_RESOLUTION, TIMER_ALL_ACCESS);
+                }
                 LARGE_INTEGER due{};
                 due.QuadPart = -((remaining - spin) * 10000000 / frequency);
                 if (timer && SetWaitableTimer(timer, &due, 0, nullptr, nullptr, FALSE))
@@ -48,7 +54,6 @@ export namespace ScarfacePacing
             LARGE_INTEGER value{};
             if (QueryPerformanceFrequency(&value))
                 frequency = value.QuadPart;
-            timer = CreateWaitableTimerExW(nullptr, nullptr, CREATE_WAITABLE_TIMER_HIGH_RESOLUTION, TIMER_ALL_ACCESS);
             if (frequency <= 0)
                 OutputDebugStringA("Scarface: frame pacing clock unavailable.\n");
         }

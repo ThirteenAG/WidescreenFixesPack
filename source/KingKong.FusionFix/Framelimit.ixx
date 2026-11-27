@@ -133,6 +133,11 @@ public:
                     SignatureUpdateTick();
                 const int requested = requestedRate.load(std::memory_order_relaxed);
                 const int mode = limiterMethod.load(std::memory_order_relaxed) == 2 ? 2 : 1;
+                if (timerPeriod && (requested == 0 || mode != 2))
+                {
+                    timeEndPeriod(1);
+                    timerPeriod = false;
+                }
                 static HMONITOR previousMonitor = nullptr;
                 static ULONGLONG refreshAfter = 0;
                 static float refreshRate = 60.0f;
@@ -161,13 +166,10 @@ public:
                     return;
                 }
                 const float rate = requested == -1 ? refreshRate : static_cast<float>(std::clamp(requested, 30, 1000));
-                if (mode == 2 && !timerPeriod)
-                {
-                    timeBeginPeriod(1);
-                    timerPeriod = true;
-                }
                 if (rate != previousRate || mode != previousMode)
                 {
+                    if (mode == 2 && !timerPeriod)
+                        timerPeriod = timeBeginPeriod(1) == TIMERR_NOERROR;
                     previousRate = rate;
                     previousMode = mode;
                     limiter.Init(mode == 2 ? FrameLimiter::FPS_ACCURATE : FrameLimiter::FPS_REALTIME, rate);

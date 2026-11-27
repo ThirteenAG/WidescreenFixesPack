@@ -22,11 +22,42 @@ namespace UWindowsViewport
     constexpr UINT IK_MOUSE4 = 193; // IK_UnknownC0
     constexpr UINT IK_MOUSE5 = 194; // IK_UnknownC1
 
+    HWND WindowHandle(void* viewport)
+    {
+        const auto nativeWindow = *reinterpret_cast<const uintptr_t*>(reinterpret_cast<uintptr_t>(viewport) + 0x18C);
+        return nativeWindow ? *reinterpret_cast<const HWND*>(nativeWindow + 4) : nullptr;
+    }
+
+    SafetyHookInline shOpenWindow = {};
+    void __fastcall OpenWindow(void* viewport, void*, DWORD parent, int temporary, int width, int height, int x, int y)
+    {
+        static bool initialViewport = true;
+        const auto previousForeground = initialViewport ? GetForegroundWindow() : nullptr;
+        shOpenWindow.unsafe_thiscall<void>(viewport, parent, temporary, width, height, x, y);
+        if (!initialViewport || parent || temporary)
+            return;
+
+        const auto window = WindowHandle(viewport);
+        if (!window || GetAncestor(window, GA_ROOT) != window || !IsWindowVisible(window) || IsIconic(window))
+            return;
+        initialViewport = false;
+
+        // The native viewport is shown without activation. Transfer focus once it can receive DirectInput.
+        const auto foreground = GetForegroundWindow();
+        DWORD owner = 0;
+        if (foreground)
+            GetWindowThreadProcessId(foreground, &owner);
+        if (foreground && foreground != previousForeground && owner != GetCurrentProcessId())
+            return;
+        if ((foreground == window || SetForegroundWindow(window)) && GetFocus() != window)
+            SetFocus(window);
+    }
+
     SafetyHookInline shCauseInputEvent = {};
     SafetyHookInline shViewportWndProc = {};
     int32_t __fastcall ViewportWndProc(void* UWindowsViewport, void* edx, UINT Msg, WPARAM wParam, LPARAM lParam)
     {
-        const HWND window = *(HWND*)(*(uintptr_t*)((uintptr_t)UWindowsViewport + 0x18C) + 4);
+        const HWND window = WindowHandle(UWindowsViewport);
         if (!hGameWindow || window == GetForegroundWindow())
             hGameWindow = window;
 
@@ -224,6 +255,7 @@ export void InitWinDrv()
     // The main loop empties the message queue each frame; a high polling rate mouse must not keep it going
     MessagePumpGuard::Install(GetModuleHandle(nullptr));
 
+    UWindowsViewport::shOpenWindow = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"WinDrv"), "?OpenWindow@UWindowsViewport@@UAEXKHHHHH@Z"), UWindowsViewport::OpenWindow);
     UWindowsViewport::shViewportWndProc = safetyhook::create_inline(GetProcAddress(GetModuleHandle(L"WinDrv"), "?ViewportWndProc@UWindowsViewport@@QAEJIIJ@Z"), UWindowsViewport::ViewportWndProc);
 
     // UseDIMouse=True: a DirectInput mouse takes the mouse input away from the raw input reader,

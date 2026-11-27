@@ -1,4 +1,15 @@
 {
+  "menu.plugins": "Plugins",
+  "menu.back": "Retour",
+  "menu.on": "Oui",
+  "menu.off": "Non",
+  "menu.preset": "Profil",
+  "menu.custom": "Personnalise",
+  "menu.vanilla": "Original",
+  "menu.recommended": "Conseille",
+  "menu.enhanced": "Ameliore",
+  "menu.restoredefaults": "Retablir les valeurs",
+  "menu.confirm": "Confirmer ?",
   "plugin.name": "The Matrix: Path of Neo Fusion Fix",
   "page.display": "Affichage",
   "page.camera": "Caméra",
@@ -41,5 +52,5 @@
   "TextLanguage": "Langue des textes",
   "TextLanguage.description": "Langue des textes du correctif. Auto suit la langue d'affichage de Windows.",
   "auto": "Auto",
-  "menu.restartwarning": "Le jeu doit être redémarré pour appliquer les réglages."
+  "menu.restartwarning": "Redémarrez le jeu pour appliquer les réglages."
 }

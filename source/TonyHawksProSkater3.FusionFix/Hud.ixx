@@ -1,6 +1,7 @@
 module;
 
 #include <stdafx.h>
+#include <atomic>
 #include "FixSettings.hpp"
 #include "Shared/Console/Viewport.hpp"
 
@@ -14,11 +15,18 @@ export namespace THPS3Hud
     inline uintptr_t Panel = 0;
     inline int Anchor = 0;
     inline float Width = 640.0f, Height = 480.0f, FrameWidth = 640.0f;
-    inline const std::string* Constraint = nullptr;
+    inline std::atomic<float> Constraint{ 0.0f };
+
+    inline void UpdateConstraint()
+    {
+        Constraint.store(console::parse_hud_aspect(FixSettings().String("MAIN.HudAspectRatioConstraint").c_str()),
+            std::memory_order_relaxed);
+    }
 
     inline float Offset()
     {
-        const float aspect = Constraint ? console::parse_hud_aspect(Constraint->c_str()) : 0.0f;
+        if (!Anchor) return 0.0f;
+        const float aspect = Constraint.load(std::memory_order_relaxed);
         const float boxWidth = aspect > 0.0f ? std::min(Width, Height * aspect) : Width;
         return Anchor * (boxWidth - FrameWidth) * 0.5f;
     }
@@ -65,12 +73,13 @@ export namespace THPS3Hud
         Anchor = previous;
     }
 
-    inline void Install(float width, float height, float frameWidth, const std::string* constraint, HMODULE module = GetModuleHandleW(nullptr))
+    inline void Install(float width, float height, float frameWidth, HMODULE module = GetModuleHandleW(nullptr))
     {
         Width = width;
         Height = height;
         FrameWidth = frameWidth;
-        Constraint = constraint;
+        UpdateConstraint();
+        FixSettings().OnChange("MAIN.HudAspectRatioConstraint", UpdateConstraint);
         auto panel = hook::module_pattern(module, "64 A1 00 00 00 00 6A FF 68 ? ? ? ? 50 64 89 25 00 00 00 00 83 EC 4C 53 55 56 8B F1 57 8A 86 50 1F 00 00");
         auto image = hook::module_pattern(module, "56 8B F1 E8 ? ? ? ? 84 C0 75 49 8B CE E8 ? ? ? ? 85 C0 74 3E");
         auto text = hook::module_pattern(module, "83 EC 30 53 55 56 8B F1 57 80 3E 00 74 07 8B 46 3C C6 40 01 01");
@@ -82,10 +91,9 @@ export namespace THPS3Hud
 
 export void InstallHud()
 {
-    auto& settings = FixSettings();
     hook::pattern pattern("");
     //HUD
-    THPS3Hud::Install(Screen.fWidth, Screen.fHeight, 640.0f * Screen.fUnit, &settings.String("MAIN.HudAspectRatioConstraint"));
+    THPS3Hud::Install(Screen.fWidth, Screen.fHeight, 640.0f * Screen.fUnit);
     pattern = hook::pattern("D8 0D ? ? ? ? 8B CF 89 5C 24 50 D8"); //0x58DDC8
     injector::WriteMemory<float>(*pattern.get_first<float*>(2), Screen.fHUDScaleX, true);
     if (Screen.fHudOffsetY > 0.0f)

@@ -354,9 +354,17 @@ public:
                 if (next.target == 0)
                 {
                     const auto* selected = GetListMode(pendingIndex);
-                    if (!selected || selected->Width != static_cast<UINT>(next.width) ||
-                        selected->Height != static_cast<UINT>(next.height) || !selected->RefreshRate)
-                        return false;
+                    if (!selected || !selected->RefreshRate)
+                    {
+                        int width = 0, height = 0;
+                        if (!DPLWindow::Dimensions(2, width, height)) return false;
+                        pendingIndex = ResolveModeIndex(width, height, -1);
+                        selected = GetListMode(pendingIndex);
+                        if (!selected || !selected->RefreshRate) return false;
+                    }
+                    // A resized client can have dimensions that the monitor cannot use exclusively.
+                    next.width = selected->Width;
+                    next.height = selected->Height;
                     next.refresh = selected->RefreshRate;
                 }
                 // The reset loop consumes this flag. Keep the previous native parameters and

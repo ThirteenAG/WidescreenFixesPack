@@ -58,7 +58,6 @@ export GameRef<CGameTime*> pGameTime;
 export class FrontendInputManager;
 
 
-export float fTimeStep = 1.0f / 60.0f;
 export bool BlockGameInput = false;
 
 export GameRef<HWND> hWnd;

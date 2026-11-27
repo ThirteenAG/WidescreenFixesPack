@@ -21,6 +21,7 @@ namespace TCOverlay
     static bool host = false;
     static std::atomic<uint32_t> inputGeneration{ 0 };
     static asi_overlay::D3D9UpdateNotice notice;
+    static const char* gameLanguage = "en";
 
     export bool BlocksInput()
     {
@@ -32,9 +33,13 @@ namespace TCOverlay
         return inputGeneration.load(std::memory_order_relaxed);
     }
 
-    static const char* NativeLanguage()
+    static const char* ResolveNativeLanguage()
     {
         static constexpr const char* languages[] = { "en", "en-GB", "fr", "de", "es", "it", "ru" };
+        const auto configured = FixSettings().Int("MAIN.Language");
+        if (configured >= 0 && static_cast<size_t>(configured) < std::size(languages))
+            return languages[configured];
+
         constexpr auto key = L"Software\\Aspyr\\True Crime New York City\\Install";
         for (const auto hive : { HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE })
         {
@@ -47,7 +52,7 @@ namespace TCOverlay
 
     export std::wstring FormatUpdateText(const std::string& latest, bool hub)
     {
-        return asi_overlay::D3D9UpdateNotice::Format(FixSettings(), NativeLanguage(), latest, hub);
+        return asi_overlay::D3D9UpdateNotice::Format(FixSettings(), gameLanguage, latest, hub);
     }
 
     export void ShowUpdate(const std::wstring& text)
@@ -129,10 +134,11 @@ namespace TCOverlay
     export void Init()
     {
         host = asi_settings::ClaimHostRole();
+        gameLanguage = ResolveNativeLanguage();
         GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
             reinterpret_cast<LPCWSTR>(&Init), &hostModule);
         if (WFP::DeveloperOverlay && host)
-            overlay.fallbackLanguage = NativeLanguage();
+            overlay.fallbackLanguage = gameLanguage;
         auto pattern = hook::pattern("A1 ? ? ? ? 8B 10 8D 4C 24 ? 51 50");
         pD3DDevice.SetAddress(*pattern.get_first<IUnknown**>(1));
         // Capture locations before installing any hooks

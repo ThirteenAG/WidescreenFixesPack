@@ -77,7 +77,7 @@
   "menu.restoredefaultshelp": "Sets the settings of this page to their defaults.",
   "menu.restartwarning": "The game must be restarted to apply some settings.",
   "WindowMode": "Window Mode",
-  "WindowMode.description": "Fullscreen, a centered window at the selected resolution, or borderless at the monitor resolution. Restart required. Alt+Enter switches between fullscreen and the last window mode.",
+  "WindowMode.description": "Fullscreen, a resizable window that starts centered at the selected resolution, or borderless at the monitor resolution. Restart required. Alt+Enter switches between fullscreen and the last window mode.",
   "WindowMode.0": "Fullscreen",
   "WindowMode.1": "Windowed",
   "WindowMode.2": "Borderless",

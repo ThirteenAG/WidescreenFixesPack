@@ -17,7 +17,8 @@ CEXP void InitializeASI()
         WindowedModeWrapper::EnableDpiAwareness();
         FixSettings();
         asi_settings::LiveLink::Start();
-        CallbackHandler::RegisterCallback(L"suffering.rfl", SufferingMenu::Init);
+        CallbackHandler::RegisterCallback(L"suffering.rfl", []() { SufferingMenu::Init(L"suffering.rfl", SufferingMenu::Retail); });
+        CallbackHandler::RegisterCallback(L"sufferingttb.rfl", []() { SufferingMenu::Init(L"sufferingttb.rfl", SufferingMenu::TiesThatBind); });
         CallbackHandler::RegisterCallbackAtGetSystemTimeAsFileTime([]() { WFP::onInitEvent().executeAll(); }, hook::pattern("75 4B D9 45 ? D8 5D ? DF E0 F6 C4 41"));
     });
 }

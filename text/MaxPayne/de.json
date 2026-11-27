@@ -68,7 +68,7 @@
   "gamefoldersaves": "Spielstände im Spielordner",
   "gamefoldersaves.description": "Speichert die Spielstände im Ordner savegames des Spiels.",
   "settingsfile": "Portable Einstellungen",
-  "settingsfile.cfg.description": "Speichert die Spieloptionen in MaxPayne.FusionFix.cfg. Fehlende Spielabschnitte werden aus der Registrierung übernommen. Erfordert einen Neustart.",
+  "settingsfile.cfg.description": "Speichert die Spieloptionen in der .cfg-Datei des Fixes. Fehlende Spielabschnitte werden aus der Registrierung übernommen. Erfordert einen Neustart.",
   "settingsfile.description": "Speichert die Spieloptionen neben den Spielständen in settings.ini statt in der Registrierung. Bei Spielständen im Spielordner liegt die Datei im Unterordner savegames. Vorhandene Registrierungseinstellungen werden bei der ersten Nutzung kopiert. Erfordert einen Neustart.",
   "savestringformat": "Datumsformat der Spielstände",
   "savestringformat.description": "Wie die Namen der Spielstände Datum und Uhrzeit zeigen (strftime).",

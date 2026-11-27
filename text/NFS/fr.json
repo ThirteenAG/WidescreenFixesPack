@@ -147,7 +147,7 @@
   "WFP_DESC_ANTIALIASING": "SMAA lisse les contours.",
   "WFP_DESC_HIDEAABUG": "Masque le défaut du MSAA avec des lignes d'un pixel aux bords.",
   "WFP_DESC_LANGUAGE": "Langue du jeu. Seules les langues installées sont proposées.",
-  "WFP_DESC_RAINDROPLETS": "Taille des gouttes de pluie à l'écran. Sans effet avec Xbox Rain Droplets.",
+  "WFP_DESC_RAINDROPLETS": "Taille des gouttes de pluie à l'écran. Sans effet avec Fusion Rain Droplets.",
   "WFP_DESC_SUBTITLES": "Affiche les sous-titres des vidéos dans toutes les langues.",
   "WFP_WRITESETTINGS": "Réglages dans un fichier",
   "WFP_DESC_WRITESETTINGS": "Stocke les réglages dans Settings.ini du profil au lieu du registre. Saisissez-y votre clé CD.",

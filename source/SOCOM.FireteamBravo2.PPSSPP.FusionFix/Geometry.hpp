@@ -11,6 +11,10 @@ inline bool worldSeen;
 inline uintptr_t projectionReturns[9];
 inline uintptr_t* sceneCamera;
 inline uintptr_t* manager;
+inline const uintptr_t* scriptHudState;
+inline constexpr const char* scriptHudSignature =
+    "E0 FF BD 27 14 00 B1 AF ? ? 11 3C ? ? 24 8E 10 00 B0 AF ? ? 10 3C "
+    "18 00 BF AF 04 00 80 10 ? ? 10 26 25 28 80 00";
 inline uintptr_t worldOffsets;
 inline SafetyMipsInline prepareHook, groundHook, clipHook;
 inline injector::hook_back<uintptr_t(uintptr_t, uintptr_t)> ground;
@@ -26,7 +30,7 @@ inline float AspectRatio()
 }
 inline bool Gameplay()
 {
-    return *manager && *reinterpret_cast<const int*>(*manager + 380) == 2;
+    return !*scriptHudState && *manager && *reinterpret_cast<const int*>(*manager + 380) == 2;
 }
 inline float Factor()
 {
@@ -34,6 +38,9 @@ inline float Factor()
 }
 inline bool Cinematic()
 {
+    // HUD_OFF saves the previous HUD state while the mission script owns the view.
+    if (*scriptHudState)
+        return true;
     if (!*manager)
         return false;
     const int mode = *reinterpret_cast<const int*>(*manager + 380);
@@ -146,6 +153,7 @@ inline void Install()
     const auto horizontalSite = sites::Required("F0 FF BD 27 FF 00 A5 30 A0 01 8C E4 00 00 AC E7 C8 02 86 24 D0 02 87 24 00 00 A0 CB 20 00 65 D0");
     const auto verticalSite = sites::Required("F0 FF BD 27 FF 00 A5 30 A4 01 8C E4 00 00 AC E7 CC 02 86 24 D4 02 87 24 00 00 A0 CB 20 00 65 D0");
     const auto managerSite = sites::Required("E0 FF BD 27 40 00 8C E4 ? ? 04 3C 10 00 BF AF ? ? ? ? ? ? 84 8C 10 00 BF 8F 08 00 E0 03");
+    const auto scriptHudSite = sites::Required(scriptHudSignature, 8);
     const auto cameraSite = sites::Required("? ? 06 3C 48 2D 0C E6 3C 02 A5 8C ? ? C6 24 ? ? C6 8C 6C 2D 06 AE 01 00 07 3C 25 30 A0 00");
     const auto contextSite = sites::Required("? ? 14 3C 80 40 09 3C 90 00 BC E7 9C 00 B2 AF A0 00 B3 AF 00 E0 89 44 00 00 04 34 28 00 B2 27");
     const char* callers[]
@@ -164,6 +172,7 @@ inline void Install()
         projectionReturns[i] = sites::Required(callers[i], 24);
     const auto exitSite = sites::Required("38 00 85 24 00 00 AC E4 3C 00 84 24 08 00 E0 03 00 00 8D E4 D0 FF BD 27 00 00 C8 8C 04 00 C9 8C");
     manager = reinterpret_cast<uintptr_t*>(Absolute(managerSite + 8, 0, 12));
+    scriptHudState = reinterpret_cast<const uintptr_t*>(Absolute(scriptHudSite, 0, 4));
     sceneCamera = reinterpret_cast<uintptr_t*>(Absolute(cameraSite, 0, 12) + 320);
     worldOffsets = Absolute(contextSite, 0, 40) + 1332;
     setHorizontal = decltype(setHorizontal)(horizontalSite);

@@ -149,7 +149,7 @@
   "WFP_DESC_ANTIALIASING": "SMAA сглаживает края.",
   "WFP_DESC_HIDEAABUG": "Скрывает дефект MSAA однопиксельными линиями по краям экрана.",
   "WFP_DESC_LANGUAGE": "Язык игры. Доступны только установленные языки.",
-  "WFP_DESC_RAINDROPLETS": "Размер капель дождя на экране. Не действует с Xbox Rain Droplets.",
+  "WFP_DESC_RAINDROPLETS": "Размер капель дождя на экране. Не действует с Fusion Rain Droplets.",
   "WFP_DESC_SUBTITLES": "Показывает субтитры в роликах на всех языках.",
   "WFP_WRITESETTINGS": "Настройки в файле",
   "WFP_DESC_WRITESETTINGS": "Хранит настройки реестра в Settings.ini в папке профиля. Введите туда ключ CD.",

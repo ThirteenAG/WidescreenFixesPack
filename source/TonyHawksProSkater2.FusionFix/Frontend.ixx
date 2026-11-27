@@ -267,40 +267,6 @@ namespace THPS2Menu
 
 namespace THPS2Menu
 {
-    enum class Diagnostic : size_t
-    {
-        UnsupportedImage, PinFailed, HookFailed,
-        TitleContext, PauseContext, Style, Widget, Layout, Discovery,
-        TitleStyle, TitleWidget, PauseStyle, PauseWidget, PauseLayout,
-        Rollback, OwnerRetired, FrameReentry, Count
-    };
-
-    // Failure reasons only, each reported at most three times.
-    inline void Diagnose(Diagnostic reason, const char* detail = nullptr, size_t rows = 0) noexcept
-    {
-        static std::array<uint8_t, static_cast<size_t>(Diagnostic::Count)> seen{};
-        auto index = static_cast<size_t>(reason);
-        if (index >= seen.size() || seen[index] >= 3)
-            return;
-        ++seen[index];
-        static constexpr std::array<const char*, static_cast<size_t>(Diagnostic::Count)> names =
-        {
-            "unsupported image", "module pin failed", "hook transaction failed",
-            "title context unavailable", "pause context unavailable", "style unavailable", "widget refused", "layout refused", "discovery retired",
-            "title style unavailable", "title widget refused", "pause style unavailable", "pause widget refused", "pause geometry refused",
-            "construction rollback", "native owner retired", "frame reentry rejected"
-        };
-        if (!detail)
-            detail = names[index];
-        char line[256] = {};
-        auto count = std::snprintf(line, sizeof(line), "THPS2 native menu: %s; rows=%zu\n", detail, rows);
-        if (count > 0)
-            OutputDebugStringA(line);
-    }
-}
-
-namespace THPS2Menu
-{
     // The native glyph lookup indexes by signed byte. Fold western letters and
     // punctuation to ASCII, and use '?' for the remaining codepoints.
     inline std::string PlainText(std::string_view utf8)
@@ -596,8 +562,6 @@ namespace THPS2Menu
                 }
                 if (row->width < 0 || row->width > 384 || row->height < 6 || row->height > 15)
                 {
-                    Diagnose(Diagnostic::Layout, row->width < 0 || row->width > 384
-                        ? "title row exceeds panel width" : "title row height unavailable", cells.size());
                     Clear();
                     return false;
                 }
@@ -610,8 +574,6 @@ namespace THPS2Menu
             FunctionAt<int (__thiscall*)(Native::List*)>(Game().listLayout)(list.get());
             if (list->count != static_cast<int>(lines.size()) || list->height <= 0 || list->height > 204 || list->selected < 0 || list->selected >= list->count || !list->rows[list->selected]->enabled)
             {
-                Diagnose(Diagnostic::Layout, list->height <= 0 || list->height > 204
-                    ? "title list exceeds panel height" : "title selection unavailable", cells.size());
                 Clear();
                 return false;
             }
@@ -1047,10 +1009,7 @@ namespace THPS2Menu
         return language.empty() || language == "auto" ? "en" : language;
     }
 
-    // The native hooks supply an exact owner predicate. This game-local
-    // state machine uses the native hooks' exact owner and frame predicates.
-    // C++ retention does not retain the native owner: deleting hooks must
-    // invalidate immediately and defer native deletion through its full frame.
+    // A retained host can outlive its native owner. Deleting hooks invalidate it before deferring native deletion.
     struct Host : std::enable_shared_from_this<Host>
     {
         Backend backend;
@@ -1089,7 +1048,7 @@ namespace THPS2Menu
                 : host(value), generation(value->generation), open(value->open) {}
             bool Current() const
             {
-                return host->valid && host->generation == generation && host->open == open && host->nativeCurrent && host->nativeCurrent(*host);
+                return host->valid && host->generation == generation && host->open == open && host->nativeCurrent(*host);
             }
         };
 
@@ -1156,16 +1115,10 @@ namespace THPS2Menu
             if (backend == Backend::Title)
             {
                 if (!titleStyle)
-                {
-                    Diagnose(Diagnostic::TitleStyle);
                     return false;
-                }
                 auto next = std::make_unique<TextList>();
                 if (!next->Build(lines, *titleStyle))
-                {
-                    Diagnose(Diagnostic::TitleWidget);
                     return false;
-                }
                 if (!snapshot.Current())
                     return false;
                 next->Select(selected);
@@ -1174,30 +1127,18 @@ namespace THPS2Menu
             else
             {
                 if (!pauseSource)
-                {
-                    Diagnose(Diagnostic::PauseStyle);
                     return false;
-                }
                 PauseFont nextFont;
                 if (!nextFont.Prepare(*pauseSource, lines))
-                {
-                    Diagnose(Diagnostic::PauseLayout);
                     return false;
-                }
                 auto next = std::make_unique<PauseList>();
                 if (!next->Build(lines))
-                {
-                    Diagnose(Diagnostic::PauseWidget);
                     return false;
-                }
                 // 44B6C0 centers baselines in240 pixels. Width is centered512;
                 // measured ascent/descent fit each16-pixel private row.
                 const auto menu = next->Get();
                 if (menu->x != 256 || menu->y < 16 || menu->rowSpacing != 16 || menu->y + 16 * (menu->count - 1) > 224 || !snapshot.Current())
-                {
-                    Diagnose(Diagnostic::PauseLayout);
                     return false;
-                }
                 next->Select(selected);
                 pauseFont = nextFont;
                 pause = std::move(next);
@@ -1207,7 +1148,7 @@ namespace THPS2Menu
             nextView.fits = {}; // it measures with the font borrowed for this call
             view = std::move(nextView);
             helpSelected = Selected();
-            return snapshot.Current();
+            return true;
         }
 
         bool Refresh(int selected = -1)
@@ -1217,7 +1158,6 @@ namespace THPS2Menu
             // Activate may have navigated before population. Never leave old
             // visible commands bound to changed logical page/item state.
             Close();
-            Diagnose(Diagnostic::Rollback, "private population refused; stock menu restored");
             return false;
         }
 
@@ -1228,33 +1168,23 @@ namespace THPS2Menu
             if (busy || open || !before.Current())
                 return false;
             Busy scope(*this);
-            // Shared9c snapshots survive Close while discovery is in flight.
+            // Plugin discovery runs callbacks that can close this host.
             model.OpenPlugins(module, MenuLanguage(), 4096);
             if (!before.Current() || !model.IsOpen())
             {
                 model.Close();
-                Diagnose(Diagnostic::Discovery);
                 return false;
             }
             view.Reset();
             open = true;
             entering = true;
-            ++generation;
-            if (!Populate() || !valid || !enterNative || !enterNative(*this))
+            if (!Populate() || !enterNative(*this))
             {
                 Close();
-                Diagnose(Diagnostic::Rollback);
                 return false;
             }
             entering = false;
             ++generation;
-            Snapshot committed(retained);
-            if (!committed.Current())
-            {
-                Close();
-                Diagnose(Diagnostic::Rollback);
-                return false;
-            }
             return true;
         }
 
@@ -1264,7 +1194,7 @@ namespace THPS2Menu
             Busy scope(*this);
             ++generation;
             model.Close();
-            if (open && valid && leaveNative)
+            if (open && valid)
                 leaveNative(*this);
             open = false;
             entering = false;
@@ -1660,21 +1590,11 @@ namespace THPS2Menu::Unwind
         return result;
     }
 
-    inline void Reset()
+    inline void Install()
     {
-        worldHook.reset();
-        presentHook.reset();
-        modalHook.reset();
-    }
-
-    inline bool Install()
-    {
-        // Caller has pinned the module.
-        // The host commits nativeReady only after all hook creation succeeds.
         modalHook = safetyhook::create_inline(reinterpret_cast<void*>(Game().modal), reinterpret_cast<void*>(&Modal));
         presentHook = safetyhook::create_inline(reinterpret_cast<void*>(Game().present), reinterpret_cast<void*>(&Present));
         worldHook = safetyhook::create_inline(reinterpret_cast<void*>(Game().world), reinterpret_cast<void*>(&World));
-        return true;
     }
 }
 
@@ -1756,7 +1676,6 @@ namespace THPS2Menu
         if (!record->context.Append(owner, Caption()))
         {
             titles.erase(owner);
-            Diagnose(Diagnostic::TitleContext, "title category construction refused");
             return result;
         }
         host->titleStyle = record->context.style;
@@ -1779,7 +1698,6 @@ namespace THPS2Menu
                 // normal native480160/save/deleting-dtor then owns teardown.
                 record->context.deletionRequested = true;
                 record->deleteFlags |= flags;
-                Diagnose(Diagnostic::OwnerRetired, "title deletion deferred to native modal exit");
                 return owner;
             }
             record->host->Close();
@@ -1873,7 +1791,6 @@ namespace THPS2Menu
             if (!record->context.Append(owner, Caption()))
             {
                 pauses.erase(owner);
-                Diagnose(Diagnostic::PauseContext, "pause category construction refused");
             }
         }
         return pauseCenterHook.unsafe_thiscall<int>(owner);
@@ -1935,7 +1852,6 @@ namespace THPS2Menu
             if (!record->host->valid || !record->context.Eligible() || !record->host->pauseFont.DrawCopy(*source, copy))
             {
                 record->host->Retire();
-                Diagnose(Diagnostic::PauseLayout, "private pause font identity changed");
                 return 0;
             }
             return fontDrawHook.unsafe_thiscall<char>(&copy, x, y, text, mode);
@@ -2071,31 +1987,14 @@ namespace THPS2Menu
                 // unload. Do not reorder an unrecognized escape path's native
                 // destruction after its borrowed font resources were released.
                 retiredTitles.push_back(record);
-                Diagnose(Diagnostic::OwnerRetired, "unexpected modal escape; native storage retained without late destruction");
             }
         }
     }
 
-    inline void ResetHooks()
-    {
-        Unwind::Reset();
-        pauseDispatchHook.reset();
-        fontDrawHook.reset();
-        pauseReadHook.reset();
-        pauseDrawHook.reset();
-        pauseInputHook.reset();
-        pauseDeleteHook.reset();
-        pauseCenterHook.reset();
-        titleUpdateHook.reset();
-        titleInputHook.reset();
-        titleDeleteHook.reset();
-        titleCtorHook.reset();
-    }
-
-    inline bool Init()
+    inline void Init()
     {
         if (nativeReady)
-            return true;
+            return;
         // Native borrowed strings and callbacks require process lifetime.
         // Pin the bridge before any hook or retained native pointer.
         // Dynamic host unload is not supported.
@@ -2129,7 +2028,6 @@ namespace THPS2Menu
             nativeStorageRetired.store(true, std::memory_order_relaxed);
         };
         nativeReady = true;
-        return true;
     }
 }
 

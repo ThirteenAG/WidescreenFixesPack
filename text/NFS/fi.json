@@ -149,7 +149,7 @@
   "WFP_DESC_ANTIALIASING": "SMAA pehmentää reunoja.",
   "WFP_DESC_HIDEAABUG": "Peittää MSAA:n reunavirheen yhden pikselin viivoilla.",
   "WFP_DESC_LANGUAGE": "Pelin kieli. Vain asennetut kielet ovat valittavissa.",
-  "WFP_DESC_RAINDROPLETS": "Ruudun sadepisaroiden koko. Ei vaikutusta Xbox Rain Droplets -lisäosan kanssa.",
+  "WFP_DESC_RAINDROPLETS": "Ruudun sadepisaroiden koko. Ei vaikutusta Fusion Rain Droplets -lisäosan kanssa.",
   "WFP_DESC_SUBTITLES": "Näyttää videoiden tekstitykset kaikilla kielillä.",
   "WFP_WRITESETTINGS": "Asetukset tiedostoon",
   "WFP_DESC_WRITESETTINGS": "Tallentaa rekisteriasetukset profiilikansion Settings.ini-tiedostoon. Syötä CD-avain sinne.",

@@ -204,7 +204,7 @@
       "label": "@MAIN.TextLanguage",
       "description": "@MAIN.TextLanguage.description",
       "page": "compatibility",
-      "apply": "menu",
+      "apply": "live",
       "visibility": "editor",
       "choices": [
         {

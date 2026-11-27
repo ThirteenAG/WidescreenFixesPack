@@ -29,7 +29,6 @@ export struct Screen
     float fFOV;
     float fIniFOV = 1.0f;
     bool bUnstretchedText = true;
-    bool bBinocularsActive = false;     // set by the binoculars HUD draw, consumed by SetCamera
 
     void AdjustToRes(uint32_t x, uint32_t y)
     {

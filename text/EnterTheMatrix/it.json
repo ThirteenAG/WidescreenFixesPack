@@ -11,7 +11,7 @@
   "page.game": "Gioco",
   "page.compatibility": "Compatibilità",
   "WindowMode": "Modalità finestra",
-  "WindowMode.description": "Schermo intero, una finestra o una finestra senza bordi che copre il monitor. In finestra usa la risoluzione scelta in MatrixOptions; Senza bordi quella del monitor. Richiede un riavvio.",
+  "WindowMode.description": "Schermo intero, una finestra o una finestra senza bordi che copre il monitor. La modalità finestra parte dalla risoluzione scelta in MatrixOptions. Trascina il bordo per ridimensionarla. Richiede un riavvio.",
   "WindowMode.fullscreen": "Schermo intero",
   "WindowMode.windowed": "In finestra",
   "WindowMode.borderless": "Senza bordi",

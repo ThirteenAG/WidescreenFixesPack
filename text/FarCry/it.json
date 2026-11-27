@@ -58,7 +58,7 @@
   "SkipIntro": "Salta introduzione",
   "SkipIntro.description": "Salta le note legali e i video dei loghi di editore e motore all'avvio. I video della storia e i normali controlli di opzioni e profilo restano.",
   "WindowMode": "Modalità finestra",
-  "WindowMode.description": "Schermo intero, finestra con bordi o senza bordi grande quanto il monitor. Le modifiche usano il ripristino della visualizzazione del gioco al prossimo fotogramma in primo piano. Alt+Invio passa tra schermo intero e l'ultima modalità finestra.",
+  "WindowMode.description": "Schermo intero, finestra ridimensionabile o senza bordi grande quanto il monitor. Trascina il bordo per ridimensionare la finestra. Alt+Invio passa tra schermo intero e l'ultima modalità finestra.",
   "Fullscreen": "Schermo intero",
   "Windowed": "In finestra",
   "Borderless": "Senza bordi",

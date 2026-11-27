@@ -186,8 +186,7 @@ public:
                 });
             }
 
-            //Draw distance adjuster
-            if (fDrawDistanceFactor)
+            if (fDrawDistanceFactor != 0.0f && fDrawDistanceFactor != 1.0f)
             {
                 auto pattern = hook::pattern("89 46 7C 89 4E 08 C3"); //0x4DDD68
                 struct DrawDistHook

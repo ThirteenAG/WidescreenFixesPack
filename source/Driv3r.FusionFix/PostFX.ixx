@@ -19,14 +19,13 @@ public:
 
             CPostFX::bConsoleGammaEnabled = FixSettings().Bool("GRAPHICS.ConsoleGamma") != 0;
             CPostFX::bSmaaEnabled = FixSettings().Int("GRAPHICS.AntiAliasing") != 0;
+            if (!CPostFX::bConsoleGammaEnabled && !CPostFX::bSmaaEnabled)
+                return;
 
             auto pattern = hook::pattern("75 ? A1 ? ? ? ? ? ? 6A ? 6A ? 50 FF 91 ? ? ? ? A1");
             static auto SMAAHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
             {
                 if (!Direct3DDevice || regs.ebp != (5 - 1))
-                    return;
-
-                if (!CPostFX::bConsoleGammaEnabled && !CPostFX::bSmaaEnabled)
                     return;
 
                 auto device = Direct3DDevice.get();

@@ -4,7 +4,7 @@ module;
 #include "FixSettings.hpp"
 #include "Shared/RWGTA/UpdateCheck.hpp"
 
-// Update notice: one line at the top of the game's menu screens, in the game's subtitle font
+// Update notice at the top of the game's menu screens, in the game's subtitle font
 
 export module Updates;
 
@@ -13,6 +13,10 @@ import ComVars;
 export namespace SniperUpdates
 {
     inline std::wstring Line;
+    inline std::string NoticeVersion;
+    inline bool NoticeUsesHub = false;
+    inline std::atomic<bool> Enabled{ false };
+    inline std::atomic<bool> LanguageChanged{ false };
     inline void(__cdecl* SetFont)(int32_t) = nullptr;
     inline char(__cdecl* Print)(const wchar_t*, const float*, float, float, float, float, uint32_t, uint32_t) = nullptr;
 
@@ -22,9 +26,24 @@ export namespace SniperUpdates
         ExitProcess(code);
     }
 
+    inline std::wstring FormatNotice()
+    {
+        using RWGTA::UpdateCheck::detail::Replace;
+        auto& settings = FixSettings();
+        auto& texts = settings.GetTexts();
+        auto line = texts.Resolve(NoticeUsesHub ? "@update.availablehub" : "@update.availablesite");
+        line = Replace(line, "{name}", texts.Resolve(settings.GetDescription().name));
+        return asi_settings::text::Widen(Replace(line, "{version}", NoticeVersion));
+    }
+
     // From the menu drawing, with the menu's 4:3 text layout active
     inline void Draw()
     {
+        if (!Enabled.load(std::memory_order_relaxed))
+            return;
+        if (!NoticeVersion.empty() && LanguageChanged.load(std::memory_order_relaxed) &&
+            LanguageChanged.exchange(false, std::memory_order_acquire))
+            Line = RWGTA::UpdateCheck::ReplacePage(FormatNotice());
         if (Line.empty() || !SetFont || !UpdateFont.is_initialized() || !Print)
             return;
         static constexpr float area[] = { 0.02f, 0.015f, 0.98f, 0.08f }; //the free strip above the menus
@@ -53,6 +72,7 @@ export namespace SniperUpdates
             }
         }
         FixSettings().GetTexts().Select(language);
+        LanguageChanged.store(true, std::memory_order_release);
     }
 
     inline void Init(decltype(Print) print)
@@ -71,7 +91,19 @@ export namespace SniperUpdates
         config.fileVersion = rsc_FileVersion;
         config.settings = &FixSettings();
         config.playable = []() { return true; };
+        config.format = [](const std::string& version, bool hub)
+        {
+            NoticeVersion = version;
+            NoticeUsesHub = hub;
+            return FormatNotice();
+        };
         config.show = [](const std::wstring& line) { Line = line; };
         RWGTA::UpdateCheck::Init(std::move(config));
+        const auto updateVisibility = []()
+        {
+            Enabled.store(FixSettings().Bool("MAIN.CheckForUpdates"), std::memory_order_relaxed);
+        };
+        updateVisibility();
+        FixSettings().OnChange("MAIN.CheckForUpdates", updateVisibility);
     }
 }

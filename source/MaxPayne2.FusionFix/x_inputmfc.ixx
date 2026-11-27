@@ -429,14 +429,23 @@ namespace
     ULONGLONG nextRegistrationCheck = 0;
     bool HavePrevious = false;
     RAWINPUTDEVICE Previous{};
+    SafetyHookMid MouseAcquireHook;
+    SafetyHookMid MouseStateHook;
     SafetyHookMid MouseHook;
     SafetyHookInline MouseUpdateHook;
+    SafetyHookMid KeyboardStateHook, KeyboardRetryHook;
+    uintptr_t KeyboardUpdateReturn = 0;
     uint8_t* SuspendedMouse = nullptr;
     constexpr UINT_PTR SubclassId = 0x4D505241;
 
     void ClearMovement()
     {
         Movement.Clear();
+    }
+
+    bool RawMouseActive()
+    {
+        return Enabled.load() && Registered && GetForegroundWindow() == Window;
     }
 
     template<typename T>
@@ -455,6 +464,17 @@ namespace
         std::memcpy(address, &value, sizeof(value));
     }
 
+    void ClearButtonStates(uint8_t* buttons, int count)
+    {
+        if (!buttons)
+            return;
+        for (int i = 0; i < count; ++i)
+        {
+            WriteMouse(buttons + i * 15, int{});
+            WriteMouse(buttons + i * 15 + 8, uint16_t{});
+        }
+    }
+
     void NeutralMouse(uint8_t* mouse)
     {
         WriteMouse(mouse + 9, DIMOUSESTATE2{});
@@ -463,14 +483,18 @@ namespace
         WriteMouse(mouse + 127, ReadMouse<float>(mouse + 123));
         auto buttons = ReadMouse<uint8_t*>(mouse + 73);
         int count = ReadMouse<int>(mouse + 45);
-        if (buttons && count >= 0 && count <= 8)
-        {
-            for (int i = 0; i < count; ++i)
-            {
-                WriteMouse(buttons + i * 15, int{});
-                WriteMouse(buttons + i * 15 + 8, uint16_t{});
-            }
-        }
+        if (count >= 0 && count <= 8)
+            ClearButtonStates(buttons, count);
+    }
+
+    void RecoverKeyboardState(SafetyHookContext& context)
+    {
+        if (static_cast<HRESULT>(context.eax) != DIERR_NOTACQUIRED)
+            return;
+        auto keyboard = reinterpret_cast<uint8_t*>(context.esi);
+        std::memset(keyboard + 9, 0, 256);
+        ClearButtonStates(ReadMouse<uint8_t*>(keyboard + 0x109), 256);
+        context.eip = KeyboardUpdateReturn;
     }
 
     // The game reads the mouse's buffered data only for its buttons, 32 events at a time from a 32 event buffer. A high
@@ -717,6 +741,7 @@ export void UpdateRawMouseWindow(HWND window)
 
 void InitRawMouse()
 {
+    MessagePumpGuard::Install(GetModuleHandleW(nullptr));
     auto module = GetModuleHandleW(L"X_Inputmfc.dll");
     auto readButtons = hook::module_pattern(module, "89 5C 24 20 8B 10 50 FF 52 28 33 F6 85 C0 8B 47 2D").get_first<uint8_t>(4);
     MouseDataCall.save(readButtons, 6, true);
@@ -730,6 +755,22 @@ void InitRawMouse()
     ClearedButtonRetry.write(clearedRetry, static_cast<int8_t>(eventCount - (clearedRetry + 1)), true);
     auto update = hook::module_pattern(module, "64 A1 00 00 00 00 6A FF 68 ? ? ? ? 50 8B 44 24 10 64 89 25 00 00 00 00 83 EC 1C 57 8B F9 89 47 4D 8B 47 05");
     MouseUpdateHook = safetyhook::create_inline(update.get_first(), UpdateMouse);
+    // Relative motion still comes from the raw worker when DirectInput cannot acquire the mouse.
+    auto acquire = hook::module_pattern(module, "89 47 4D 8B 47 05 8B 08 50 FF 51 1C 85 C0 7D ? 68");
+    MouseAcquireHook = safetyhook::create_mid(acquire.get_first(12), [](SafetyHookContext& context)
+    {
+        if (FAILED(static_cast<HRESULT>(context.eax)) && RawMouseActive())
+            context.eax = DI_OK;
+    });
+    auto state = hook::module_pattern(module, "55 8D 6F 09 55 6A 14 50 FF 52 24 85 C0 74 ?");
+    MouseStateHook = safetyhook::create_mid(state.get_first(11), [](SafetyHookContext& context)
+    {
+        if (context.eax != DI_OK && RawMouseActive())
+        {
+            WriteMouse(reinterpret_cast<uint8_t*>(context.edi) + 9, DIMOUSESTATE2{});
+            context.eax = DI_OK;
+        }
+    });
     auto pattern = hook::module_pattern(module, "D9 47 53 8B 4F 5F D8 0D ? ? ? ? 8B 97 87 00 00 00 8B 47 5B");
     MouseHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& context)
     {
@@ -740,7 +781,7 @@ void InitRawMouse()
         }
         auto mouse = reinterpret_cast<uint8_t*>(context.edi);
         MaxPayneOverlay::Mouse(mouse + 9);
-        if (!Enabled.load() || !Registered || GetForegroundWindow() != Window)
+        if (!RawMouseActive())
             return;
         const auto movement = Movement.Take();
         if (!movement.relative)
@@ -763,7 +804,11 @@ void ShutdownRawMouse()
     Window = nullptr;
     CandidateWindow = nullptr;
     MouseHook.reset();
+    MouseStateHook.reset();
+    MouseAcquireHook.reset();
     MouseUpdateHook.reset();
+    KeyboardRetryHook.reset();
+    KeyboardStateHook.reset();
     ClearedButtonRetry.restore();
     EmptyButtonRetry.restore();
     MouseDataCall.restore();
@@ -775,6 +820,14 @@ void ShutdownRawMouse()
 export void InitInput()
 {
     InitRawMouse();
+    // Focus can change between Acquire and GetDeviceState. Retry on the next frame with no held keys.
+    const auto input = GetModuleHandleW(L"X_Inputmfc.dll");
+    KeyboardUpdateReturn = reinterpret_cast<uintptr_t>(hook::module_pattern(input,
+        "5B 5F 5D 8B 4C 24 14 5E 64 89 0D 00 00 00 00 83 C4 1C C2 04 00").get_first(1));
+    KeyboardStateHook = safetyhook::create_mid(hook::module_pattern(input,
+        "55 68 00 01 00 00 50 FF 52 24 85 C0 0F 84 ? ? ? ? 3D 1E 00 07 80").get_first(10), RecoverKeyboardState);
+    KeyboardRetryHook = safetyhook::create_mid(hook::module_pattern(input,
+        "55 68 00 01 00 00 50 FF 52 24 8B F8 85 FF 74 ? 8B CE E8").get_first(10), RecoverKeyboardState);
     X_Input::getMouse = (void* (*)())GetProcAddress(GetModuleHandle(L"X_Inputmfc"), "?getMouse@X_Input@@SIPAVX_InputDeviceMouse@@XZ");
 
     auto pattern = hook::pattern("8B 15 ? ? ? ? 50 51 53");

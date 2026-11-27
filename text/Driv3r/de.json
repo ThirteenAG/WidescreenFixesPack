@@ -91,7 +91,7 @@
   "menu.restartwarning": "Neustart erforderlich",
   "menu.presethelp": "Voreinstellung wählen und zweimal bestätigen, um sie auf dieses Plugin anzuwenden.",
   "MAIN.WindowMode": "Fenstermodus",
-  "MAIN.WindowMode.description": "Vollbild, zentriertes Fenster mit gewählter Auflösung oder randlos mit Monitorauflösung. Neustart erforderlich. Alt+Eingabe wechselt zwischen Vollbild und dem letzten Fenstermodus.",
+  "MAIN.WindowMode.description": "Vollbild, veränderbares Fenster, das mit der gewählten Auflösung zentriert startet oder randlos mit Monitorauflösung. Neustart erforderlich. Alt+Eingabe wechselt zwischen Vollbild und dem letzten Fenstermodus.",
   "MAIN.WindowMode.0": "Vollbild",
   "MAIN.WindowMode.1": "Fenster",
   "MAIN.WindowMode.2": "Randlos",

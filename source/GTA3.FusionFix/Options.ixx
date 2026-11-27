@@ -301,9 +301,33 @@ namespace
         LastScreen = screen;
     }
 
+    POINT ResolutionCursor{};
+    bool ResolutionCursorHeld{};
+
+    void SyncResolutionCursor(uint8_t* manager)
+    {
+        if (!ResolutionCursorHeld)
+            return;
+
+        POINT cursor{};
+        if (!GetCursorPos(&cursor) || cursor.x != ResolutionCursor.x || cursor.y != ResolutionCursor.y)
+        {
+            ResolutionCursorHeld = false;
+            return;
+        }
+
+        // A window resize changes client coordinates even when the cursor stays at the same screen position.
+        auto field = [manager](size_t offset) -> int32_t& { return *reinterpret_cast<int32_t*>(manager + offset); };
+        const auto x = std::clamp(field(0x120), 0, std::max(0, RsGlobal->width));
+        const auto y = std::clamp(field(0x124), 0, std::max(0, RsGlobal->height));
+        field(0x118) = field(0x53C) = x;
+        field(0x11C) = field(0x540) = y;
+    }
+
     void* ProcessButtonPressesPrevious = nullptr;
     void __fastcall ProcessButtonPresses(uint8_t* manager, void* edx)
     {
+        SyncResolutionCursor(manager);
         if (bReady)
             Update(manager);
         bool overValue = ValueAreas.Contains(
@@ -565,6 +589,11 @@ namespace
 
 export namespace FixOptions
 {
+    void RememberResolutionCursor()
+    {
+        ResolutionCursorHeld = GetCursorPos(&ResolutionCursor) != FALSE;
+    }
+
     // A text of the fix in the game's language, upper case in the game's font (empty when it has none)
     const wchar_t* GameText(const std::string& key)
     {
@@ -612,6 +641,7 @@ public:
             auto rightTextStore = hook::pattern("E8 ? ? ? ? 89 44 24 ? E9 ? ? ? ? 0F BE 05");
             auto layout = hook::pattern("8B 85 ? ? ? ? 59 48 8B 8D ? ? ? ? 83 F8 37 0F 87 ? ? ? ? FF 24 85");
             auto buttons = hook::pattern("89 E9 E8 ? ? ? ? 83 3D ? ? ? ? 00 74");
+            ProcessButtonPressesPrevious = injector::MakeCALL(buttons.get_first(2), ProcessButtonPresses, true).get();
             auto accept = hook::pattern("89 E9 E8 ? ? ? ? 80 7C 24 ? 00 0F 84");
             auto change = hook::pattern("89 E9 E8 ? ? ? ? 83 BD ? ? ? ? 37");
             auto sound = hook::pattern("B9 ? ? ? ? A2 ? ? ? ? 6A 00 68 98 00 00 00 E8");
@@ -652,7 +682,6 @@ public:
 
             RowTextPrevious = injector::MakeCALL(rowText.get_first(0), RowText, true).get();
             TitleTextPrevious = injector::MakeCALL(titleText.get_first(18), TitleText, true).get();
-            ProcessButtonPressesPrevious = injector::MakeCALL(buttons.get_first(2), ProcessButtonPresses, true).get();
             OnOffAcceptPrevious = injector::MakeCALL(accept.get_first(2), OnOffAccept, true).get();
             OnOffChangePrevious = injector::MakeCALL(change.get_first(2), OnOffChange, true).get();
 

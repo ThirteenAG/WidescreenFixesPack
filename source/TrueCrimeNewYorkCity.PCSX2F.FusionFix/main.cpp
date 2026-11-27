@@ -29,7 +29,8 @@ namespace
         {"MAIN", "SkipIntro", "1"},          {"MAIN", "ForceAspectRatio", "Auto"},
         {"MAIN", "HudAspectRatioConstraint", "Auto"}, {"MAIN", "FOVFactor", "1.0"},
         {"MAIN", "CutsceneBorders", "3"},    {"MAIN", "AnimatedCutsceneBorders", "1"},
-        {"MAIN", "FPSLimit", "60"},          {"MAIN", "UnthrottleEmuDuringLoading", "1"}};
+        {"MAIN", "FPSLimit", "60"},          {"MAIN", "UnthrottleEmuDuringLoading", "1"},
+        {"MAIN", "SkipPressStart", "1"}};
     console::ps2settings::Value options[sizeof(defaults) / sizeof(*defaults)];
 
     bool ReadOptions(bool startup)
@@ -191,6 +192,18 @@ extern "C" void init()
     InstallHud(width, layout, subtitle, models, map, blips, radar, radarDisc, scale);
     InstallCutscene(barsBegin, barsHeight, barsEnd, barsReset);
     InstallCamera(projection);
+    if (console::ps2settings::boolean(options[8], true))
+    {
+        const auto title = sites::at_2587E0(), modalInput = sites::at_258A38();
+        if (title && modalInput)
+        {
+            InstallTitleSkip(title, Absolute(modalInput));
+        }
+        else
+        {
+            std::snprintf(OSDText[0], OSDStringSize, "Skip Press Start could not find the title menu.");
+        }
+    }
     // Optional: builds without this driver code keep the original zone.
     if (const auto traffic = sites::at_19ABDC())
     {

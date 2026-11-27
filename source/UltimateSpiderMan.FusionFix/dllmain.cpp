@@ -120,15 +120,8 @@ namespace USMLanguage
 
 namespace USMUpdates
 {
-    void WINAPI Exit(UINT code)
-    {
-        RWGTA::UpdateCheck::OnExit();
-        ExitProcess(code);
-    }
-
     void Init()
     {
-        IATHook::Replace(GetModuleHandleW(nullptr), "KERNEL32.dll", std::forward_as_tuple("ExitProcess", Exit));
         RWGTA::UpdateCheck::Config config;
         config.pluginId = "UltimateSpiderMan.FusionFix";
         config.fileVersion = rsc_FileVersion;
@@ -144,6 +137,13 @@ namespace USMUpdates
             USMMenu::Click(USMMenu::Tab, 2, 0);
         };
         RWGTA::UpdateCheck::Init(std::move(config));
+
+        // WinMain returns to the CRT, which owns the normal process exit.
+        auto returnFromWinMain = hook::pattern("8B F0 89 75 ? 39 5D ? 75 ? 56 FF 15 ? ? ? ? FF 15");
+        static auto ExitHook = safetyhook::create_mid(returnFromWinMain.get_first(), [](SafetyHookContext&)
+        {
+            RWGTA::UpdateCheck::OnExit();
+        });
     }
 }
 

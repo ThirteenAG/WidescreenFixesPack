@@ -700,34 +700,11 @@ public:
             // or Cutscene Borders below an added Trails row). The selection stays on Screen Resolution, whose accept
             // changes nothing else, and the menu doesn't take the centred cursor or the resized window for a mouse
             // movement until the cursor really moves.
-            static POINT resolutionCursor{};
-            static bool resolutionCursorHeld = false;
             pattern = hook::pattern("C6 85 40 01 00 00 01 C7 45 30 05 00 00 00");
             injector::MakeNOP(pattern.get_first(7), 7, true);
             static auto ResolutionAppliedHook = safetyhook::create_mid(pattern.get_first(7), [](SafetyHookContext&)
             {
-                resolutionCursorHeld = GetCursorPos(&resolutionCursor) != FALSE;
-            });
-
-            // CMenuManager::UserInput's mouse movement check (previous mouse position at +134h/+138h, current at
-            // +12Ch/+130h, the window's mouse position at +64h/+68h)
-            pattern = hook::pattern("80 BD 40 01 00 00 00 75 ? 83 BD F8 00 00 00 06 74");
-            static auto MouseMovedHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-            {
-                if (!resolutionCursorHeld)
-                    return;
-                POINT cursor{};
-                if (!GetCursorPos(&cursor) || cursor.x != resolutionCursor.x || cursor.y != resolutionCursor.y)
-                {
-                    resolutionCursorHeld = false;
-                    return;
-                }
-                auto manager = reinterpret_cast<uint8_t*>(regs.ebp);
-                auto field = [manager](size_t offset) -> int32_t& { return *reinterpret_cast<int32_t*>(manager + offset); };
-                const int32_t x = std::clamp(field(0x64), 0, std::max(0, RsGlobal->width));
-                const int32_t y = std::clamp(field(0x68), 0, std::max(0, RsGlobal->height));
-                field(0x12C) = field(0x134) = x;
-                field(0x130) = field(0x138) = y;
+                FixOptions::RememberResolutionCursor();
             });
 
             pattern = hook::pattern("74 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? DF E0 80 E4 ? 80 FC ? 0F 85 ? ? ? ? 6A");

@@ -11,6 +11,7 @@ module;
 export module Options;
 
 import Skeleton;
+import Draw;
 
 namespace MenuText
 {
@@ -385,9 +386,35 @@ namespace
             FillPage(manager);
     }
 
+    POINT ResolutionCursor{};
+    bool ResolutionCursorHeld{};
+
+    void SyncResolutionCursor(uint8_t* manager)
+    {
+        if (!ResolutionCursorHeld)
+            return;
+
+        POINT cursor{};
+        if (!GetCursorPos(&cursor) || cursor.x != ResolutionCursor.x || cursor.y != ResolutionCursor.y)
+        {
+            ResolutionCursorHeld = false;
+            return;
+        }
+
+        // A window resize changes client coordinates even when the cursor stays at the same screen position.
+        auto field = [manager](size_t offset) -> int32_t& { return *reinterpret_cast<int32_t*>(manager + offset); };
+        const auto x = MenuCanvas::Depth && !MenuCanvas::Suspensions
+            ? MenuCanvas::GetMouseX(field(0xE0))
+            : std::clamp(field(0xE0), 0, std::max(0, RsGlobal->width));
+        const auto y = std::clamp(field(0xE4), 0, std::max(0, RsGlobal->height));
+        field(0xBC) = field(0x1AF8) = x;
+        field(0xC0) = field(0x1AFC) = y;
+    }
+
     void* UserInputPrevious = nullptr;
     void __fastcall UserInput(uint8_t* manager, void* edx)
     {
+        SyncResolutionCursor(manager);
         if (bReady)
             Update(manager);
         bool overValue = ValueAreas.Contains(
@@ -734,6 +761,11 @@ namespace
 
 export namespace FixOptions
 {
+    void RememberResolutionCursor()
+    {
+        ResolutionCursorHeld = GetCursorPos(&ResolutionCursor) != FALSE;
+    }
+
     // From Menu.ixx's hook at the end of CMenuManager::DrawStandardMenus' right text switch
     const char* RightText(int action)
     {
@@ -796,6 +828,7 @@ public:
             auto rowText = hook::pattern("57 E8 ? ? ? ? 8B D8 89 5C 24");
             auto titleText = hook::pattern("81 C2 ? ? ? ? 52 B9 ? ? ? ? E8 ? ? ? ? 8B 4C 24");
             auto userInput = hook::pattern("8A 46 5B 50 E8 ? ? ? ? 8B CE E8");
+            UserInputPrevious = injector::MakeCALL(userInput.get_first(11), UserInput, true).get();
             auto processUserInput = hook::pattern("50 51 52 8B CE E8 ? ? ? ? 5E 83 C4 18 C3");
             auto accept = hook::pattern("8D 54 24 ? 52 6A 00 8B CE E8 ? ? ? ? 8A 44 24");
             auto change = hook::pattern("8D 44 24 ? 50 53 8B CE E8 ? ? ? ? 53 8B CE E8");
@@ -823,7 +856,6 @@ public:
             // Menu mods that hide the page title replace its print call with NOPs; it stays hidden then.
             if (*titleText.get_first<uint8_t>(28) == 0xE8)
                 TitlePrintPrevious = reinterpret_cast<PrintStringFn>(injector::MakeCALL(titleText.get_first(28), TitlePrint, true).as_int());
-            UserInputPrevious = injector::MakeCALL(userInput.get_first(11), UserInput, true).get();
             ProcessUserInputPrevious = injector::MakeCALL(processUserInput.get_first(5), ProcessUserInput, true).get();
             OptionsAcceptPrevious = injector::MakeCALL(accept.get_first(9), OptionsAccept, true).get();
             OptionsChangePrevious = injector::MakeCALL(change.get_first(8), OptionsChange, true).get();

@@ -464,31 +464,10 @@ public:
             // A new screen resolution (CMenuManager::ProcessButtonPresses) resizes the window under a cursor that
             // stays put, and the menu took the cursor's new place in the window (or at its edge) for a mouse movement
             // and selected the row there. Until the cursor really moves on the screen, the menu doesn't see one.
-            static POINT resolutionCursor{};
-            static bool resolutionCursorHeld = false;
             pattern = hook::pattern("8B 45 04 3B 45 00 0F 84 ? ? ? ? 89 45 00 8B 45 00 50 E8 ? ? ? ? 59");
             static auto ResolutionAppliedHook = safetyhook::create_mid(pattern.get_first(24), [](SafetyHookContext&)
             {
-                resolutionCursorHeld = GetCursorPos(&resolutionCursor) != FALSE;
-            });
-
-            // CMenuManager::ProcessButtonPresses, once the mouse position is updated (previous at +53Ch/+540h, current
-            // at +118h/+11Ch): row hover in CMenuManager::Draw only follows a position that differs from the last one
-            pattern = hook::pattern("83 F8 1E 74 ? 83 F8 36 74 ? 83 F8 37 0F 85");
-            static auto MouseMovedHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
-            {
-                if (!resolutionCursorHeld)
-                    return;
-                POINT cursor{};
-                if (!GetCursorPos(&cursor) || cursor.x != resolutionCursor.x || cursor.y != resolutionCursor.y)
-                {
-                    resolutionCursorHeld = false;
-                    return;
-                }
-                auto manager = reinterpret_cast<uint8_t*>(regs.ebp);
-                auto field = [manager](size_t offset) -> int32_t& { return *reinterpret_cast<int32_t*>(manager + offset); };
-                field(0x53C) = field(0x118);
-                field(0x540) = field(0x11C);
+                FixOptions::RememberResolutionCursor();
             });
 
             pattern = hook::pattern("74 ? ? ? ? ? ? ? ? ? ? ? ? ? ? ? DF E0 80 E4 ? 80 FC ? 0F 85 ? ? ? ? 6A");

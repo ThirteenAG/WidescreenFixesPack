@@ -29,6 +29,7 @@ namespace
     uintptr_t resetResume = 0;
     constexpr int ToggleMode = 3;
     std::atomic<int> pendingMode{ -1 };
+    std::atomic<bool> confineCursor{ true };
     int lastWindowMode = 1;
     bool changing = false;
     bool haveSettings = false;
@@ -371,8 +372,11 @@ namespace
         if (currentDisplay != display)
             return;
         ApplyPending();
-        CursorConfinement::SetEnabled(FixSettings().Bool("MAIN.ConfineCursor") && !ScarfaceOverlayInput::BlocksInput());
-        CursorConfinement::Update(boundWindow);
+        const bool confine = confineCursor.load(std::memory_order_relaxed) && !ScarfaceOverlayInput::BlocksInput();
+        if (confine != CursorConfinement::Enabled)
+            CursorConfinement::SetEnabled(confine);
+        if (confine || CursorConfinement::Window.load(std::memory_order_relaxed) != boundWindow)
+            CursorConfinement::Update(boundWindow);
         CursorConfinement::Bind();
     }
 }
@@ -388,11 +392,14 @@ public:
             auto nWindowedMode = std::clamp(settings.Int("MAIN.WindowMode"), 0, 2);
 
             mode = nWindowedMode;
-            CursorConfinement::SetEnabled(settings.Bool("MAIN.ConfineCursor"));
-            settings.OnChange("MAIN.ConfineCursor", []()
+            const auto refreshCursor = []()
             {
-                CursorConfinement::SetEnabled(FixSettings().Bool("MAIN.ConfineCursor") && !ScarfaceOverlayInput::BlocksInput());
-            });
+                const bool confine = FixSettings().Bool("MAIN.ConfineCursor");
+                confineCursor.store(confine, std::memory_order_relaxed);
+                CursorConfinement::SetEnabled(confine && !ScarfaceOverlayInput::BlocksInput());
+            };
+            refreshCursor();
+            settings.OnChange("MAIN.ConfineCursor", refreshCursor);
             const auto displayVtable = ScarfaceRTTI::FindVtable(".?AVd3dDisplay@pure3d@@");
 
             auto pattern = hook::pattern("A3 ? ? ? ? 5B 74");

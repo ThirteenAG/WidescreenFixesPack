@@ -252,13 +252,12 @@ export namespace DeerHud
         return pathHook.ccall<void*>(path, brush);
     }
 
-    inline bool Init()
+    inline void Init()
     {
         // The sprite path wrapper; an identical wrapper elsewhere calls a different function
         auto path = hook::pattern("53 8B 5C 24 08 83 EC 08 89 1C 24 8B 44 24 14 89 44 24 04 E8 08 00 00 00 83 C4 08 8B C3 5B C3");
         UpdateConstraint();
         FixSettings().OnChange("MAIN.HudAspectRatioConstraint", [] { UpdateConstraint(); });
         pathHook = safetyhook::create_inline(path.get_first(), Draw);
-        return true;
     }
 }

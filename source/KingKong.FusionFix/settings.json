@@ -105,6 +105,27 @@
       ]
     },
     {
+      "id": "MAIN.CutsceneBorders",
+      "type": "choice",
+      "default": 3,
+      "label": "@CutsceneBorders",
+      "description": "@CutsceneBorders.description",
+      "page": "display",
+      "apply": "live",
+      "visibility": "menu",
+      "choices": [
+        { "value": 0, "label": "@menu.off" },
+        { "value": 1, "label": "@CutsceneBorders.1" },
+        { "value": 2, "label": "@CutsceneBorders.2" },
+        { "value": 3, "label": "@CutsceneBorders.3" }
+      ],
+      "presets": {
+        "vanilla": 0,
+        "recommended": 3,
+        "enhanced": 3
+      }
+    },
+    {
       "id": "MAIN.FMVWidescreenMode",
       "type": "choice",
       "default": 1,

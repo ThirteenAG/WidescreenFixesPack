@@ -13,6 +13,7 @@ import KnifeParry;
 import Menu;
 import SplitScreen;
 import Hud;
+import Cutscenes;
 import Overlay;
 import ButtonIcons;
 
@@ -39,6 +40,7 @@ void Init()
     Menu::Init();
     SplitScreen::Init();
     Hud::Init();
+    Cutscenes::Init();
     ButtonIcons::Init();
     Overlay::Init();
 }

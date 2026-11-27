@@ -14,6 +14,7 @@ export module Movies;
 export namespace SecondSightMovies
 {
     inline SafetyHookMid DrawHook;
+    inline std::atomic<bool> FillScreen{ false };
     // Width of the 4:3 box the copyright screen, the title card and the title logo are laid out in
     inline uint32_t BoxWidth = 640;
 
@@ -61,10 +62,11 @@ export namespace SecondSightMovies
         if (width <= 0.0f || height <= 0.0f)
             return;
         const float movie = DisplayAspect(desc.Width, desc.Height), screen = width / height;
-        const int mode = std::clamp(FixSettings().Int("MAIN.FMVWidescreenMode"), 0, 1);
-        const float area = mode == 0 ? 4.0f / 3.0f : screen;
+        const float area = FillScreen.load(std::memory_order_relaxed) ? screen : 4.0f / 3.0f;
         const float scaleX = std::min(1.0f, area / screen) * std::min(1.0f, movie / area);
         const float scaleY = std::min(1.0f, screen / area) * std::min(1.0f, area / movie);
+        if (scaleX == 1.0f && scaleY == 1.0f)
+            return;
         for (int i = 0; i < 4; ++i)
         {
             auto& vertex = vertices[i];
@@ -76,6 +78,12 @@ export namespace SecondSightMovies
 
     inline void Init()
     {
+        const auto updateMode = []()
+        {
+            FillScreen.store(FixSettings().Int("MAIN.FMVWidescreenMode") > 0, std::memory_order_relaxed);
+        };
+        updateMode();
+        FixSettings().OnChange("MAIN.FMVWidescreenMode", updateMode);
         auto draw = hook::pattern("6A 1C 8D 4C 24 ? 51 6A 02 6A 05 50 FF 92 4C 01 00 00");
         DrawHook = safetyhook::create_mid(draw.get_first(12), &Draw);
 

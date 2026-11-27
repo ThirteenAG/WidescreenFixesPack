@@ -4,6 +4,7 @@ module;
 #include <dinput.h>
 #include <cwchar>
 #include <intrin.h>
+#include <map>
 #include "FixSettings.hpp"
 #include "Shared/D3D9Options.hpp"
 #include "Shared/DirectInputRawMouse.hpp"
@@ -30,9 +31,14 @@ export namespace NeoRenderer
     inline SafetyHookInline RegisterRawMouseHook;
     inline SafetyHookMid MouseStateHook;
     inline std::atomic<bool> RecoverMouse{ false };
+    inline std::atomic<bool> PadPrompts{ false };
     inline DWORD OverlayPadSlot = XUSER_MAX_COUNT;
     inline bool ControllerSuppressed = false;
-    inline SafetyHookInline CreateDeviceHook;
+    using CreateDeviceFn = HRESULT(STDMETHODCALLTYPE*)(IDirect3D9*, UINT, D3DDEVTYPE, HWND, DWORD,
+        D3DPRESENT_PARAMETERS*, IDirect3DDevice9**);
+    inline std::mutex FactoryMutex;
+    inline std::map<void**, CreateDeviceFn> NativeCreateDevice;
+    inline IDirect3D9* GameFactory = nullptr;
     inline IDirect3D9*(WINAPI* NativeCreate9)(UINT) = nullptr;
     inline void (*DeviceCreated)(IDirect3DDevice9*) = nullptr;
     inline void (*Started)() = nullptr;
@@ -128,6 +134,50 @@ export namespace NeoRenderer
         return {};
     }
 
+    inline void UpdatePadPrompts(HWND window)
+    {
+        if (GetForegroundWindow() != window)
+            return;
+        const auto getState = PadInput::XInput().getState;
+        if (!getState)
+            return;
+        struct Pad
+        {
+            XINPUT_GAMEPAD previous{};
+            ULONGLONG retryAt{};
+        };
+        static thread_local std::array<Pad, XUSER_MAX_COUNT> pads;
+        const auto now = GetTickCount64();
+        for (DWORD slot = 0; slot < pads.size(); ++slot)
+        {
+            auto& pad = pads[slot];
+            if (now < pad.retryAt)
+                continue;
+            XINPUT_STATE state{};
+            if (getState(slot, &state) != ERROR_SUCCESS)
+            {
+                pad = { {}, now + 500 };
+                continue;
+            }
+            const auto& next = state.Gamepad;
+            const auto& last = pad.previous;
+            const auto moved = [](SHORT value, SHORT previous, int deadZone)
+            {
+                return std::abs(int(value)) > deadZone &&
+                    (std::abs(int(previous)) <= deadZone || std::abs(int(value) - previous) > 4096);
+            };
+            if ((next.wButtons & ~last.wButtons) ||
+                (next.bLeftTrigger > XINPUT_GAMEPAD_TRIGGER_THRESHOLD && last.bLeftTrigger <= XINPUT_GAMEPAD_TRIGGER_THRESHOLD) ||
+                (next.bRightTrigger > XINPUT_GAMEPAD_TRIGGER_THRESHOLD && last.bRightTrigger <= XINPUT_GAMEPAD_TRIGGER_THRESHOLD) ||
+                moved(next.sThumbLX, last.sThumbLX, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE) ||
+                moved(next.sThumbLY, last.sThumbLY, XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE) ||
+                moved(next.sThumbRX, last.sThumbRX, XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE) ||
+                moved(next.sThumbRY, last.sThumbRY, XINPUT_GAMEPAD_RIGHT_THUMB_DEADZONE))
+                PadPrompts.store(true);
+            pad.previous = next;
+        }
+    }
+
     inline bool NativeDigitalHeld(const DIJOYSTATE2& pad)
     {
         return LOWORD(pad.rgdwPOV[0]) != 0xFFFF ||
@@ -183,6 +233,7 @@ export namespace NeoRenderer
             CursorConfinement::Frame(window);
         }
         WFP::onGameProcessEvent().executeAll();
+        UpdatePadPrompts(window);
         if constexpr (!WFP::DeveloperOverlay)
             return;
 
@@ -225,6 +276,24 @@ export namespace NeoRenderer
     inline HRESULT __fastcall KeyboardState(uint8_t* input)
     {
         const auto result = KeyboardStateHook.thiscall<HRESULT>(input);
+        const auto window = Window.load();
+        if (SUCCEEDED(result) && window && GetForegroundWindow() == window)
+        {
+            static thread_local std::array<uint8_t, 256> previous;
+            const auto state = input + 0x2AC;
+            if (PadPrompts.load())
+            {
+                for (size_t key = 0; key < previous.size(); ++key)
+                {
+                    if ((state[key] & ~previous[key]) & 0x80)
+                    {
+                        PadPrompts.store(false);
+                        break;
+                    }
+                }
+            }
+            std::memcpy(previous.data(), state, previous.size());
+        }
         if (BlocksInput())
             std::memset(input + 0x2AC, 0, 256);
         return result;
@@ -259,6 +328,17 @@ export namespace NeoRenderer
             }
             else
                 mouse = {};
+        }
+        if (focused && (DirectInputRawMouse::Active() || SUCCEEDED(static_cast<HRESULT>(regs.eax))))
+        {
+            static thread_local uint8_t previousButtons = 0;
+            uint8_t buttons = 0;
+            for (size_t i = 0; i < std::size(mouse.rgbButtons); ++i)
+                buttons |= ((mouse.rgbButtons[i] & 0x80) != 0) << i;
+            if (PadPrompts.load(std::memory_order_relaxed) &&
+                (mouse.lX || mouse.lY || mouse.lZ || (buttons & ~previousButtons)))
+                PadPrompts.store(false);
+            previousButtons = buttons;
         }
         if constexpr (WFP::DeveloperOverlay)
         {
@@ -310,9 +390,18 @@ export namespace NeoRenderer
     inline HRESULT STDMETHODCALLTYPE CreateDevice(IDirect3D9* factory, UINT adapter, D3DDEVTYPE type, HWND window,
         DWORD flags, D3DPRESENT_PARAMETERS* parameters, IDirect3DDevice9** output)
     {
+        CreateDeviceFn original;
+        bool gameFactory;
+        {
+            const std::lock_guard lock(FactoryMutex);
+            original = NativeCreateDevice.at(*reinterpret_cast<void***>(factory));
+            gameFactory = factory == GameFactory;
+        }
+        if (!gameFactory)
+            return original(factory, adapter, type, window, flags, parameters, output);
         if (parameters)
             D3D9Options::presentParameters(parameters, window);
-        const HRESULT result = CreateDeviceHook.unsafe_stdcall<HRESULT>(factory, adapter, type, window, flags, parameters, output);
+        const HRESULT result = original(factory, adapter, type, window, flags, parameters, output);
         if (SUCCEEDED(result) && output && *output)
         {
             D3D9Options::HookDevice(*output);
@@ -326,13 +415,13 @@ export namespace NeoRenderer
         auto* factory = NativeCreate9(sdkVersion);
         if (factory)
         {
-            static std::mutex mutex;
-            const std::lock_guard lock(mutex);
-            if (!CreateDeviceHook)
-            {
-                auto table = *reinterpret_cast<void***>(factory);
-                CreateDeviceHook = safetyhook::create_inline(table[IDirect3D9VTBL::CreateDevice], CreateDevice);
-            }
+            const std::lock_guard lock(FactoryMutex);
+            GameFactory = factory;
+            auto table = *reinterpret_cast<void***>(factory);
+            auto* slot = table + IDirect3D9VTBL::CreateDevice;
+            // Keep the runtime method available for other plugins to detour.
+            if (NativeCreateDevice.try_emplace(table, reinterpret_cast<CreateDeviceFn>(*slot)).second)
+                injector::WriteMemory(slot, reinterpret_cast<void*>(&CreateDevice), true);
         }
         return factory;
     }
@@ -356,10 +445,10 @@ export namespace NeoRenderer
                 GetProcAddress(GetModuleHandleW(L"user32.dll"), "RegisterRawInputDevices"), RegisterRawMouse);
         }
 
-        if constexpr (!WFP::DeveloperOverlay)
-            return;
         auto keyboard = hook::pattern("56 57 8B F1 8B 46 10 8B 08 8D BE AC 02 00 00 57 68 00 01 00 00 50 FF 51 24");
         KeyboardStateHook = safetyhook::create_inline(keyboard.get_first(), KeyboardState);
+        if constexpr (!WFP::DeveloperOverlay)
+            return;
         auto controller = hook::pattern("53 55 8B D9 8B 43 08 56 33 ED 85 C0 57 0F 84 ? ? ? ? 8B 08 50 FF 51 64");
         ControllerStateHook = safetyhook::create_inline(controller.get_first(), ControllerState);
     }

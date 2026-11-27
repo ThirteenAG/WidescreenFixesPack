@@ -23,6 +23,7 @@ namespace RevHudLayout
         Left,
         Right,
         Subtitles,
+        Scanner,
         Vanilla,
         Hidden,
     };
@@ -78,6 +79,7 @@ namespace RevHudLayout
         switch (mode)
         {
             case Mode::Center:
+            case Mode::Scanner:
                 constants[0] *= scaleX;
                 constants[2] *= scaleX;
                 break;
@@ -160,6 +162,7 @@ namespace
     }
 
     std::atomic<bool> disableDamageOverlay{ false };
+    std::atomic<bool> scannerDrawn{ false };
 
     // GUI objects are drawn on several threads at once: the class being drawn is kept per thread.
     thread_local Mode nCurrentMode = Mode::Center;
@@ -182,6 +185,8 @@ namespace
             return IsMinimap() ? Mode::Right : Mode::Center;
         if (n == "uGUISubtitles" || n == "uGUISubtitlesFix")
             mode = Mode::Subtitles;
+        else if (n == "uGUI_GadgetScanner")
+            mode = Mode::Scanner;
         else if (n == "uGUI_PauseBlurHD" || n == "uGUI_Damage" || n == "uGUI_DamageChoke")
             mode = Mode::Vanilla;
         else
@@ -208,6 +213,13 @@ namespace
         auto mode = GetClassMode(object);
         if (mode == Mode::Vanilla && disableDamageOverlay.load(std::memory_order_relaxed) && IsDamageOverlay(object))
             return;
+        if (mode == Mode::Scanner && GetAspectRatio() > defaultAspectRatio)
+        {
+            // Only the active native GUI object submits the scanner artwork.
+            const auto bytes = static_cast<const uint8_t*>(object);
+            if ((bytes[328] & 1) && *reinterpret_cast<const uintptr_t*>(bytes + 244))
+                scannerDrawn.store(true, std::memory_order_relaxed);
+        }
         const auto previous = nCurrentMode;
         nCurrentMode = mode;
         shDrawGUI.unsafe_fastcall(object, edx, context);
@@ -230,6 +242,11 @@ namespace
         DrawRadarBlip(context);
         bRadarBlip = previous;
     }
+}
+
+export bool ConsumeScannerMask()
+{
+    return scannerDrawn.exchange(false, std::memory_order_relaxed);
 }
 
 class GUI

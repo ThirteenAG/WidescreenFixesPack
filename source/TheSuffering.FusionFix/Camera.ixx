@@ -47,7 +47,7 @@ void UpdateCameraLenses()
     {
         auto camera = reinterpret_cast<void*>(base + off_2C0 * i);
         auto methods = *reinterpret_cast<void***>(camera);
-        if (!methods || methods[2] != reinterpret_cast<void*>(SetCameraLens))
+        if (!methods || methods[CameraViewportSlot() + 2] != reinterpret_cast<void*>(SetCameraLens))
             continue;
         const float lens = *reinterpret_cast<float*>(reinterpret_cast<uintptr_t>(camera) + nCameraLensOffset);
         if (std::isfinite(lens) && lens > 0.0f)
