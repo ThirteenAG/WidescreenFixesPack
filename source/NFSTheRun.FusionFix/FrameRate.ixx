@@ -248,8 +248,6 @@ namespace
 export void ApplyFrameRateLimit(bool loading)
 {
     static std::optional<float> originalLimit;
-    static int previousLimit = 0;
-    static LONGLONG nextFrame = 0;
 
     int limit = loading ? 0 : RequestedFrameRateLimit.load();
     if (limit == 0 && !originalLimit)
@@ -262,15 +260,11 @@ export void ApplyFrameRateLimit(bool loading)
     {
         *nativeLimit = *originalLimit;
         originalLimit.reset();
-        previousLimit = 0;
-        nextFrame = 0;
         return;
     }
 
     if (!originalLimit)
         originalLimit = *nativeLimit;
-    // The native limiter rounds its sleep to whole milliseconds. Leave it above the supported FPS range.
-    *nativeLimit = 10000.0f;
 
     static uint32_t refreshRate = 60;
     static HMONITOR refreshMonitor = nullptr;
@@ -299,47 +293,9 @@ export void ApplyFrameRateLimit(bool loading)
     }
     limit = std::clamp(limit, 30, 1000);
 
-    static const auto frequency = []()
-    {
-        LARGE_INTEGER result;
-        QueryPerformanceFrequency(&result);
-        return result.QuadPart;
-    }();
-    const auto clock = []()
-    {
-        LARGE_INTEGER now;
-        QueryPerformanceCounter(&now);
-        return now.QuadPart;
-    };
-    const auto period = (frequency + limit / 2) / limit;
-    const auto now = clock();
-    if (limit != previousLimit || now >= nextFrame)
-    {
-        previousLimit = limit;
-        nextFrame = now + period;
-        return;
-    }
-
-    constexpr double spinTime = 0.0015;
-    const double remaining = double(nextFrame - now) / double(frequency);
-    if (remaining > spinTime)
-    {
-        static HANDLE timer = CreateWaitableTimerExW(nullptr, nullptr, CREATE_WAITABLE_TIMER_HIGH_RESOLUTION, TIMER_ALL_ACCESS);
-        LARGE_INTEGER due{};
-        due.QuadPart = -static_cast<LONGLONG>((remaining - spinTime) * 10000000.0);
-        if (timer && SetWaitableTimer(timer, &due, 0, nullptr, nullptr, FALSE))
-            WaitForSingleObject(timer, INFINITE);
-        else
-            Sleep(static_cast<DWORD>((remaining - spinTime) * 1000.0));
-    }
-    auto release = clock();
-    while (release < nextFrame)
-    {
-        YieldProcessor();
-        release = clock();
-    }
-    // A late wake must not shorten the interval to the next update.
-    nextFrame = release + period;
+    // The game's own limiter paces the frames. It keeps the game's background work going while it waits; frames
+    // paced outside it give physics debris less simulated time, and the pieces of a broken barrier stop flying early.
+    *nativeLimit = static_cast<float>(limit);
 }
 
 class FrameRate
@@ -544,6 +500,7 @@ public:
                 static VehicleLens vehicleLens = VehicleLens::Native;
                 static uintptr_t sampledVehicle = 0;
                 static std::array<float, 3> sampledPosition{};
+                static uint64_t relocatedTick = 0;
                 static uintptr_t lastParentedVehicle = 0;
                 static Transform lastParentedTransform{};
 
@@ -565,6 +522,9 @@ public:
                     const float movement = std::hypot(position[0] - sampledPosition[0],
                         position[1] - sampledPosition[1], position[2] - sampledPosition[2]);
                     const bool moved = sampledVehicle != body.entity || movement > 0.02f;
+                    // A tick's travel far beyond any driving speed: the scene put the car somewhere else.
+                    if (sampledVehicle == body.entity && movement > 4.0f)
+                        relocatedTick = state.tick;
                     sampledVehicle = body.entity;
                     std::copy_n(position, 3, sampledPosition.begin());
                     if (!moved)
@@ -681,11 +641,13 @@ public:
                         const auto source = *reinterpret_cast<const uint32_t*>(camera + antSourceOffset);
                         if (!source)
                             return false;
-                        // The new rig can publish while the chassis is still traversing its old and new
-                        // positions. Carry the outgoing rig with the drawn chassis through that cut tick.
+                        // When the scene puts the car somewhere else at a cut, the new rig can publish while the
+                        // chassis is still traversing its old and new positions. Carry the outgoing rig with the
+                        // drawn chassis through that cut tick. Ordinary cuts show the incoming rig at once.
                         const bool hasVehicleView = vehicleView.camera == camera && vehicleView.vehicle == body.entity &&
                             state.tick - vehicleView.tick <= 2;
-                        const bool hold = recentCut && state.snapCut && hasVehicleView && vehicleView.source != source;
+                        const bool relocated = relocatedTick && state.tick - relocatedTick <= 2;
+                        const bool hold = recentCut && state.snapCut && hasVehicleView && vehicleView.source != source && relocated;
                         // The finalized camera can lag the latest ANT publication by a tick. Pair each
                         // endpoint with its closest authored eye, then retain the finalized rig and lens aim.
                         const auto match = [&](const float* pose) -> const VehicleCameraSample*

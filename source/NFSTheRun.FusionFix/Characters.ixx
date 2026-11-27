@@ -99,8 +99,9 @@ namespace
         return std::clamp((Alpha + float(Tick - pose.currentTick)) / span, 0.0f, 1.0f);
     }
 
-    // Keeps the values of a tick with the ones of the tick before. position: where the first bone's position is
-    void Snapshot(Pose& pose, uintptr_t source, size_t count, const size_t (&position)[3])
+    // Keeps the values of a tick with the ones of the tick before. position: where a bone's position is in its values,
+    // stride: the values per bone
+    void Snapshot(Pose& pose, uintptr_t source, size_t count, const size_t (&position)[3], size_t stride)
     {
         pose.seenTick = Tick;
         auto values = (const float*)source;
@@ -119,11 +120,23 @@ namespace
         pose.previousTick = pose.currentTick;
         pose.currentTick = Tick;
 
-        // Put somewhere else, or not animated for a while: no blending from where it was
-        float dx = pose.current[position[0]] - pose.previous[position[0]];
-        float dy = pose.current[position[1]] - pose.previous[position[1]];
-        float dz = pose.current[position[2]] - pose.previous[position[2]];
-        if (dx * dx + dy * dy + dz * dz > 5.0f * 5.0f || pose.currentTick - pose.previousTick > 10)
+        // Put somewhere else, or not animated for a while: no blending from where it was. A skeleton's first bone is a
+        // reference point that moves in steps of 20 m while the character moves on smoothly. Its children are placed
+        // relative to it and step back by the same amount in that tick, so a first bone's step with a child that
+        // stays in place in the world isn't a move to somewhere else.
+        const auto delta = [&](size_t bone, size_t axis)
+        {
+            return pose.current[bone + position[axis]] - pose.previous[bone + position[axis]];
+        };
+        const float rx = delta(0, 0), ry = delta(0, 1), rz = delta(0, 2);
+        bool moved = rx * rx + ry * ry + rz * rz > 5.0f * 5.0f;
+        for (size_t bone = stride; moved && bone + stride <= count; bone += stride)
+        {
+            const float x = delta(bone, 0) + rx, y = delta(bone, 1) + ry, z = delta(bone, 2) + rz;
+            if (x * x + y * y + z * z < 5.0f * 5.0f)
+                moved = false;
+        }
+        if (moved || pose.currentTick - pose.previousTick > 10)
         {
             pose.previous = pose.current;
             pose.previousTick = pose.currentTick;
@@ -147,7 +160,7 @@ namespace
 
             auto matrices = *(uintptr_t*)(result + 0x08);
             if (matrices && matricesSize == bones * BoneSize && matrices == *(uintptr_t*)(block + 0x08) + index * matricesSize)
-                Snapshot(Poses[matrices], matrices, matricesSize / sizeof(float), { 3, 7, 11 });
+                Snapshot(Poses[matrices], matrices, matricesSize / sizeof(float), { 3, 7, 11 }, BoneSize / sizeof(float));
 
             // Only a slot's own bone transforms of this skeleton: exactly its bone count is read and given back
             auto transforms = *(uintptr_t*)(result + 0x14);
@@ -157,7 +170,7 @@ namespace
             {
                 if (transforms == *(uintptr_t*)(block + buffer) + index * transformsSize)
                 {
-                    Snapshot(Transforms[result], transforms, transformsSize / sizeof(float), { 0, 1, 2 });
+                    Snapshot(Transforms[result], transforms, transformsSize / sizeof(float), { 0, 1, 2 }, TransformSize / sizeof(float));
                     break;
                 }
             }
