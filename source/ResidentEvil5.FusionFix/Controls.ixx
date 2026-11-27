@@ -558,6 +558,26 @@ export namespace Controls
             regs.ebx = (regs.ebx & ~0xFFu) | 1;
         });
 
+        // The laser's dot: the laser runs from the muzzle to the aim point (+0x2720). With a pad the aim update first
+        // traces the gun's line (LaserTrace): the aim point ends on the first wall, object or enemy, the enemy is marked
+        // as aimed at, and the result (1 enemy, 2 object) makes the laser draw its dot there. For keyboard/mouse it
+        // skips the trace and passes the crosshair's result instead (esp + 0x14, copied right after), so the forced
+        // laser ran on past the target and no dot was drawn. With the laser forced the pad's trace runs here as well;
+        // the mouse shot point it also writes (+0x2700) is kept, so shots still go where the mouse aims.
+        pattern = hook::pattern("83 B8 98 00 00 00 00 75 ? 8B 54 24 ? 89 54 24 ? EB ? 8B CE E8");
+        static auto LaserTrace = (int(__fastcall*)(uintptr_t, void*))injector::GetBranchDestination(pattern.get_first(21)).as_int();
+        static auto LaserTraceHook = safetyhook::create_mid(pattern.get_first(9), [](SafetyHookContext& regs)
+        {
+            static auto& forceLaser = FixSettings().Int("MAIN.ForceLaserSight");
+            auto ch = regs.esi;
+            if (!forceLaser || !PlayerFor(ch) || !KeyboardPlayer(ch))
+                return;
+            float shot[3];
+            std::memcpy(shot, reinterpret_cast<void*>(ch + 0x2700), sizeof(shot));
+            *reinterpret_cast<int*>(regs.esp + 0x14) = LaserTrace(ch, nullptr);
+            std::memcpy(reinterpret_cast<void*>(ch + 0x2700), shot, sizeof(shot));
+        });
+
         // The keyboard/mouse crosshair: the HUD cockpit (character +0x2640, its character at +0x1A0) shows its reticle
         // when it was asked for one this frame (+0x373), which it copies into its visible flag here (ecx = cockpit).
         // With the laser forced the request is dropped, as with a pad; the sniper scope keeps its reticle.
