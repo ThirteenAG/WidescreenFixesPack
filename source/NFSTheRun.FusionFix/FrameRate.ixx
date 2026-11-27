@@ -464,6 +464,40 @@ public:
                     regs.eip = skip;
             });
 
+            // A car is drawn between its last two physics poses. When the game moves it somewhere else at once, as at
+            // the start of a race's ending scene, the drawn car is on the way between both places for a tick, and the
+            // ending scene places its camera relative to the drawn car in that tick: the whole scene is filmed from the
+            // side of the road or under it. A gap wider than any car covers in a tick takes the physics pose at once.
+            if (bUnlockFrameRate)
+            {
+                auto vehicleTransform = hook::pattern("55 8B EC 83 E4 F0 83 EC 28 56 B8 01 00 00 00 57 8B F9 84 05 ? ? ? ? 75 06 09 05 ? ? ? ? 8B 8F ? ? 00 00 8B 01 8B 50 08 FF D2 8B F0 8D 47 70");
+                static const auto getVehicleTransform = reinterpret_cast<uintptr_t>(vehicleTransform.get_first());
+                static const auto bodyOffset = *vehicleTransform.get_first<uint32_t>(34);
+                auto pull = hook::pattern("8B 86 ? ? 00 00 85 C0 74 ? 8B 88 E0 00 00 00 8B 01 8B 50 0C FF D2 50 8B CE E8");
+                static const auto sourceOffset = *pull.get_first<uint32_t>(2);
+                static auto VehicleTransformHook = safetyhook::create_mid(pull.get_first(23), [](SafetyHookContext& regs)
+                {
+                    // The car's source entity, its component that gives the transform from the physics body
+                    const auto source = *reinterpret_cast<const uintptr_t*>(regs.esi + sourceOffset);
+                    const auto component = *reinterpret_cast<const uintptr_t*>(source + 0xE0);
+                    if ((*reinterpret_cast<const uintptr_t* const*>(component))[3] != getVehicleTransform)
+                        return;
+                    const auto holder = *reinterpret_cast<const uintptr_t*>(component + bodyOffset);
+                    const auto body = reinterpret_cast<uintptr_t(__thiscall*)(uintptr_t)>((*reinterpret_cast<const uintptr_t* const*>(holder))[2])(holder);
+                    if (!body)
+                        return;
+                    const auto physics = reinterpret_cast<const float*(__thiscall*)(uintptr_t)>((*reinterpret_cast<const uintptr_t* const*>(body))[14])(body);
+                    const auto drawn = reinterpret_cast<const float*>(regs.eax);
+                    const float x = drawn[12] - physics[12], y = drawn[13] - physics[13], z = drawn[14] - physics[14];
+                    if (x * x + y * y + z * z > 15.0f * 15.0f)
+                    {
+                        static thread_local std::array<float, 16> moved{};
+                        std::copy_n(physics, moved.size(), moved.begin());
+                        regs.eax = reinterpret_cast<uintptr_t>(moved.data());
+                    }
+                });
+            }
+
             if (bUnlockFrameRate && bUnlockCutscenes)
             {
                 struct CameraState
