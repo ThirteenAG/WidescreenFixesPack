@@ -106,7 +106,7 @@ Far Cry plays with an Xbox-style controller (or any controller that Windows sees
 | Back | Objectives | Objectives |
 | Start | Menu; skips movies | Menu |
 
-In menus the left stick moves the pointer, A clicks, B goes back, the d-pad moves through lists and the right stick scrolls.
+In menus the left stick moves the pointer, A clicks, the d-pad moves through lists and the right stick scrolls. Start or B closes the pause menu and returns to the game.
 
 Controller settings on the Controls page: camera speed, invert look (the game's own Invert Mouse option turns the controller around too), vibration and controller icons. The controller rumbles with your shots, hits and nearby explosions.
 

@@ -206,17 +206,6 @@ export namespace MenuCanvas
         onLayoutChange().executeAll(RsGlobal->width, RsGlobal->height);
     }
 
-    // A camera resize while the canvas is applied (a windowed mode resizing the window from the
-    // resolution menu) writes the new physical size over the canvas values. Take it as the physical
-    // size, otherwise the end of the scope restores the old one.
-    void Resized()
-    {
-        if (!Depth || Suspensions) return;
-        if (RsGlobal->maximumWidth == CanvasWidth)
-            RsGlobal->maximumWidth = RsGlobal->width;
-        Apply();
-    }
-
     class Scope
     {
         bool active;
@@ -254,6 +243,24 @@ export namespace MenuCanvas
         }
         Suspend(const Suspend&) = delete;
         Suspend& operator=(const Suspend&) = delete;
+    };
+
+    // The menus start their own frames (message screens), and the camera takes RsGlobal's size when it gets
+    // no rectangle, so it is sized with the physical viewport. A size it sets there (a windowed mode
+    // resizing the window) is the new physical size the canvas is applied to again.
+    class CameraResize
+    {
+        std::optional<Suspend> physicalViewport;
+    public:
+        CameraResize()
+        {
+            // A maximum width written over the canvas one is the new physical size
+            if (Depth && !Suspensions && RsGlobal->maximumWidth != CanvasWidth)
+                PhysicalMaximumWidth = RsGlobal->maximumWidth;
+            physicalViewport.emplace();
+        }
+        CameraResize(const CameraResize&) = delete;
+        CameraResize& operator=(const CameraResize&) = delete;
     };
 }
 

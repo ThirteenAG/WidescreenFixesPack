@@ -169,8 +169,8 @@ export void (__cdecl* RwCameraSetNearClipPlane)(RwCamera* camera, float nearClip
 SafetyHookInline shCameraSize = {};
 void __cdecl CameraSize(RwCamera* camera, RwRect* rect, float viewWindow, float aspectRatio)
 {
+    MenuCanvas::CameraResize physicalViewport;
     shCameraSize.unsafe_ccall(camera, rect, SCREEN_VIEWWINDOW, SCREEN_ASPECT_RATIO);
-    MenuCanvas::Resized();
 }
 
 SafetyHookInline shAvoidTheGeometry = {};
