@@ -108,9 +108,9 @@ Far Cry plays with an Xbox-style controller (or any controller that Windows sees
 
 In menus the left stick moves the pointer, A clicks, the d-pad moves through lists and the right stick scrolls. Start or B closes the pause menu and returns to the game.
 
-Controller settings on the Controls page: camera speed, invert look (the game's own Invert Mouse option turns the controller around too), vibration and controller icons. The controller rumbles with your shots, hits and nearby explosions.
+Controller settings on the Controls page: camera speed, invert look (the game's own Invert Mouse option turns the controller around too), vibration and controller button names. The controller rumbles with your shots, hits and nearby explosions.
 
-While you play with the controller, the game's hints name the controller buttons instead of keys and the mouse, for example "Hold X to open the door" or "Use the right stick to look around". They switch back to the keyboard and mouse wording as soon as you use the keyboard or move the mouse. Controller Icons chooses the button names: Xbox, PlayStation or Nintendo (Automatic uses Xbox). The hints are written for every language the game was released in.
+While you play with the controller, the game's hints name the controller buttons instead of keys and the mouse, for example "Hold X to open the door" or "Use the right stick to look around". They switch back to the keyboard and mouse wording as soon as you use the keyboard or move the mouse. Controller Button Names chooses them: Xbox, PlayStation or Nintendo (Automatic uses Xbox). The hints are written for every language the game was released in.
 
 The left stick moves in any direction, and pushing it gently walks slowly, in both the 32-bit and the 64-bit game.
 

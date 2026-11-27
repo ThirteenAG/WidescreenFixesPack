@@ -8,7 +8,7 @@
   "MAIN.GamepadCameraSpeed.description": "Wie schnell der rechte Stick die Kamera dreht und zielt. Wirkt sofort.",
   "MAIN.InvertGamepadY": "Controller-Blick umkehren",
   "MAIN.InvertGamepadY.description": "Den rechten Stick nach oben drücken schaut nach unten. Die spieleigene Option Maus umkehren dreht auch den Controller um. Wirkt sofort.",
-  "MAIN.GamepadIcons": "Controller-Symbole",
+  "MAIN.GamepadIcons": "Controller-Tastennamen",
   "MAIN.GamepadIcons.description": "Tastennamen in den Spielhinweisen, solange du mit dem Controller spielst: Xbox, PlayStation oder Nintendo. Automatisch verwendet Xbox. Hinweise für Tastatur und Maus bleiben unverändert. Wirkt sofort.",
   "MAIN.Vibration": "Vibration",
   "MAIN.Vibration.description": "Lässt den Controller bei Schüssen, Explosionen und Treffern vibrieren. Wirkt sofort.",

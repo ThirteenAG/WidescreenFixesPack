@@ -8,7 +8,7 @@
   "MAIN.GamepadCameraSpeed.description": "La rapidez con la que el stick derecho gira la cámara y apunta. Se aplica al instante.",
   "MAIN.InvertGamepadY": "Invertir vista del mando",
   "MAIN.InvertGamepadY.description": "Empujar el stick derecho hacia arriba mira hacia abajo. La opción Invertir ratón del juego también invierte el mando. Se aplica al instante.",
-  "MAIN.GamepadIcons": "Iconos del mando",
+  "MAIN.GamepadIcons": "Nombres de botones del mando",
   "MAIN.GamepadIcons.description": "Nombres de los botones en las pistas del juego mientras juegas con mando: Xbox, PlayStation o Nintendo. Automático usa Xbox. Las pistas de teclado y ratón no cambian. Se aplica al momento.",
   "MAIN.Vibration": "Vibración",
   "MAIN.Vibration.description": "Hace vibrar el mando con disparos, explosiones y golpes. Se aplica al instante.",
