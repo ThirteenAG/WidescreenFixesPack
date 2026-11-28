@@ -2,6 +2,7 @@
 #include "d3d9.h"
 #include "FixSettings.hpp"
 #include "Shared/NFS/Cursor.hpp"
+#include "Shared/NFS/DeviceLoss.hpp"
 #include "Shared/WidescreenFixConflict.hpp"
 
 import ComVars;
@@ -40,6 +41,7 @@ static void FrameEvents([[maybe_unused]] float debugSpeed)
 void Init()
 {
     NFSCursor::Initialize();
+    NFSDeviceLoss::Install(true, false);
     #ifdef _DEBUG
     InitSpeedhack();
     #endif

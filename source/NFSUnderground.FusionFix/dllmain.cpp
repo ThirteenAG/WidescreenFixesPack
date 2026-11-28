@@ -3,6 +3,7 @@
 #include "automation/asi_automation_frames.h"
 #include "FixSettings.hpp"
 #include "Shared/NFS/Cursor.hpp"
+#include "Shared/NFS/DeviceLoss.hpp"
 #include "Shared/WidescreenFixConflict.hpp"
 
 // The settings' runtime interface for menu hosts and editors (AsiSettings_GetApi)
@@ -37,6 +38,7 @@ void MainLoop()
 void Init()
 {
     NFSCursor::Initialize();
+    NFSDeviceLoss::Install(true);
 
     auto pattern = hook::pattern("A1 ? ? ? ? 68 ? ? ? ? 50 FF 15");
     hWnd.SetAddress(*pattern.get_first<HWND*>(1));

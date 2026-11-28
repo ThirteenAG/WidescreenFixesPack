@@ -78,6 +78,24 @@ namespace DeviceCreation
     }
 }
 
+// After the device's Reset the render thread puts the renderer's current render states back on the device. When the
+// device was lost during startup (another program changing the display mode), the renderer had no current states yet
+// and the restore read a null pointer. Without them there is nothing to put back.
+namespace DeviceReset
+{
+    void Install()
+    {
+        // The restore call, skipped when the renderer (ecx) has no current states (+0x14 to +0x20)
+        auto pattern = hook::pattern("A1 ? ? ? ? 8B 08 85 C9 74 05 E8 ? ? ? ? 8B 0D ? ? ? ? 8B 49 30");
+        static auto RestoreStatesHook = safetyhook::create_mid(pattern.get_first(7), [](SafetyHookContext& regs)
+        {
+            auto renderer = reinterpret_cast<void**>(regs.ecx);
+            if (renderer && (!renderer[5] || !renderer[6] || !renderer[7] || !renderer[8]))
+                regs.ecx = 0;
+        });
+    }
+}
+
 class Windowed
 {
 public:
@@ -86,6 +104,7 @@ public:
         WFP::onInitEvent() += []()
         {
             DeviceCreation::Install();
+            DeviceReset::Install();
 
             // 0 full screen, 1 windowed, 2 borderless at the monitor's size, 3 resizable window, 4 borderless
             const auto mode = std::clamp(FixSettings().Int("MAIN.WindowMode"), 0, 4);

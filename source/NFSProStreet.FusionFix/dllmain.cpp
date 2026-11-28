@@ -2,6 +2,7 @@
 #include "d3d9.h"
 #include "FixSettings.hpp"
 #include "Shared/NFS/Cursor.hpp"
+#include "Shared/NFS/DeviceLoss.hpp"
 #include "Shared/WidescreenFixConflict.hpp"
 
 import ComVars;
@@ -43,6 +44,7 @@ void __cdecl MainLoop(float TickerDifference)
 void Init()
 {
     NFSCursor::Initialize();
+    NFSDeviceLoss::Install(false);
 
     // Window, resolution and game flow
     auto pattern = hook::pattern("8B 0D ? ? ? ? 50 51 89 54 24");
