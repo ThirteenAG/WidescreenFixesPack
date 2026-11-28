@@ -35,6 +35,8 @@ export namespace PsiOpsMenu
     inline std::map<std::string, std::string> restartValues;
     inline std::atomic<bool> languageChanged{ false };
     inline const char*(__cdecl* lookupString)(const char*){};
+    // Every text the game draws, before it is drawn
+    inline void (*textDrawn)(void*){};
     inline void* find_pattern(const char* bytes)
     {
         return hook::pattern(bytes).get_first();
@@ -1042,6 +1044,8 @@ export namespace PsiOpsMenu
     }
     inline int __fastcall DrawText(void* self, void*, int transform)
     {
+        if (textDrawn)
+            textDrawn(self);
         Prune();
         // The droplets stay off the game's menu screens while they show
         RainDroplets::MenuOpen(!screens.empty() || !joinedScreens.empty());

@@ -251,6 +251,22 @@
       "apply": "live"
     },
     {
+      "id": "MAIN.GamepadIcons",
+      "type": "choice",
+      "default": 0,
+      "label": "@GamepadIcons",
+      "description": "@GamepadIcons.description",
+      "page": "game",
+      "visibility": "menu",
+      "apply": "live",
+      "choices": [
+        { "value": 0, "label": "@GamepadIcons.auto" },
+        { "value": 1, "label": "Xbox" },
+        { "value": 2, "label": "PlayStation" },
+        { "value": 3, "label": "Nintendo" }
+      ]
+    },
+    {
       "id": "MAIN.CheckForUpdates",
       "type": "bool",
       "default": false,

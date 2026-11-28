@@ -44,7 +44,7 @@
 
 ## Settings and rendering
 
-Open **Options → Plugins** for settings and per-plugin presets (Gamer's Edition). In every edition the fix can be configured in FusionFixHub or in `scripts/KingKong.FusionFix.cfg`. Restart the game after changing Window Mode, VSync, Skip Intro, or Raw Input Mouse. Text Language takes effect when the settings menu is reopened. The remaining settings take effect while the game runs.
+Open **Options → Plugins** for settings and per-plugin presets (Gamer's Edition). Each list scrolls with Up and Down, Page Up/Page Down, Home/End or the mouse wheel; categories open their own list, and Back returns to the row you came from. F1 shows the selected setting's details. In every edition the fix can be configured in FusionFixHub or in `scripts/KingKong.FusionFix.cfg`. Restart the game after changing Window Mode, VSync, Skip Intro, or Raw Input Mouse. Text Language takes effect when the settings menu is reopened. The remaining settings take effect while the game runs.
 
 When enabled, update checks run once. Gamer's Edition shows an available update in Plugins. Signature Edition shows a dialog in the game window.
 
@@ -59,7 +59,7 @@ Widescreen, HUD, videos, input, timing and existing Direct3D 9 shader replacemen
 - Signature Edition uses its widescreen view for scripted cameras, including any field-of-view multiplier you apply.
 - The window can't be resized while the game runs (the game draws at the size it started with); choose the size in the settings application.
 - The "Press SPACE to continue" screen after the logos stays; press a key to continue.
-- Long menu entries can continue on another line or page. Changing a value can move nearby entries to a different page.
+- Long menu entries continue on the next line.
 - Gamer's Edition: a controller works out of the box with an Xbox 360 layout (Jack: A use/help, B magazines, LT arm, RT fire, RB reload, LS crouch, RS precise aim; Kong: A hit, B grab, X jump, Y rage; left stick moves) while no controller bindings are saved; SettingsApplication.exe changes them. Selectable controller prompt sets are not provided.
 - Some small effects, such as swinging chains, still move faster above 60 FPS.
 

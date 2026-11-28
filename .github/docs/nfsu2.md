@@ -32,6 +32,7 @@
 - **Fix** for sticky steering, where the opposite direction was ignored until the wheels were centred
 - **Fix** for a crash when a movie object is drawn without a movie playing
 - **Stability** - fixes the random "0xAAAAAAAA" crash on multi-core CPUs at its cause (the game's memory allocator wasn't thread safe), so the game no longer needs to run on a single CPU core
+- **Display Loss** - the game no longer crashes when another program takes the screen in exclusive fullscreen or changes the display mode; it waits until the display is back
 - **No disc** - the game runs without a disc in the drive
 <br clear="both">
 
@@ -39,7 +40,7 @@
 
 ## Notes
 
-Menu rows keep their original font size. Longer values expand into the space between the label and the right arrow; labels shorten to fit the remaining space. Two lines below the list show the full selected label, value and description; long help continues on timed pages. Restart notices use a separate header line and also continue when needed. Letters missing from the installed font use basic Latin replacements or a visible question mark. Russian menu text uses English because the original fonts lack Cyrillic.
+Menu rows keep their original font size. Longer values expand into the space between the label and the right arrow; labels shorten to fit the remaining space. Restart notices use a separate header line and continue on timed pages when they are longer. Letters missing from the installed font use basic Latin replacements or a visible question mark. Russian menu text uses English because the original fonts lack Cyrillic.
 
 Menu Text Language is on fusionfix.io and in FusionFixHub, on the Compatibility page; it follows the game language by default and presets don't change it.
 
@@ -47,7 +48,7 @@ Menu Text Language is on fusionfix.io and in FusionFixHub, on the Compatibility 
 
 <img src="https://thirteenag.github.io/screens/nfsu2/drag.jpg" width="360" align="left" style="margin: 0 24px 0px 0;" alt="Drag racing">
 
-- **In-Game Options** - one new category, **Plugins**, in the Options menu and in the pause menu's options. It lists the fix first, then every other loaded plugin with settings (such as Fusion Rain Droplets). Longer lists use a first-row page selector; left/right changes the page, and Back from a plugin returns to the plugin list. Each plugin opens its page: a Preset row, its settings (Graphics, Video, Camera & Gamepad; the first row picks the part shown) and Restore Defaults (resets that page's settings, asks to confirm). The plugin list is shown even when only the fix is installed. Display Mode, Field of View, HUD Aspect Ratio and Console Gamma are on the game's Display screen (Display Mode under Resolution), and its Default Settings resets them too. If a row cannot be added there, its setting remains in Plugins. A change that needs a restart shows a separate header note; longer notices continue on timed pages. All settings are stored in `NFSUnderground2.FusionFix.cfg` next to the plugin, which the fix writes with every setting and a comment above each; settings can also be changed on fusionfix.io or in FusionFixHub.
+- **In-Game Options** - one new category, **Plugins**, in the Options menu and in the pause menu's options. It lists the fix first, then every other loaded plugin with settings (such as Fusion Rain Droplets). Each plugin opens its page: a Preset row, its settings or a row per category that opens them, and Restore Defaults (resets that page's settings, asks to confirm). Every list scrolls a row at a time as the selection passes the first or last row shown, with the scroll bar's arrows or with the mouse wheel; Back returns one level, to the row you came from. The plugin list is shown even when only the fix is installed. Display Mode, Field of View, HUD Aspect Ratio and Console Gamma are on the game's Display screen (Display Mode under Resolution), and its Default Settings resets them too. If a row cannot be added there, its setting remains in Plugins. A change that needs a restart shows a separate header note; longer notices continue on timed pages. All settings are stored in `NFSUnderground2.FusionFix.cfg` next to the plugin, which the fix writes with every setting and a comment above each; settings can also be changed on fusionfix.io or in FusionFixHub.
 - **Skip Intro** - bypass startup FMVs, the title screen and the first successful profile-load confirmation, straight to the game menu
 - **Presets** - the Preset row of the fix's page picks Vanilla, Recommended or Enhanced (left/right) and applies it on accept after a confirmation; it sets the picture, movie, cutscene, camera, frame rate limit and intro options at once; Vanilla uses the game's own 60 FPS cap, original-aspect movies and the original cutscene bars; window mode, language, sensitivities and dead zones stay as they are
 - **Language** - switch between the languages installed with the game (restart needed); languages whose files are missing are not offered

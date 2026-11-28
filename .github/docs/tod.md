@@ -38,11 +38,12 @@
 
 ## Settings and hub
 
+Options › Plugins, in the main menu and in the pause menu, lists the fix and the other installed plugins on the game's own settings page. A plugin's page has its preset, a row per category (Game, Camera, Display) and Restore defaults; a category lists its settings with their values beside them. Settings marked * apply after a restart. The line under the list describes the selected setting. Up/Down select (holding repeats), Left/Right change the value, Enter opens a category, Escape goes back to the row it came from; Page Up/Page Down and Home/End jump through long lists, and the mouse wheel and the list's arrows scroll them. The mouse selects and clicks rows and the value arrows. A controller works the same way: d-pad or left stick, A, Start to go back, and the shoulder buttons for a page. F1 shows the whole help text when it is longer than the line under the list.
+
 The fix creates `scripts/TotalOverdose.FusionFix.cfg` on first start. FusionFixHub can change live settings while the game runs, and fusionfix.io can export a config. Vanilla shows the startup logos and title screen, plays videos in the game's 4:3 frame and leaves the frame rate unlimited. Recommended and Enhanced skip the logos and title screen, fit videos to the screen and limit the game to 60 FPS. Auto is the default HUD aspect ratio and the value in all three presets exported by the site. Window mode and resolution remain player choices. Texts are available in English, French, German, Italian and Spanish.
 
 ## Known limits
 
-- The game's menus are compiled into the game as scripts, so the fix has no page in them: change its settings in FusionFixHub or on fusionfix.io.
 - The title picture and the menu pictures are 4:3 art and stay 4:3 in the middle of the screen.
 - The fix supports the unprotected `TOD.exe` of the digital release (GOG); the SecuROM-protected disc `TOD.exe` is not supported.
 - Button prompts and the Controls menu show keyboard keys, also while you play with a controller; the controller follows the default key bindings, so rebinding keys moves controller buttons with them.
@@ -52,7 +53,7 @@ The fix creates `scripts/TotalOverdose.FusionFix.cfg` on first start. FusionFixH
 1. Download the fix archive from this release.
 2. Extract the archive into the game folder, beside `TOD.exe`, preserving the folders in the archive.
 3. Launch the game once to create `scripts/TotalOverdose.FusionFix.cfg` with every setting.
-4. Configure the fix in FusionFixHub or on fusionfix.io. Restart when an option requires it.
+4. Configure the fix in Options › Plugins, in FusionFixHub or on fusionfix.io. Restart when an option requires it.
 
 
 <p align="center"> <a href="https://patreon.fusionfix.io/" target="_blank"><picture><source media="(max-width: 768px) and (prefers-color-scheme: dark)" srcset="https://fusionfix.io/credits/supporters.svg?theme=dark&layout=mobile"><source media="(max-width: 768px)" srcset="https://fusionfix.io/credits/supporters.svg?layout=mobile"><source media="(prefers-color-scheme: dark)" srcset="https://fusionfix.io/credits/supporters.svg?theme=dark"><img width="100%" src="https://fusionfix.io/credits/supporters.svg"></picture></a> <br /> <a href="https://github.com/sponsors/ThirteenAG"><picture><source media="(prefers-color-scheme: dark)" srcset="https://thirteenag.github.io/img/buttons/github-dark.svg"><img src="https://thirteenag.github.io/img/buttons/github.svg" width="250"></picture></a> <a href="https://ko-fi.com/thirteenag"><picture><source media="(prefers-color-scheme: dark)" srcset="https://thirteenag.github.io/img/buttons/kofi-dark.svg"><img src="https://thirteenag.github.io/img/buttons/kofi.svg" width="250"></picture></a> <a href="https://paypal.me/SergeyP13"><picture><source media="(prefers-color-scheme: dark)" srcset="https://thirteenag.github.io/img/buttons/paypal-dark.svg"><img src="https://thirteenag.github.io/img/buttons/paypal.svg" width="250"></picture></a> <a href="https://www.patreon.com/ThirteenAG"><picture><source media="(prefers-color-scheme: dark)" srcset="https://thirteenag.github.io/img/buttons/patreon-dark.svg"><img src="https://thirteenag.github.io/img/buttons/patreon.svg" width="250"></picture></a> <a href="https://boosty.to/thirteenag"><picture><source media="(prefers-color-scheme: dark)" srcset="https://thirteenag.github.io/img/buttons/boosty-dark.svg"><img src="https://thirteenag.github.io/img/buttons/boosty.svg" width="250"></picture></a><br><br> </p>

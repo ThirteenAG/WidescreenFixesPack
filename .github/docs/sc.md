@@ -47,7 +47,7 @@ The gameplay FOV multiplier changes the normal following camera and widens it up
 
 The added settings text is available in English, French, German, Italian and Spanish. Choose Text Language in FusionFixHub to override the automatic choice. If the game language cannot be identified, English is used. The in-game font uses unaccented letter equivalents; FusionFixHub keeps the full translations.
 
-In the Plugins page, select a setting and choose Details or press F1 to read its complete description. Use the arrow keys to change description pages and Back or Escape to return.
+In the Plugins page, each list scrolls with Up and Down, Page Up/Page Down, the mouse wheel or the scroll bar; categories open their own list, and Back or Escape returns to the row you came from. The selected setting's help is shown under the list; press F1 to read its complete description.
 
 Recommended uses the default setup. Vanilla and Enhanced offer alternative presets. Settings marked for restart take effect on the next launch. If Plugins is unavailable in your game version, use FusionFixHub or the generated `.cfg` file.
 

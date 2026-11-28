@@ -13,6 +13,7 @@ module;
 #include <functional>
 #include <map>
 #include "Shared/RWGTA/UpdateCheck.hpp"
+#include "Shared/RainDroplets.hpp"
 
 export module Frontend;
 
@@ -128,7 +129,7 @@ namespace THUGMenu
 
     struct Addresses
     {
-        uintptr_t unlinkWeak, linkWeak, lookup, run, spawn, launch, symbol, getChecksum, created, task;
+        uintptr_t unlinkWeak, linkWeak, lookup, run, spawn, launch, symbol, getChecksum, created, task, freeComponent;
         uint32_t listTable, containerTable;
     };
     inline const Addresses& Game()
@@ -147,6 +148,7 @@ namespace THUGMenu
             a.symbol = at("8B 4C 24 04 8B C1 25 FF 0F 00 00 56 8B 35");
             a.getChecksum = at("51 53 56 8B 31 32 DB 85 F6 89 4C 24 08 74");
             a.created = at("6A FF 68 ? ? ? ? 64 A1 00 00 00 00 50 83 EC 20 56 57 A1 ? ? ? ? 33 C4 50 8D 44 24 2C 64 A3 00 00 00 00 8B 74");
+            a.freeComponent = injector::GetBranchDestination(hook::pattern("8B 56 0C 89 55 00 E8 ? ? ? ? 56 E8").get_first(12)).as_int();
             a.task = at("8B 0D ? ? ? ? 8B 81 DC 00 00 00 50 E8 ? ? ? ? 8B 4C");
             NativeManager.SetAddress(operand("8B 35 ? ? ? ? 6A 01 8D 4C 24 08", 2));
             NativeSymbols.SetAddress(operand("A1 ? ? ? ? 8D 04 90 83 C4 04 39", 1));
@@ -160,7 +162,8 @@ namespace THUGMenu
 }
 
 // The "Plugins" row of the Options page and its pages, built with the game's own themed scrolling menu (as its
-// Cheats page, also in the pause menu), so long pages scroll inside the box. Choose, left/right and back are taken from
+// Cheats page, also in the pause menu), so every list scrolls inside the box: the plugins, a plugin's page (its
+// settings, or a row per category that opens the category's list) and a category. Choose, left/right and back are taken from
 // the controller events while one of our pages (or the Plugins row) has focus; up/down stay the game's. The selected
 // row's help runs line by line in the menu's own description line, as the game's pause menu does.
 namespace THUGMenu
@@ -193,7 +196,7 @@ namespace THUGMenu
     static_assert(sizeof(Weak) == 12);
 
     enum class Kind { Setting, Page, Back, Info };
-    struct Item { Kind kind; uint32_t id, textId; size_t index; RWGTAMenu::Row row{}; std::string key, text; bool enabled = true; std::string help; };
+    struct Item { Kind kind; uint32_t id, textId; size_t target; RWGTAMenu::Row row{}; std::string key, text; bool enabled = true; std::string help; };
     enum class Command { Open, Accept, Left, Right, Back };
     struct Pending { Command command; uint32_t generation, row, selected; void* owner; };
     struct Busy
@@ -215,7 +218,8 @@ namespace THUGMenu
         uint32_t generation = 1, baseID = 0;
         std::string focusKey;       // the row to select again once a rebuilt page has focus
         bool returnToEntry = false; // select the Plugins row when the stock page is back
-        int page = -1;
+        size_t page = RWGTAMenu::Model::RootPage;
+        std::map<size_t, std::string> cameFrom; // a page's row in its parent, selected again on Back
         bool pause = false, open = false, busy = false, draining = false;
         unsigned frameDepth = 0;
         uint32_t helpRow = 0;           // the row whose help is shown
@@ -265,6 +269,21 @@ namespace THUGMenu
         auto* symbol = Symbol(name);
         return symbol && Read<uint8_t>(symbol, 1) == 7 && Read<void*>(symbol, 12);
     }
+    // CreateScreenElement writes the new element's id into the parameters of the script that calls it: a stand-in
+    // script takes that one entry, which is freed again
+    inline void CreateElement(Parameters& params)
+    {
+        Structure result;
+        alignas(4) uint8_t script[512]{};
+        *reinterpret_cast<Structure**>(script + 0x14) = &result;
+        state.createHook.unsafe_ccall<uint8_t>(&params.value, script);
+        for (auto* component = result.head; component;)
+        {
+            auto* next = component->next;
+            reinterpret_cast<void(__cdecl*)(Component*)>(Game().freeComponent)(component);
+            component = next;
+        }
+    }
     inline void Sound(const char* name)
     {
         Parameters params;
@@ -295,6 +314,16 @@ namespace THUGMenu
         WideCharToMultiByte(1252, WC_NO_BEST_FIT_CHARS, wide.data(), static_cast<int>(wide.size()), converted.data(), count, "?", nullptr);
         return EscapeNativeText(converted);
     }
+    // THEME_PREFIXES[current_theme_prefix] of the game's scripts: the theme's texture names start with it
+    inline std::string ThemePrefix()
+    {
+        static constexpr const char* Prefixes[] = { "DE", "PA", "AL", "FU", "NS", "UG", "SP", "SP", "SP", "SP", "SP", "SP", "SP", "SP", "SP" };
+        auto* symbol = Symbol("current_theme_prefix");
+        const auto index = symbol && Read<uint8_t>(symbol, 1) == 1 ? Read<uint32_t>(symbol, 12) : 0;
+        return Prefixes[index < std::size(Prefixes) ? index : 0];
+    }
+    inline const uint32_t BackdropColor[] = { 100, 100, 100, 80 };
+    inline const uint32_t BackdropJust[] = { Checksum("Right"), Checksum("bottom") };
     inline bool Modal() { return Lookup("keyboard_anchor") || Lookup("dialog_box_anchor") || Lookup("quit_dialog_anchor"); }
     inline bool Current(bool privateMenu, bool requireFocus = true)
     {
@@ -372,7 +401,7 @@ namespace THUGMenu
         state.open = false;
         state.pending.clear(); state.items.clear();
         state.list.Reset(); state.root.Reset();
-        state.model.Close(); state.page = -1;
+        state.model.Close(); state.page = RWGTAMenu::Model::RootPage; state.cameFrom.clear();
     }
     // Back from the Plugins list: the stock Options page is built again (it replaces our page)
     inline void Close()
@@ -393,12 +422,13 @@ namespace THUGMenu
     {
         auto result = std::to_string(static_cast<int>(row.kind)) + ":" + std::to_string(row.plugin ? reinterpret_cast<uintptr_t>(row.plugin->module) : 0);
         if (row.setting) result += ":" + row.setting->id;
+        if (RWGTAMenu::Model::Opens(row)) result += ":" + std::to_string(row.target);
         return result;
     }
-    inline void Add(std::vector<Item>& items, Kind kind, size_t index, std::string key, std::string text, bool enabled = true, RWGTAMenu::Row row = {}, std::string help = {})
+    inline void Add(std::vector<Item>& items, Kind kind, size_t target, std::string key, std::string text, bool enabled = true, RWGTAMenu::Row row = {}, std::string help = {})
     {
         auto n = std::to_string(items.size());
-        items.push_back({ kind, Checksum(("wfp_thug_row_" + n).c_str()), Checksum(("wfp_thug_text_" + n).c_str()), index, row, std::move(key), std::move(text), enabled, std::move(help) });
+        items.push_back({ kind, Checksum(("wfp_thug_row_" + n).c_str()), Checksum(("wfp_thug_text_" + n).c_str()), target, row, std::move(key), std::move(text), enabled, std::move(help) });
     }
     // Lines of at most width characters, broken at spaces
     inline std::vector<std::string> Wrap(const std::string& text, size_t width)
@@ -447,37 +477,37 @@ namespace THUGMenu
     }
     inline bool Prepare(std::vector<Item>& items)
     {
-        const auto& pages = state.model.Pages();
-        if (state.page < 0)
+        if (state.page >= state.model.Pages().size()) return false;
+        if (state.page == RWGTAMenu::Model::RootPage)
         {
             for (const auto& line : state.notice)
                 Add(items, Kind::Info, 0, "notice:" + line, line, false);
-            for (size_t i = 0; i < pages.size(); ++i)
-                Add(items, Kind::Page, i, "page:" + std::to_string(i), pages[i].title);
         }
-        else
+        for (auto* source : state.model.ListRows(state.page, false))
         {
-            if (static_cast<size_t>(state.page) >= pages.size()) return false;
-            for (auto* source : state.model.VisibleRows(state.page))
+            RWGTAMenu::Row row = *source;
+            if (RWGTAMenu::Model::Opens(row))
             {
-                RWGTAMenu::Row row = *source;
-                auto text = state.model.Label(row);
-                auto value = state.model.Value(row);
-                bool enabled = state.model.Enabled(row, state.pause);
-                if (!enabled) value = state.model.Text("menu.unavailable");
-                if (!value.empty()) text += ": " + value;
-                Add(items, Kind::Setting, 0, Key(row), std::move(text), enabled, row, state.model.Help(row));
+                Add(items, Kind::Page, row.target, Key(row), state.model.Label(row), true, row);
+                continue;
             }
-            if (RestartPending())
-                Add(items, Kind::Info, 0, "restart", state.model.Text("menu.restartwarning"), false);
+            auto text = state.model.Label(row);
+            auto value = state.model.Value(row);
+            bool enabled = state.model.Enabled(row, state.pause);
+            if (!enabled) value = state.model.Text("menu.unavailable");
+            if (!value.empty()) text += ": " + value;
+            Add(items, Kind::Setting, 0, Key(row), std::move(text), enabled, row, state.model.Help(row));
         }
+        if (state.page != RWGTAMenu::Model::RootPage && RestartPending())
+            Add(items, Kind::Info, 0, "restart", state.model.Text("menu.restartwarning"), false);
         Add(items, Kind::Back, 0, "back", state.model.Text("menu.back"));
         return state.model.IsOpen();
     }
-    // Builds the page from scratch with the game's themed menu scripts; keep: select the same row again
-    inline bool Build(bool keep = false)
+    // Builds the page from scratch with the game's themed menu scripts; keep: select the same row again, focus: the row
+    // to select (Back: the row the page was opened from)
+    inline bool Build(bool keep = false, const std::string& focus = {})
     {
-        state.focusKey.clear();
+        state.focusKey = focus;
         if (keep)
         {
             const auto selected = state.list.element ? Read<uint32_t>(state.list.element, 352) : 0;
@@ -489,21 +519,50 @@ namespace THUGMenu
         ++state.generation;
         state.helpRow = 0;
         // The title font has capitals only
-        auto title = NativeText(state.model.Text("menu.plugins"));
+        auto title = NativeText(state.model.Pages()[state.page].title);
         CharUpperBuffA(title.data(), static_cast<DWORD>(title.size()));
-        Parameters menu; menu.Text("title", title); menu.Pair("dims", MenuWidth, 252);
+        // The Options page's own icon next to the title, as its other submenus show theirs
+        const auto icon = Checksum((ThemePrefix() + "_options").c_str());
+        Parameters menu; menu.Text("title", title); menu.Name("title_icon", icon); menu.Pair("dims", MenuWidth, 252);
         Run("make_new_themed_scrolling_menu", menu);
         auto* root = Lookup("current_menu_anchor");
         auto* list = Lookup("current_menu");
         if (!root || !list || Read<uint32_t>(root) != Game().containerTable || Read<uint32_t>(list) != Game().listTable || Modal()) return false;
         state.root.Reset(root); state.list.Reset(list);
         state.open = true;
-        for (const auto& item : items)
+        // A long title (a plugin's name) is drawn smaller to stay inside the screen, never cut
+        const float titleScale = std::min(1.9f, 31.0f / std::max<float>(1.0f, static_cast<float>(title.size())));
+        if (titleScale < 1.9f)
         {
+            Parameters subtitle; subtitle.Text("title", title); subtitle.Name("title_icon", icon);
+            subtitle.Float("title_scale", titleScale); subtitle.Integer("right_bracket_z", 1);
+            Run("build_theme_sub_title", subtitle);
+        }
+        // The title Options page's backdrop: its cloud plane and the vector picture behind the box
+        if (!state.pause)
+        {
+            Parameters clouds; clouds.Name("id", "cloud_bg"); clouds.Integer("z_priority", static_cast<uint32_t>(-499));
+            clouds.Text("Model", "options_clouds\\options_clouds.mdl");
+            Run("make_mainmenu_3d_plane", clouds);
+            Array rgba{ Parameters::Pointer(BackdropColor), 1, 4 }, just{ Parameters::Pointer(BackdropJust), 13, 2 };
+            Parameters vector; vector.Name("Type", "SpriteElement"); vector.Name("parent", "current_menu_anchor");
+            vector.Name("id", "vector_bg"); vector.Name("texture", "mm_vector_bg_1"); vector.List("rgba", &rgba);
+            vector.List("just", &just); vector.Pair("pos", 640, 400); vector.Pair("scale", 1.8f, 0.8f);
+            vector.Integer("z_priority", static_cast<uint32_t>(-3)); vector.Float("alpha", 0.7f);
+            CreateElement(vector);
+            if (Lookup("current_menu_anchor") != root) return false;
+        }
+        // first_item/last_item: the list's own arrows hide at the ends, as the game's lists do
+        const auto first = std::find_if(items.begin(), items.end(), [](const Item& item) { return item.enabled; });
+        for (auto it = items.begin(); it != items.end(); ++it)
+        {
+            const auto& item = *it;
             Parameters row; row.Name("id", item.id); row.Name("text_id", item.textId);
             row.Text("text", NativeText(item.text));
             row.Flag("centered"); row.Flag("no_bg");
             if (!item.enabled) row.Flag("not_focusable");
+            if (it == first) row.Flag("first_item");
+            else if (std::next(it) == items.end()) row.Flag("last_item");
             Run("theme_menu_add_item", row);
             if (Lookup("current_menu_anchor") != root) return false;
         }
@@ -580,7 +639,7 @@ namespace THUGMenu
     // The Plugins list (not a plugin's page) is on screen
     inline bool ListShown()
     {
-        return state.open && state.page < 0 && !state.busy && Current(true);
+        return state.open && state.page == RWGTAMenu::Model::RootPage && !state.busy && Current(true);
     }
     inline void ShowNotice(const std::string& text)
     {
@@ -591,9 +650,19 @@ namespace THUGMenu
     {
         if (!Current(false) || !Script("make_new_themed_scrolling_menu") || !Script("theme_menu_add_item")
             || !Script("finish_themed_scrolling_menu")) return;
-        state.model.OpenPlugins(state.module, Language(), 64);
-        state.page = -1;
+        state.model.OpenMenu(state.module, Language(), 64);
+        state.page = RWGTAMenu::Model::RootPage;
+        state.cameFrom.clear();
         if (!Build()) { Close(); return; }
+    }
+    // Back one level, to the row the page was opened from; Back on the plugins list leaves the menu
+    inline void Leave()
+    {
+        const auto parent = state.model.Back(state.page);
+        if (parent == SIZE_MAX) { Close(); return; }
+        auto focus = state.cameFrom[state.page];
+        state.page = parent;
+        if (!Build(false, focus)) Close();
     }
     inline void Activate(const Pending& input)
     {
@@ -601,9 +670,7 @@ namespace THUGMenu
         if (input.command == Command::Back)
         {
             Sound("generic_menu_pad_back_sound");
-            if (state.page < 0) { Close(); return; }
-            state.page = -1;
-            if (!Build()) Close();
+            Leave();
             return;
         }
         if (input.row >= state.items.size() || Read<uint32_t>(state.list.element, 352) != input.selected) return;
@@ -613,15 +680,15 @@ namespace THUGMenu
         Sound(direction ? "generic_menu_scroll_sideways_sound" : "generic_menu_pad_choose_sound");
         if (item.kind == Kind::Back)
         {
-            if (state.page < 0) { Close(); return; }
-            state.page = -1;
-            if (!Build()) Close();
+            Leave();
             return;
         }
         if (item.kind == Kind::Page)
         {
-            state.page = static_cast<int>(item.index);
-            state.model.PageShown(item.index);
+            const auto target = state.model.Enter(item.row);
+            if (target == SIZE_MAX) return;
+            state.cameFrom[target] = item.key;
+            state.page = target;
             if (!Build()) Close();
             return;
         }
@@ -733,6 +800,8 @@ namespace THUGMenu
             }
         }
         Adopt();
+        // Screen drops stay off the game's menus (front end and pause)
+        RainDroplets::MenuOpen(Lookup("current_menu_anchor") || Lookup("dialog_box_anchor") || Lookup("keyboard_anchor"));
         if (state.updateFrame) state.updateFrame();
         return result;
     }

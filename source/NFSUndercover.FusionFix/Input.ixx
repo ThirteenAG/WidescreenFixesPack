@@ -187,6 +187,23 @@ namespace
         return shGetTextureInfo.unsafe_ccall<void*>(hash, returnDefault, includeUnloaded);
     }
 
+    // The menus (APT) map an image's pixels onto its texture by the texture's size. The sharp images are larger than
+    // the game's, so a menu image keeps the size of the texture it replaces, or it shows only a corner of the image.
+    void KeepMenuImageSize(SafetyHookContext& regs)
+    {
+        auto requested = regs.ebp;
+        auto info = reinterpret_cast<uint8_t*>(regs.eax);
+        if (!bTexturesLoaded || !ButtonImageHashes.contains(requested) || *reinterpret_cast<uint32_t*>(info + 0x0C) == requested)
+            return;
+
+        auto original = shGetTextureInfo.unsafe_ccall<uint8_t*>(requested, 0, 0);
+        if (!original)
+            return;
+        auto image = reinterpret_cast<float*>(regs.esi + 0x14);
+        image[0] = float(*reinterpret_cast<int16_t*>(original + 0x28));
+        image[1] = float(*reinterpret_cast<int16_t*>(original + 0x2A));
+    }
+
     int (__cdecl* LoadChunks)(void* data, int size, int flags) = nullptr;
 
     void LoadButtonTextures()
@@ -337,6 +354,10 @@ public:
 
             auto pattern = hook::pattern("53 56 57 8B 7C 24 10 85 FF 74 ? 8B C7 25 FF 00 00 00 8B 04 85");
             shGetTextureInfo = safetyhook::create_inline(pattern.get_first(), GetTextureInfo);
+
+            // Menu image creation: ebp = the requested texture hash, eax = its texture, esi = the image (size at +0x14)
+            pattern = hook::pattern("55 E8 ? ? ? ? 83 C4 0C 3B C3 89 46 24 74 ? 0F BF 48 28 F3 0F 2A C1 F3 0F 11 46 14 0F BF 50 2A F3 0F 2A C2 F3 0F 11 46 18 8B 40 0C 89 46 1C");
+            static auto MenuImageSizeHook = safetyhook::create_mid(pattern.get_first(42), KeepMenuImageSize);
 
             pattern = hook::pattern("8B 44 24 0C 56 8B 74 24 08 57 8B 7C 24 10 50 57 56 E8");
             LoadChunks = reinterpret_cast<decltype(LoadChunks)>(pattern.get_first());

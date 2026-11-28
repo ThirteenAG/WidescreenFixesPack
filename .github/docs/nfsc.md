@@ -28,6 +28,7 @@
 
 - **High frame rates** - the game simulates at the frame rate limit with precisely paced frames, so it adds frame pacing and selected high-frame-rate corrections; contrails, sparks and NOS trails look the same at any frame rate, with the effect rate limits working for every car, not just one
 - **Crash Fix** - saved progress is no longer lost after loading a profile, which was often followed by a crash
+- **Display Loss** - the game no longer crashes when another program takes the screen in exclusive fullscreen or changes the display mode; it waits until the display is back
 <br clear="both">
 
 ---
@@ -36,7 +37,7 @@
 
 <img src="https://thirteenag.github.io/screens/nfsc/race3.jpg" width="360" align="right" style="margin: 0 0 0 24px;" alt="Visual effects">
 
-- **In-Game Options** - window mode follows resolution, picture and movie options follow brightness, FOV follows the car camera, and HUD width follows the interface options. The remaining settings are under one **Plugins** category in the Options menu, also available while paused. It lists the fix first, then other loaded plugins with settings; each opens its own pages, presets and Restore Defaults. Back returns to the plugin list. Extra settings remain available in Plugins. The game's defaults reset the added controls on the current page. Settings are stored in `NFSCarbon.FusionFix.cfg` next to the plugin and can also be changed on fusionfix.io or in FusionFixHub.
+- **In-Game Options** - window mode follows resolution, picture and movie options follow brightness, FOV follows the car camera, and HUD width follows the interface options. The remaining settings are under one **Plugins** category in the Options menu, also available while paused. It lists the fix first, then other loaded plugins with settings; each opens its page: its preset, its settings or a row per category that opens them, and Restore Defaults. Every list scrolls through the screen's rows, and Back returns one level, to the row you came from. Extra settings remain available in Plugins. The game's defaults reset the added controls on the current page. Settings are stored in `NFSCarbon.FusionFix.cfg` next to the plugin and can also be changed on fusionfix.io or in FusionFixHub.
 - **Menu Text** - added settings keep the native font size and complete values. Long plugin values continue on timed pages. Select a setting to read its full name, value and description below the list; longer help continues on timed pages, six seconds a line. A separate notice appears after the first change that needs a restart; its OK returns to the plugin list
 - **Presets** - the fix's Plugins page offers Vanilla, Recommended and Enhanced (accept twice to apply). Vanilla keeps the original presentation and 60 Hz simulation rate with bug fixes; Recommended and Enhanced enable the corresponding improvements. Window mode, language and control preferences stay as they are
 - **Language** - the game's language in Plugins (Gameplay), after a restart; only languages whose text files are installed are listed

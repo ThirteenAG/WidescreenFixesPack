@@ -34,6 +34,8 @@ namespace PunisherMouse
     inline std::atomic<DWORD> inputThread{};
     inline bool useSample{};
     inline bool (*blocksInput)(){};
+    // Movement or buttons of a real mouse (input sent by programs has no device)
+    inline std::atomic_bool deviceInput{};
 
     inline void Clear()
     {
@@ -94,6 +96,8 @@ namespace PunisherMouse
         }
 
         const auto flags = mouse.usButtonFlags;
+        if (header.hDevice && (flags || (!(mouse.usFlags & MOUSE_MOVE_ABSOLUTE) && std::abs(mouse.lLastX) + std::abs(mouse.lLastY) > 2)))
+            deviceInput.store(true, std::memory_order_relaxed);
         if (flags & RI_MOUSE_WHEEL)
             sample.wheel += static_cast<SHORT>(mouse.usButtonData);
         constexpr USHORT buttonFlags = RI_MOUSE_BUTTON_1_DOWN | RI_MOUSE_BUTTON_1_UP | RI_MOUSE_BUTTON_2_DOWN |

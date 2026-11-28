@@ -46,7 +46,7 @@
 
 ## Settings
 
-Open **Settings → Plugins** to configure this fix and other installed plugins. Each plugin has its own presets and Restore Defaults. Select **Details** or press **F1** for the complete setting description; use Left and Right to read longer descriptions, and Escape to return.
+Open **Settings → Plugins** to configure this fix and other installed plugins. Each plugin has its own presets and Restore Defaults. Each list scrolls with Up and Down, Page Up/Page Down, Home/End or the mouse wheel; categories open their own list, and Escape returns to the row you came from. The selected setting's help is shown under the list; **F1** shows the complete description, and Escape returns.
 
 **Window Mode** sits below Resolution on the native Display page. Choose fullscreen, windowed or borderless, then restart when prompted. The Display page's Default button also resets Window Mode.
 

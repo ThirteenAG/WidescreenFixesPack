@@ -3,6 +3,7 @@
 #include "FixSettings.hpp"
 #include "Shared/NFS/Cursor.hpp"
 #include "Shared/NFS/DeviceLoss.hpp"
+#include "Shared/NFS/RenderList.hpp"
 #include "Shared/WidescreenFixConflict.hpp"
 
 // The settings' runtime interface for menu hosts and editors (AsiSettings_GetApi)
@@ -54,6 +55,11 @@ void Init()
 {
     NFSCursor::Initialize();
     NFSDeviceLoss::Install(true);
+    {
+        auto count = *hook::pattern("8B 35 ? ? ? ? 81 FE 00 10 00 00").get_first<uint32_t*>(2);
+        auto models = *hook::pattern("B8 ? ? ? ? B9 00 10 00 00 8D 9B 00 00 00 00 C7 00 00 00 00 00 83 C0 68").get_first<uint8_t*>(1);
+        NFSRenderList::Install(count, models, 0x68, 4, 7, true);
+    }
     auto pattern = hook::pattern("A1 ? ? ? ? 68 ? ? ? ? 50 FF 15 ? ? ? ? 8B 0D");
     hWnd.SetAddress(*pattern.get_first<HWND*>(1));
     WindowRect.SetAddress(*pattern.get_first<tagRECT*>(6));

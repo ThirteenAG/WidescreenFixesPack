@@ -63,5 +63,10 @@
   "borders.pillar": "Pillarbox",
   "borders.both": "Entrambi",
   "AnimatedCutsceneBorders": "Bande dei filmati animate",
-  "AnimatedCutsceneBorders.description": "Mantiene lo scorrimento originale delle bande superiori e inferiori. Disattivato le cambia istantaneamente."
+  "AnimatedCutsceneBorders.description": "Mantiene lo scorrimento originale delle bande superiori e inferiori. Disattivato le cambia istantaneamente.",
+  "GamepadIcons": "Tasti del controller",
+  "GamepadIcons.auto": "Auto",
+  "GamepadIcons.description": "I suggerimenti indicano i tasti del controller se è stato usato per ultimo il controller, altrimenti i tasti di tastiera e mouse. Auto usa i nomi Xbox.",
+  "pad.continue": "Premi %s per continuare.",
+  "pad.targets": "Muovi la levetta destra a sinistra o a destra"
 }

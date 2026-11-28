@@ -4,6 +4,8 @@ module;
 #include <atomic>
 #include "Shared/WindowCursor.hpp"
 #include "FixSettings.hpp"
+#include <tlhelp32.h>
+#include "Shared/RainDroplets.hpp"
 
 export module Window;
 import ComVars;
@@ -16,6 +18,7 @@ import Hud;
 import Video;
 import Bars;
 import Camera;
+import NativeMenu;
 
 
 void DrawFrameBorders(IDirect3DDevice9* device)
@@ -70,6 +73,7 @@ export namespace JCWindow
     {
         if (target == window)
         {
+            JCMenu::WindowMessage(target, message, wParam);
             LRESULT result = 0;
             if (JCOverlay::Message(target, message, wParam, lParam, result))
                 return result;
@@ -277,6 +281,7 @@ export namespace JCWindow
         JCCamera::Frame();
         DrawFrameBorders(currentDevice);
         JCUpdates::Tick();
+        RainDroplets::MenuOpen(JCHud::MenuShown() || JCMenu::MenuShown());
         JCUpdates::Draw(currentDevice, Screen.nWidth, Screen.nHeight, JCHud::MenuShown());
         JCOverlay::Present(currentDevice, window);
     }

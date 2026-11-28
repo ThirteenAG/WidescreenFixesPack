@@ -63,5 +63,10 @@
   "borders.pillar": "Pillarbox",
   "borders.both": "Ambos",
   "AnimatedCutsceneBorders": "Bordes de cinemáticas animados",
-  "AnimatedCutsceneBorders.description": "Conserva el movimiento original de los bordes superior e inferior. Desactivado los cambia al instante."
+  "AnimatedCutsceneBorders.description": "Conserva el movimiento original de los bordes superior e inferior. Desactivado los cambia al instante.",
+  "GamepadIcons": "Botones del mando",
+  "GamepadIcons.auto": "Auto",
+  "GamepadIcons.description": "Los avisos nombran los botones del mando si se usó el mando por última vez, y las teclas si se usó el teclado o el ratón. Auto usa los nombres de Xbox.",
+  "pad.continue": "Pulsa %s para continuar.",
+  "pad.targets": "Mueve el stick derecho a la izquierda o a la derecha"
 }

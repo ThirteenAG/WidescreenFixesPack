@@ -20,6 +20,7 @@
 - **Film grain** — Keeps its size at high resolutions.
 - **Camera** — No clipping into walls next to the camera at wide aspects.
 - **Display modes** — No startup crash on monitors with 256 or more display modes; the resolution list keeps all of them, including widths that aren't a multiple of eight.
+- **Display loss** — When the display is off or asleep, the game waits until it is back instead of stopping with an error.
 - **Frame rate** — The **VARIABLE** frame rate option is capped at the chosen limit instead of 120; the 30 and 60 FPS options stay as they are.
 - **Windows settings** — The game no longer turns off the sticky keys, toggle keys and filter keys shortcuts or changes mouse trails and the screen saver setting of Windows; the display stays on while the game runs.
 

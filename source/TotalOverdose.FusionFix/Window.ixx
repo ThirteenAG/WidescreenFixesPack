@@ -14,6 +14,7 @@ import ComVars;
 import Hud;
 import DeveloperOverlay;
 import Updates;
+import NativeMenu;
 
 // Window mode through the engine's own "fullscreen" configuration value: the fix answers its lookup (present, false)
 // for a window; the window's frame and size come from the shared window wrapper, borderless covers the monitor
@@ -84,6 +85,7 @@ LRESULT CALLBACK WindowProcedure(HWND window, UINT message, WPARAM wParam, LPARA
         RemoveWindowSubclass(window, WindowProcedure, id);
     if (window == hGameWindow.load())
     {
+        TODMenu::WindowMessage(window, message, wParam);
         const bool inactive = (message == WM_ACTIVATE && LOWORD(wParam) == WA_INACTIVE) || (message == WM_ACTIVATEAPP && !wParam);
         if (inactive || message == WM_KILLFOCUS)
         {

@@ -21,7 +21,20 @@ import xidi;
 
 void UpdateInput()
 {
-    MaxPaynePad::Update();
+    // The game never opens a DirectInput joystick, and Xidi starts reading the controller only when asked for one:
+    // without this its menu mapping (keys for the menus, Esc on Start) stayed off until the first vibration
+    static bool bXidiStarted = false;
+    if (!bXidiStarted)
+    {
+        if (auto send = XidiSendVibration.load(std::memory_order_acquire))
+        {
+            send(-1, 0, 0);
+            bXidiStarted = true;
+        }
+    }
+    // The menu mappings move the cursor with the right stick
+    const auto profile = GamepadProfile.load(std::memory_order_relaxed);
+    MaxPaynePad::Update(profile == eGamepadProfile::Menu || profile == eGamepadProfile::GraphicNovel);
     if constexpr (WFP::DeveloperOverlay)
         MaxPaynePad::ToOverlay(MaxPayneOverlay::Gamepad);
 }

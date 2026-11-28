@@ -30,7 +30,7 @@
 
 ## Options
 
-Open **Settings → Plugins → Manhunt Fusion Fix** for settings and per-plugin presets. Choose **Details** to read option help. **Settings → Video** also contains Field of View and HUD Aspect Ratio; use Left/Right to change them while playing. The game’s confirmed Default Settings action resets the fix’s options too. Window mode and Skip Intro need a restart.
+Open **Settings → Plugins → Manhunt Fusion Fix** for settings and per-plugin presets. Each list scrolls with Up and Down, Page Up/Page Down, Home/End or the mouse wheel, and the mouse selects the row under it; categories open their own list, and Back returns to the row you came from. **Settings → Video** also contains Field of View and HUD Aspect Ratio; use Left/Right to change them while playing. The game’s confirmed Default Settings action resets the fix’s options too. Window mode and Skip Intro need a restart.
 
 In FusionFixHub, Text Language follows the game when set to Auto, or you can choose English, French, German, Italian or Spanish. If Plugins is unavailable with your executable, configure the fix in FusionFixHub.
 

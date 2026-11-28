@@ -53,7 +53,7 @@
 
 ## Settings
 
-Open Options > Plugins > Splinter Cell Double Agent Fusion Fix in the single-player menu, including from Pause > Options. On/off options show On or Off, while indicator and color choices use names. More Pages reaches the remaining settings; F1 opens the selected option’s full help, and Back returns. FusionFixHub and fusionfix.io also configure the fix. HUD width changes apply to the HUD after the next loading screen: Auto puts the HUD at the screen edges, 4:3 keeps the original layout. The gameplay FOV multiplier changes the normal following camera; aiming, cinematic and minimap views keep their own framing.
+Open Options > Plugins > Splinter Cell Double Agent Fusion Fix in the single-player menu, including from Pause > Options. On/off options show On or Off, while indicator and color choices use names. Each list scrolls with Up and Down, Page Up/Page Down or the shoulder buttons, Home/End or the mouse wheel; categories open their own list, and Back returns to the row you came from. The selected option's help is shown under the list; F1 opens all of it. FusionFixHub and fusionfix.io also configure the fix. HUD width changes apply to the HUD after the next loading screen: Auto puts the HUD at the screen edges, 4:3 keeps the original layout. The gameplay FOV multiplier changes the normal following camera; aiming, cinematic and minimap views keep their own framing.
 
 Raw Mouse Input has a separate sensitivity multiplier. Raw Mouse Data bypasses Windows mouse speed and acceleration. Sensitivity changes apply while playing and are kept when changing presets. The live frame rate limit defaults to 60 FPS; Monitor follows the display refresh rate up to 60. Higher rates are not offered because AI and physics misbehave above 60 FPS.
 

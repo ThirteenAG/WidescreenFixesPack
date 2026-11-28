@@ -20,7 +20,7 @@ Install the release in the game directory. Configure it in the game's menus, on 
 
 Open **Options → Plugins → The Punisher Fusion Fix** for presets, window mode, cutscene borders, video framing, intro skipping and the update check. **Game Settings** also contains **HUD Aspect Ratio** and **FOV Multiplier** beside the game's options.
 
-Use **More Pages** and **Previous Pages** to browse a plugin's settings. **Details** describes the last selected option. **Back** returns to the previous page. Each plugin has its own preset and Restore Defaults action; those actions leave the joined Game Settings values unchanged. The game's confirmed **Restore Default Settings** action also resets the added Game Settings values. A restart notice appears when an option needs the game to restart.
+A plugin's settings are one list, or a row per category that opens its own list. The selected option's description is shown under the rows, and **Back** returns to the row you came from. Each plugin has its own preset and Restore Defaults action; those actions leave the joined Game Settings values unchanged. The game's confirmed **Restore Default Settings** action also resets the added Game Settings values. A restart notice appears when an option needs the game to restart.
 
 | Setting | Values | Default |
 |---|---|---|
@@ -36,6 +36,7 @@ Use **More Pages** and **Previous Pages** to browse a plugin's settings. **Detai
 | Confine cursor | On keeps the cursor inside the active game window; live | On |
 | Cutscene borders | Off, Letterbox, Pillarbox or Both; live | Both |
 | Animated cutscene borders | On slides the borders like the original; Off shows them at once; live | On |
+| Controller buttons | Auto (Xbox), Xbox, PlayStation or Nintendo button glyphs in prompts; live | Auto |
 | Check for updates | Off makes no network request; live | Off |
 
 Vanilla shows the intro and uses the original letterbox and video framing. Recommended and Enhanced skip the intro and use Fill for videos. The bundled videos are encoded at 4:3. Fill enlarges the theatrical clip using its verified black edges. It keeps the complete picture and titles visible. Hub texts are available in English, French, German, Italian and Spanish.
@@ -48,6 +49,25 @@ Windowed mode centers the exact rendering client size in the monitor work area. 
 
 The fix’s own text is available in English, French, German, Italian and Spanish. Choose **Text language** in FusionFixHub or the settings file; Auto follows the Windows display language. Reopen the menu after changing it.
 
+## Controller
+
+An Xbox-style controller works without setup: the bundled Xidi (`Xidi.32.dll` and `Xidi.ini` beside `pun.exe`) turns it into the game's default keys and mouse, laid out like the console versions. PlayStation and Switch controllers work through Steam Input or DS4Windows.
+
+| Button | Play | Menus |
+|---|---|---|
+| Left stick | Move | Select |
+| Right stick | Look and aim | Cursor |
+| RT / LT | Fire / alternate fire, throw | |
+| A | Grab and use, continue | Accept |
+| B | Quick kill | Back |
+| X / Y | Reload / next weapon | Delete (X) |
+| LB / RB | Crouch / jump and dodge | Previous / next page |
+| Left / right stick click | Release held enemy / fine aim | |
+| D-pad | Up: pick up weapon, down: Slaughter Mode, left: pistol, right: rifle | Select |
+| Back / Start | Help / pause | Back |
+
+In cutscenes A shows the next shot and Start skips the cutscene. While the controller was used last, prompts, tutorials and the screens' footers show its buttons with the console versions' button symbols; after keyboard or mouse input they show the keys again. Changed key bindings are not followed by the controller layout.
+
 Mouse input is read in batches on a separate thread. The game still applies its mouse sensitivity and handles button and wheel events.
 
 ## Known limits
@@ -55,6 +75,5 @@ Mouse input is read in batches on a separate thread. The game still applies its 
 - The field-of-view multiplier also affects scripted gameplay cameras outside cutscenes. Portraits and other menu views keep their original framing.
 - Window mode changes require a restart; live resizing and Alt+Enter switching are unavailable.
 - Anti-aliasing options are unavailable.
-- The PC version has no controller support; use the keyboard and mouse.
 
 <p align="center"> <a href="https://patreon.fusionfix.io/" target="_blank"><picture><source media="(max-width: 768px) and (prefers-color-scheme: dark)" srcset="https://fusionfix.io/credits/supporters.svg?theme=dark&layout=mobile"><source media="(max-width: 768px)" srcset="https://fusionfix.io/credits/supporters.svg?layout=mobile"><source media="(prefers-color-scheme: dark)" srcset="https://fusionfix.io/credits/supporters.svg?theme=dark"><img width="100%" src="https://fusionfix.io/credits/supporters.svg"></picture></a> <br /> <a href="https://github.com/sponsors/ThirteenAG"><picture><source media="(prefers-color-scheme: dark)" srcset="https://thirteenag.github.io/img/buttons/github-dark.svg"><img src="https://thirteenag.github.io/img/buttons/github.svg" width="250"></picture></a> <a href="https://ko-fi.com/thirteenag"><picture><source media="(prefers-color-scheme: dark)" srcset="https://thirteenag.github.io/img/buttons/kofi-dark.svg"><img src="https://thirteenag.github.io/img/buttons/kofi.svg" width="250"></picture></a> <a href="https://paypal.me/SergeyP13"><picture><source media="(prefers-color-scheme: dark)" srcset="https://thirteenag.github.io/img/buttons/paypal-dark.svg"><img src="https://thirteenag.github.io/img/buttons/paypal.svg" width="250"></picture></a> <a href="https://www.patreon.com/ThirteenAG"><picture><source media="(prefers-color-scheme: dark)" srcset="https://thirteenag.github.io/img/buttons/patreon-dark.svg"><img src="https://thirteenag.github.io/img/buttons/patreon.svg" width="250"></picture></a> <a href="https://boosty.to/thirteenag"><picture><source media="(prefers-color-scheme: dark)" srcset="https://thirteenag.github.io/img/buttons/boosty-dark.svg"><img src="https://thirteenag.github.io/img/buttons/boosty.svg" width="250"></picture></a><br><br> </p>

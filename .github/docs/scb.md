@@ -12,7 +12,7 @@
 
 ## Settings
 
-Open Settings → Plugins → Splinter Cell Blacklist Fusion Fix in the title or pause menu. Use the page links for more options and F1 for full help. Restart-only changes show a restart notice. Presets apply to this plugin after confirmation. FusionFixHub and fusionfix.io also edit the settings. The default setup enables split screen and keeps detection failure enabled in Ghost mode. The default frame rate limit is 60 FPS.
+Open Settings → Plugins → Splinter Cell Blacklist Fusion Fix in the title or pause menu. Each list scrolls with Up and Down, Page Up/Page Down, Home/End or the mouse wheel; categories open their own list, and B or Esc returns to the row you came from. The selected option's help is shown under the title; F1 shows all of it. Restart-only changes show a restart notice. Presets apply to this plugin after confirmation. FusionFixHub and fusionfix.io also edit the settings. The default setup enables split screen and keeps detection failure enabled in Ghost mode. The default frame rate limit is 60 FPS.
 
 Menus and dialogs remain in an undistorted, centered 16:9 area. The 3D view fills the screen, and HUD Aspect Ratio controls the width used by side HUD elements. Ambient occlusion and planar reflections are disabled during split screen.
 
@@ -99,7 +99,7 @@ New config for the Hunter game mode and coop campaign: Random, which randomizes 
 
 # Ghost Mode and Campaign
 
-Plugin adds an ability to disable mission failure on detection in Ghost mode and Campaign (SP and COOP).
+Plugin adds an ability to disable mission failure on detection in Ghost mode and Campaign (SP and COOP). In the Plugins menu the two options are named **Disable Mission Fail On Detection (Ghost)** and **Disable Mission Fail On Detection (Campaign)**.
 
 # Extra tweaks
 
@@ -115,7 +115,7 @@ Put edited ini configs in `update` folder.
 
 ## Known limits
 
-At frame rates above 100 FPS, guards may appear doubled. Some wall shadows can pop as the camera turns. After changing a setting, move to another row and back if its help line resets to "Plugins".
+Some wall shadows can pop as the camera turns. After changing a setting, move to another row and back if its help line resets to "Plugins".
 
 Render-resolution changes made during startup movies take effect after playback. Movie framing follows the current window size while the change is pending.
 

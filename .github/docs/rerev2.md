@@ -26,7 +26,7 @@
 
 ## Settings
 
-Open **Options → Plugins → Resident Evil Revelations 2 Fusion Fix** (the last row of the Options list) for the fix's settings and presets. Left and Right change a value, the **Details** row below a setting shows its full help, **More pages** and **Previous pages** move through the settings, and **Back** returns. A notice appears when a changed setting needs a restart. `scripts/ResidentEvilRevelations2.FusionFix.cfg` is created on first start; fusionfix.io and FusionFixHub change the same settings.
+Open **Options → Plugins → Resident Evil Revelations 2 Fusion Fix** (the last row of the Options list) for the fix's settings and presets. Each list scrolls as you move through it, and categories open their own list. Left and Right change a value, the **Details** row below the list shows the selected setting's full help, and **Back** returns to the row you came from. A notice appears when a changed setting needs a restart. `scripts/ResidentEvilRevelations2.FusionFix.cfg` is created on first start; fusionfix.io and FusionFixHub change the same settings.
 
 | Setting | Values | Default |
 |---|---|---|

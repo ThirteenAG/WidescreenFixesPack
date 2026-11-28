@@ -63,5 +63,10 @@
   "borders.pillar": "Pillarbox",
   "borders.both": "Beide",
   "AnimatedCutsceneBorders": "Animierte Filmstreifen",
-  "AnimatedCutsceneBorders.description": "Behält die originalen Bewegungen der oberen und unteren Filmstreifen bei. Aus schaltet sie sofort um."
+  "AnimatedCutsceneBorders.description": "Behält die originalen Bewegungen der oberen und unteren Filmstreifen bei. Aus schaltet sie sofort um.",
+  "GamepadIcons": "Controller-Tasten",
+  "GamepadIcons.auto": "Auto",
+  "GamepadIcons.description": "Tastenhinweise nennen die Tasten des Controllers, wenn zuletzt der Controller benutzt wurde, sonst die Tasten von Tastatur und Maus. Auto verwendet Xbox-Namen.",
+  "pad.continue": "Drücken Sie %s, um fortzufahren.",
+  "pad.targets": "Rechten Stick nach links oder rechts bewegen"
 }

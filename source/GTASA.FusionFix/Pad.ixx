@@ -398,10 +398,13 @@ namespace
         // hydraulics, the guns, flying)
         float look = context == Context::Frontend ? 1.0f : speed;
         float lookUp = RWGTA::PadOptions::LookUp(ry);
+        auto vehicle = context == Context::Frontend ? nullptr : PlayerVehicle();
+        // The classic scope looks with either stick, so the left one takes the right one's sign
+        const bool classicScope = context == Context::Classic && !vehicle && IsScopeMode(ActiveCameraMode());
         s.LeftStickX = ToAxis(lx);
-        s.LeftStickY = ToAxis(-ly);
+        s.LeftStickY = ToAxis(classicScope ? RWGTA::PadOptions::LookUp(ly) : -ly);
         s.RightStickX = ToCameraAxis(rx, look);
-        s.RightStickY = ToCameraAxis(context == Context::Frontend ? -ry : PlayerVehicle() ? -lookUp : lookUp, look);
+        s.RightStickY = ToCameraAxis(context == Context::Frontend ? -ry : vehicle ? -lookUp : lookUp, look);
 
         const To* layout = LayoutClassic;
         switch (context)

@@ -63,5 +63,8 @@
   "CutsceneBorders.pillarbox": "Seitenbalken",
   "CutsceneBorders.both": "Beide",
   "CutsceneBorders.description": "Letterbox behält die Balken des Spiels über und unter Zwischensequenzen; Seitenbalken halten das Bild auf breiteren Bildschirmen bei 4:3 zwischen Balken an den Seiten; Beide macht beides und zeigt den ursprünglichen Bildausschnitt; Aus füllt den Bildschirm. Wirkt sofort.",
-  "FOVFactor.description": "Multipliziert das Sichtfeld im Spiel. 1.0 behält den ursprünglichen Bildausschnitt; größere Werte erweitern die Sicht bis zu 150 Grad in der Breite. Zwischensequenzen behalten ihren Bildausschnitt. Wirkt sofort."
+  "FOVFactor.description": "Multipliziert das Sichtfeld im Spiel. 1.0 behält den ursprünglichen Bildausschnitt; größere Werte erweitern die Sicht bis zu 150 Grad in der Breite. Zwischensequenzen behalten ihren Bildausschnitt. Wirkt sofort.",
+  "menu.plugins": "Plugins",
+  "menu.restoredefaultshelp": "Setzt die Einstellungen dieser Seite auf ihre Standardwerte zurück.",
+  "menu.restartwarning": "Einige Einstellungen gelten erst nach einem Neustart des Spiels."
 }

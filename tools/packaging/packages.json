@@ -1526,12 +1526,22 @@
           "sign": true
         }
       ],
-      "files": [],
+      "files": [
+        {
+          "source": "data/PsiOpsTheMindgateConspiracy.FusionFix/Xidi.ini",
+          "destination": "Xidi.ini"
+        }
+      ],
       "dependencies": [
         {
           "id": "loader-x86",
           "member": "*.dll",
           "destination": "dinput8.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/Xidi.32.dll",
+          "destination": "Xidi.32.dll"
         }
       ]
     },
@@ -2958,6 +2968,10 @@
         {
           "source": "data/ThePunisher.FusionFix/d3d8.ini",
           "destination": "d3d8.ini"
+        },
+        {
+          "source": "data/ThePunisher.FusionFix/Xidi.ini",
+          "destination": "Xidi.ini"
         }
       ],
       "dependencies": [
@@ -2965,6 +2979,11 @@
           "id": "loader-x86",
           "member": "*.dll",
           "destination": "d3d8.dll"
+        },
+        {
+          "id": "xidi",
+          "member": "Xidi-*/Win32/Xidi.32.dll",
+          "destination": "Xidi.32.dll"
         }
       ]
     },

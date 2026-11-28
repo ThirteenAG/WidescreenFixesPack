@@ -27,13 +27,14 @@
 - **Fix** for sticky steering, where the opposite direction was ignored until the wheels were centred
 - **Audio** - 44.1 kHz output instead of 22 kHz
 - **Stability** - fixes the random "0xAAAAAAAA" crash on multi-core CPUs at its cause (the game's memory allocator wasn't thread safe), so the game no longer needs to run on a single CPU core
+- **Display Loss** - the game no longer crashes when another program takes the screen in exclusive fullscreen or changes the display mode; it waits until the display is back
 <br clear="both">
 
 ---
 
 ## Notes
 
-The settings of the Plugins menu show their full name, value and description in the rows below the list; long descriptions continue on the next page after a few seconds, and a change that needs a restart adds the restart warning there. The settings added to the game's Display options show their description the same way. Russian menu text needs game fonts with Cyrillic letters.
+The game's option screens have no help line, so the menu shows no setting descriptions. A change that needs a restart shows the restart warning in the last two rows, moving on by itself when it is longer. Russian menu text needs game fonts with Cyrillic letters.
 
 Menu Text Language (the language of the Plugins menu) is on fusionfix.io and in FusionFixHub; it follows the game language by default.
 
@@ -41,7 +42,7 @@ Menu Text Language (the language of the Plugins menu) is on fusionfix.io and in 
 
 <img src="https://thirteenag.github.io/screens/nfsu/drag.jpg" width="360" align="left" style="margin: 0 24px 0px 0;" alt="Resolution selector in the menu">
 
-- **In-Game Options** - one new **Plugins** entry in the Options menu and in the pause menu's options lists the Fusion Fix first, then every other plugin with settings (such as Fusion Rain Droplets), and in the main menu the game's credits. Each plugin's page has a **Preset** row (when the plugin has presets; accept asks to confirm), its settings, and **Restore Defaults** (resets only that page, accept twice); Back returns to the list. HUD Aspect Ratio, Field of View, FOV Scale, Console Gamma and Movie Display are in the game's own **Display** options, below the game's rows. When a changed setting applies after a restart, the menu shows the restart warning below the rows. All settings are stored in `NFSUnderground.FusionFix.cfg` next to the plugin, which the fix writes with every setting and a comment above each; settings can also be changed on fusionfix.io or in FusionFixHub.
+- **In-Game Options** - one new **Plugins** entry in the Options menu and in the pause menu's options lists the Fusion Fix first, then every other plugin with settings (such as Fusion Rain Droplets), and in the main menu the game's credits. Each plugin's page has a **Preset** row (when the plugin has presets; accept asks to confirm), its settings or a row per category that opens them, and **Restore Defaults** (resets only that page, accept twice). Every list scrolls a row at a time as the selection passes the first or last row shown, or with the mouse wheel; Back returns one level, to the row you came from. HUD Aspect Ratio, Field of View, FOV Scale, Console Gamma and Movie Display are in the game's own **Display** options, below the game's rows. When a changed setting applies after a restart, the menu shows the restart warning below the rows. All settings are stored in `NFSUnderground.FusionFix.cfg` next to the plugin, which the fix writes with every setting and a comment above each; settings can also be changed on fusionfix.io or in FusionFixHub.
 - **Skip Intro** - bypass startup FMVs and the title screen, straight to the game menu
 - **Presets** - Vanilla, Recommended (the defaults) and Enhanced presets in the Preset row of the fix's page set the picture, anti-aliasing, movie, camera, frame rate limit and intro options at once (accept asks to confirm); Vanilla uses the game's own 60 FPS cap, no anti-aliasing and original-aspect movies; Recommended adds SMAA; Enhanced also adds console gamma; window mode, language, sensitivities and dead zones stay as they are
 - **Language** - the game's language, chosen from the languages whose text and speech files are installed; applies after a restart

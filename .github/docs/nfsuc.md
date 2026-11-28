@@ -23,6 +23,7 @@
 - **Menus** - on screens wider than 16:9 the in-game main menu, the options menu and their dialogs keep their 16:9 layout with black sides, so decorations that were never meant to be seen stay hidden
 - **Music Crash Fix** - the interactive music no longer crashes on streams that aren't set up yet, which happened mostly when loading a profile on the 1.1.2.1 executables
 - **Settings** - a crash no longer resets the game's settings on the next start
+- **Display Loss** - the game no longer crashes when another program takes the screen in exclusive fullscreen or changes the display mode; it waits until the display is back
 - **Profiles** - load like on the Xbox 360, without the "Load complete" message
 <br clear="both">
 

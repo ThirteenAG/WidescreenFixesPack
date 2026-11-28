@@ -17,6 +17,7 @@ import Hud;
 import Frontend;
 import Cutscene;
 import Camera;
+import Pad;
 
 
 
@@ -154,6 +155,7 @@ void InitPatches()
     PunMenuLayout::Init(Screen.Width, Screen.Height);
     PunMenu::Init();
     PunisherUpdates::Init();
+    PunisherPad::Init();
 }
 
 

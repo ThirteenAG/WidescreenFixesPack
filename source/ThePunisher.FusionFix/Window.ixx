@@ -17,6 +17,7 @@ export namespace PunisherWindow
     inline std::atomic_bool PauseOnFocusLoss{ true };
     inline std::atomic_int MonitorRefreshRate{ 60 };
     inline bool (*Message)(HWND, UINT, WPARAM, LPARAM, LRESULT&){};
+    inline void (*Input)(UINT){};
     inline void (*WindowChanged)(HWND){};
 
     inline bool __cdecl RenderActive()
@@ -87,6 +88,8 @@ export namespace PunisherWindow
         }
         if (window != Window.load())
             return DefSubclassProc(window, message, wParam, lParam);
+        if (Input)
+            Input(message);
         LRESULT handled{};
         if (Message && Message(window, message, wParam, lParam, handled))
             return handled;

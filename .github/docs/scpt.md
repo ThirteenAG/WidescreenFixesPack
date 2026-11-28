@@ -36,13 +36,13 @@
 
 ## Settings
 
-Open Options → Plugins to change the fix’s settings in the game. Window Mode is on the Video page, and the added mouse options are on Controls. Select an option and press F1 or choose Details to read its full explanation. In Details, Left/Right changes pages; Escape or F1 returns.
+Open Options → Plugins to change the fix’s settings in the game. Window Mode is on the Video page, and the added mouse options are on Controls. Each list scrolls with Up and Down, Page Up/Page Down or the shoulder buttons, Home/End, the mouse wheel or the scroll bar; categories open their own list, and Back returns to the row you came from. The selected option's help is shown under the list; F1 (Y on a controller) shows all of it.
 
 Choose the resolution, HUD width, gameplay field of view and video framing in FusionFixHub or on fusionfix.io. Video framing offers the original 4:3 display or Fill, which never cuts the picture.
 
 HUD Aspect Ratio, Widescreen Scope and Vision Grain Scaling apply while playing. Shadow, reflection and post-process buffer sizes require a restart because the renderer creates those textures at startup.
 
-Gamepad Icons, Gamepad Camera Speed, Invert Gamepad Y and Vibration are under Options → Plugins → this fix. Choose More pages until the controller rows appear. Camera speed, inversion and vibration changes apply while playing. Keyboard and mouse input returns the training hints to keyboard keys. The prompts assume the supplied Xidi mappings and the default keyboard bindings. The fix fills in the pad bindings only where the game has none, so pad bindings changed in the game's own settings are kept.
+Gamepad Icons, Gamepad Camera Speed, Invert Gamepad Y and Vibration are under Options → Plugins → this fix. They are in the **Controls** category. Camera speed, inversion and vibration changes apply while playing. Keyboard and mouse input returns the training hints to keyboard keys. The prompts assume the supplied Xidi mappings and the default keyboard bindings. The fix fills in the pad bindings only where the game has none, so pad bindings changed in the game's own settings are kept.
 
 Raw Mouse Input has a separate sensitivity multiplier. Raw Mouse Data bypasses Windows mouse speed and acceleration. Sensitivity changes apply while playing and are kept when changing presets. The default frame rate limit is 60 FPS; higher rates can affect AI and physics.
 

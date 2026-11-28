@@ -59,7 +59,7 @@
 
 ## Settings and hub
 
-Open **Options → Plugins → Far Cry Fusion Fix** from the title or pause menu. More pages and Previous pages move through the settings; F1 opens full help for the selected option. Vanilla, Recommended and Enhanced presets are available. Changes that need a restart show a notice until their original value is restored or the game is restarted.
+Open **Options → Plugins → Far Cry Fusion Fix** from the title or pause menu. Each list scrolls with Up and Down, Page Up/Page Down, Home/End, the mouse wheel or its scroll bar; categories open their own list, and Back returns to the row you came from. The selected option's whole help is shown in the box under the list; a longer text moves through it a line at a time. Vanilla, Recommended and Enhanced presets are available. Changes that need a restart show a notice until their original value is restored or the game is restarted.
 
 The native Plugins menu supports English, French, German, Italian and Spanish. Select the text language in FusionFixHub or the CFG and reopen Plugins.
 
@@ -77,7 +77,7 @@ Movie framing also respects smaller videos embedded in menus: they are shown who
 
 Skip intro removes only the startup logos. Story videos, menu music and normal startup checks remain.
 
-Window mode supports framed, borderless and fullscreen output. Framed windows resize when you release the frame. If a display change fails, the game restores the previous size and mode.
+Window mode supports framed, borderless and fullscreen output. Framed windows resize when you release the frame. If a display change fails, the game restores the previous size and mode. When the game starts while the display is off or another program holds the screen in exclusive fullscreen, it waits and creates its display once it can, instead of failing.
 
 Cursor confinement follows focus and releases the pointer when disabled. Compatibility can depend on other input wrappers installed alongside the fix.
 

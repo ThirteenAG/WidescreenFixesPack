@@ -63,5 +63,10 @@
   "borders.pillar": "Pillarbox",
   "borders.both": "Both",
   "AnimatedCutsceneBorders": "Animated cutscene borders",
-  "AnimatedCutsceneBorders.description": "Keep the game's sliding top and bottom borders. Off switches them instantly."
+  "AnimatedCutsceneBorders.description": "Keep the game's sliding top and bottom borders. Off switches them instantly.",
+  "GamepadIcons": "Controller buttons",
+  "GamepadIcons.auto": "Auto",
+  "GamepadIcons.description": "Button prompts name the controller's buttons after the controller was used last, the keys after the keyboard or mouse. Auto uses Xbox names.",
+  "pad.continue": "Press %s to continue.",
+  "pad.targets": "Move the right stick left or right"
 }

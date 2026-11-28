@@ -105,8 +105,9 @@ namespace MaxPaynePad
         return length > 0.0f && (stick.x * x + stick.y * y) > 0.38f * length;
     }
 
-    // From the game's input update. Without a controller, XInput is asked again once a second.
-    inline void Update()
+    // From the game's input update. Without a controller, XInput is asked again once a second. heldSticksAreInput: the
+    // controller's mapping turns a held stick into keyboard or mouse input (the menus), which keeps the controller in use.
+    inline void Update(bool heldSticksAreInput = false)
     {
         auto& s = Get();
         s.previous = s.current;
@@ -137,17 +138,19 @@ namespace MaxPaynePad
             MaxPayneGamepadButtons::SelectController(s.slot);
         }
 
-        // Held input must not take the device back from a newer keyboard or mouse action
+        // Held input must not take the device back from a newer keyboard or mouse action. Releases count: the
+        // controller's mapping sends a key release for them.
         auto& now = s.current.Gamepad;
-        auto changed = [](SHORT x, SHORT y, POINT& lastActivity)
+        auto changed = [heldSticksAreInput](SHORT x, SHORT y, POINT& lastActivity)
         {
             const auto stick = ReadStick(x, y);
             if (stick.x == 0.0f && stick.y == 0.0f)
             {
+                const bool released = lastActivity.x != 0 || lastActivity.y != 0;
                 lastActivity = {};
-                return false;
+                return released;
             }
-            if (std::abs(x - lastActivity.x) <= 128 && std::abs(y - lastActivity.y) <= 128)
+            if (!heldSticksAreInput && std::abs(x - lastActivity.x) <= 128 && std::abs(y - lastActivity.y) <= 128)
                 return false;
             lastActivity = { x, y };
             return true;
@@ -156,7 +159,7 @@ namespace MaxPaynePad
         const bool rightChanged = changed(now.sThumbRX, now.sThumbRY, s.rightActivity);
         bool active = leftChanged || rightChanged;
         for (int i = 0; i < Button::Count && !active; ++i)
-            active = JustPressed(i);
+            active = JustPressed(i) || JustReleased(i);
         if (active)
             MaxPayneGamepadButtons::OnPadActivity();
     }

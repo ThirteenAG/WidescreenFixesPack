@@ -63,5 +63,10 @@
   "borders.pillar": "Pillarbox",
   "borders.both": "Les deux",
   "AnimatedCutsceneBorders": "Bandes cinématiques animées",
-  "AnimatedCutsceneBorders.description": "Conserve le mouvement d’origine des bandes en haut et en bas. Désactivé : changement instantané."
+  "AnimatedCutsceneBorders.description": "Conserve le mouvement d’origine des bandes en haut et en bas. Désactivé : changement instantané.",
+  "GamepadIcons": "Boutons de manette",
+  "GamepadIcons.auto": "Auto",
+  "GamepadIcons.description": "Les indications nomment les boutons de la manette si la manette a servi en dernier, sinon les touches du clavier ou de la souris. Auto utilise les noms Xbox.",
+  "pad.continue": "Appuyez sur %s pour continuer.",
+  "pad.targets": "Déplacez le stick droit à gauche ou à droite"
 }

@@ -61,7 +61,7 @@ https://user-images.githubusercontent.com/4904157/192846910-6ddfb3fb-3089-4553-b
 
 ## Settings
 
-Open Settings → Plugins → Splinter Cell Conviction Fusion Fix, from the title or pause menu. More Pages reaches the remaining options; F1 opens complete, scrollable help. Back returns to the previous page. Restart options show a notice when changed. FusionFixHub and fusionfix.io offer the same settings.
+Open Settings → Plugins → Splinter Cell Conviction Fusion Fix, from the title or pause menu. Each list scrolls with Up and Down, Page Up/Page Down, Home/End or the mouse wheel; categories open their own list, and B or Esc returns to the row you came from. The selected option's help is shown under the list; F1 (Y on a controller) opens all of it, scrollable. Restart options show a notice when changed. FusionFixHub and fusionfix.io offer the same settings.
 
 Local split screen is enabled by default; launching a second instance is optional. Gamepad camera speed and the gameplay FOV multiplier change live. FOV 1.00 is neutral; extra widening is bounded to 150°. The multiplier affects locomotion views; aiming, gadgets and cinematic cameras keep their own framing. Controller artwork applies after restarting because the game caches its Flash image library.
 

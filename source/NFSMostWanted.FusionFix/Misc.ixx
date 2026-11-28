@@ -563,6 +563,58 @@ public:
             };
             static auto SoundBufferHook1 = safetyhook::create_mid(pattern.get_first(0xE), CheckBuffer);
             static auto SoundBufferHook2 = safetyhook::create_mid(bufferUse.get_first(3), CheckBuffer);
+
+            // The sound library restarts on game mode changes: it frees the music player, makes it again, then makes
+            // the DirectSound device. When the device couldn't be made, the cleanup freed the music player, but the
+            // game went on starting and stopping music in the freed memory and crashed (also later, on the way to the
+            // main menu). A failed start keeps the music player and tries the device again for a while, and while
+            // the library has no music player, music isn't started or stopped.
+            {
+                static SafetyHookInline shStartOutput = {};
+                static SafetyHookInline shStartMusic = {};
+                static SafetyHookInline shStopMusic = {};
+                static int32_t* pMusicPlayerReady = *hook::pattern("83 3D ? ? ? ? 00 74 51 57 FF 35").get_first<int32_t*>(2);
+                struct SoundOutput
+                {
+                    // Starts the DirectSound output; makeMusicPlayer also makes the music player first
+                    static int __cdecl Start(int window, int makeMusicPlayer)
+                    {
+                        int result = shStartOutput.unsafe_ccall<int>(window, makeMusicPlayer);
+                        for (int attempt = 0; result < 0 && (makeMusicPlayer & 0xFF) && attempt < 20; attempt++)
+                        {
+                            Sleep(100);
+                            result = shStartOutput.unsafe_ccall<int>(window, 0);
+                        }
+                        return result;
+                    }
+
+                    // A music handle's stream: started into the handle's +0x28, stopped from there
+                    static int __cdecl StartMusic(uint8_t* handle, void* data)
+                    {
+                        if (!*pMusicPlayerReady)
+                            return 0;
+                        return shStartMusic.unsafe_ccall<int>(handle, data);
+                    }
+
+                    static int __cdecl StopMusic(uint8_t* handle)
+                    {
+                        if (!*pMusicPlayerReady || !*reinterpret_cast<void**>(handle + 0x28))
+                            return 0;
+                        return shStopMusic.unsafe_ccall<int>(handle);
+                    }
+                };
+                pattern = hook::pattern("55 8B EC 83 EC 34 53 33 DB 56 57 83 CF FF 38 5D 0C C7 05");
+                shStartOutput = safetyhook::create_inline(pattern.get_first(), SoundOutput::Start);
+
+                // The failure's cleanup: "push 1" (also free the music player) -> "push 0"
+                pattern = hook::pattern("85 C0 7D 10 6A 01 FF 75 08 E8 ? ? ? ? 59 59 8B C7");
+                injector::WriteMemory<uint8_t>(pattern.get_first(5), 0x00, true);
+
+                pattern = hook::pattern("56 E8 ? ? ? ? FF 74 24 0C 8B 44 24 0C FF 70 04 0F B7 05");
+                shStartMusic = safetyhook::create_inline(pattern.get_first(), SoundOutput::StartMusic);
+                pattern = hook::pattern("56 E8 ? ? ? ? 8B 44 24 08 FF 70 28 FF 70 04 E8");
+                shStopMusic = safetyhook::create_inline(pattern.get_first(), SoundOutput::StopMusic);
+            }
         };
     }
 } Misc;

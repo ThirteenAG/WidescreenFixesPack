@@ -79,5 +79,9 @@
   "checkupdates": "Check for updates",
   "checkupdates.description": "Check for a new fix version once when enabled. A notice appears in Plugins; FusionFixHub opens after the game exits if installed. Off makes no network request.",
   "update.availablehub": "An update for The Punisher Fusion Fix is available. FusionFixHub will open after you exit the game.",
-  "update.availablesite": "An update for The Punisher Fusion Fix is available at {page}"
+  "update.availablesite": "An update for The Punisher Fusion Fix is available at {page}",
+  "GamepadIcons": "Controller buttons",
+  "GamepadIcons.auto": "Auto",
+  "GamepadIcons.description": "Prompts show the controller's buttons once it is used, the keys after keyboard or mouse input. Auto: Xbox.",
+  "pad.interrogation": "Move the right stick"
 }

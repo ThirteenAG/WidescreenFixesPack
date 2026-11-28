@@ -228,8 +228,8 @@ export namespace TexturePack
                 entry.renderingOrder = 5;
                 entry.alphaUsageType = 2;
                 entry.alphaBlendType = 1;
-                entry.offsetT = 0x100;
                 entry.scaleS = 0x100;
+                entry.scaleT = 0x100;
 
                 // The same fields in a different layout, then the name with a length byte
                 std::vector<uint8_t> carbon(0x58, 0);
@@ -250,8 +250,8 @@ export namespace TexturePack
                 carbon[0x35] = entry.renderingOrder;
                 carbon[0x39] = entry.alphaUsageType;
                 carbon[0x3A] = entry.alphaBlendType;
-                put16(0x44, 0x100);
-                put16(0x46, 0x100);
+                put16(0x48, uint16_t(entry.scaleS));    // UV scale, 8.8 fixed point, as in the game's packs
+                put16(0x4A, uint16_t(entry.scaleT));
                 w.PutBytes(carbon.data(), carbon.size());
                 w.Put(uint8_t(texture.name.size() + 1));
                 w.PutBytes(texture.name.c_str(), texture.name.size() + 1);

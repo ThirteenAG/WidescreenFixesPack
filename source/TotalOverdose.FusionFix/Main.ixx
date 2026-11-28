@@ -12,6 +12,7 @@ import Movies;
 import Misc;
 import Window;
 import Updates;
+import NativeMenu;
 
 void InitializeFix()
 {
@@ -42,6 +43,7 @@ void InitializeFix()
     InstallFieldOfView();
     InstallFrame();
     Updates::Install();
+    TODMenu::Install();
 
     if (settings.Bool("MAIN.SkipIntro"))
         SkipIntro();

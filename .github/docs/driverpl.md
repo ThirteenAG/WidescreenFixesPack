@@ -25,7 +25,7 @@
 
 ## New Options
 
-Open **Options → Plugins → Driver: Parallel Lines Fusion Fix** for the fix’s settings and presets. Plugins is also available through Options in the pause menu. Press **F1** for the selected option’s complete help; use **Up / Down** to scroll and **F1 / Esc** to return. Options that need a restart show a warning. Each plugin has its own presets and Restore defaults. Presets leave the refresh-rate list setting unchanged. Choose **More pages** or **Previous page** to move through the fix’s settings.
+Open **Options → Plugins → Driver: Parallel Lines Fusion Fix** for the fix’s settings and presets. Plugins is also available through Options in the pause menu. Press **F1** for the selected option’s complete help; use **Up / Down** to scroll and **F1 / Esc** to return. Options that need a restart show a warning. Each plugin has its own presets and Restore defaults. Presets leave the refresh-rate list setting unchanged. Each list scrolls with Up and Down, Page Up/Page Down or the shoulder buttons, Home/End, the mouse wheel or the scroll arrows; categories open their own list, and Back returns to the row you came from.
 
 On first launch the fix writes `scripts/DriverParallelLines.FusionFix.cfg`. The settings can also be changed on fusionfix.io or in FusionFixHub. Defaults: free mouse look and automatic indicators on, field of view multiplier 1, highest refresh rate on, fullscreen, frame rate limit 60 FPS, SMAA on and Xbox 360 gamma off. With the mouse action map, free mouse look replaces the native Look Left/Right/Back actions; camera return controls require it. The controller action map keeps its native look controls.
 

@@ -25,7 +25,7 @@ Applies to the retail and Steam versions of Psychonauts.
 
 ## Options
 
-In Psychonauts, open the journal (Esc) and choose **Options → Plugins → Psychonauts Fusion Fix**, from the title screen or while playing. Point at a setting and press Enter or the pad's accept button for its next value. Left and Right step either way. Use More and Previous to page through the plugins and their settings. Select Restore defaults twice to reset a plugin's settings. The line at the bottom explains the row under the cursor and says when a change needs a restart. Back returns to the Plugins list, then to the game's options.
+In Psychonauts, open the journal (Esc) and choose **Options → Plugins → Psychonauts Fusion Fix**, from the title screen or while playing. Point at a setting and press Enter or the pad's accept button for its next value. Left and Right step either way. Each list scrolls a row at a time with the mouse wheel or the arrows beside it, and categories open their own list. Select Restore defaults twice to reset a plugin's settings. The line at the bottom explains the row under the cursor and says when a change needs a restart. Back returns to the list you came from, on the same row, then to the game's options.
 
 | Setting | Values | Default | Applies |
 |---|---|---|---|

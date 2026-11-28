@@ -22,6 +22,7 @@
 
 - **Field of view** — Adjusts the gameplay view; aiming and cutscenes keep their original framing.
 - **HUD aspect ratio** — Auto spreads the HUD across the whole screen; 4:3, 16:9, 21:9 or 32:9 keep it in a centred box of that shape.
+- **Cutscene borders** — Letterbox keeps the game's bars above and below, Pillarbox keeps cutscenes inside the 16:9 area with bars at the sides on wider screens, Both (default) does both, as the game looks on a 16:9 screen, and Off fills the screen. Without the bars the picture fills the height and keeps its framing; wider views show more at the sides.
 - **Split screen layout** — Game keeps the game's own split screen (one player above the other, its split mode option chooses the size). Side by side gives each player the left or right half; on a 32:9 screen that is a 16:9 view per player. Each player's HUD, prompts, subtitles and pause menu are scaled to fit their half.
 - **Frame rate limit** — 60 FPS by default, Unlimited, monitor refresh rate or a chosen rate. This works alongside the game’s own frame rate option.
 - **Menu language** — Choose the Plugins-page language in FusionFixHub or the settings file; Auto follows the game. Reopen the page to apply it.
@@ -61,8 +62,8 @@
 The game's Options menu (at the title screen and in the pause menu) has the fix's settings: **GAME SETTINGS** gets
 Field of view, Modern controls, Laser sight with keyboard/mouse and Knife parry under the game's own rows (its Restore
 to default resets them too), and the added **PLUGINS** row lists the fix and every other loaded plugin with settings.
-Each plugin's page has its preset, its settings and Restore defaults for that page. FusionFixHub and fusionfix.io change
-the same settings; the first launch creates `scripts/ResidentEvil5.FusionFix.cfg`. **Vanilla** shows the logos; **Recommended** skips them; **Enhanced** also turns off the colour filter. Modern controls, laser sight, turn speed while moving and knife parry remain player choices. The field of view, HUD aspect ratio, split screen layout, controller icons, frame rate limit, cursor confinement, pause when unfocused, colour filter, modern
+Each plugin's page has its preset, its settings or a row per category that opens them, and Restore defaults for that page. The lists scroll, also with the mouse wheel, and Back returns to the row you came from. FusionFixHub and fusionfix.io change
+the same settings; the first launch creates `scripts/ResidentEvil5.FusionFix.cfg`. **Vanilla** shows the logos; **Recommended** skips them; **Enhanced** also turns off the colour filter. Modern controls, laser sight, turn speed while moving and knife parry remain player choices. The field of view, HUD aspect ratio, cutscene borders, split screen layout, controller icons, frame rate limit, cursor confinement, pause when unfocused, colour filter, modern
 controls, laser sight, turn speed while moving, knife parry and update check apply at once. Reopen the Plugins page after changing its language;
 window mode, intro skipping and RGB lighting apply after a restart. The window mode and update check are the player's choice.
 
@@ -71,8 +72,6 @@ window mode, intro skipping and RGB lighting apply after a restart. The window m
 - The game is already Hor+ at any aspect.
 - Movies keep their proportions as the game fits them (the 16:9 logo movies with black bars at the sides on wider
   screens; the 2.35:1 opening movie with its baked bars zoomed past), so there is no movie setting.
-- Cutscenes keep the game's own 2.35:1 frame: black bars above and below on screens narrower than 2.35:1, at the sides on
-  wider ones. There is no setting to remove the bars: the engine's cinematic mode sets that frame itself.
 - The chapter title cards and the PAUSED label stay where the game places them in the 16:9 area.
 - The fix doesn't force a window mode: **Window mode** applies when the game's own full screen option is off.
 - Side-by-side split screen keeps the game's split HUD layout, scaled down to fit each half and centred in it, so on

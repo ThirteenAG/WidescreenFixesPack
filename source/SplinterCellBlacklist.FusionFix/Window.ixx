@@ -48,6 +48,7 @@ namespace Window
 
     int lastMode = -1;          // of the last SetRes
     bool fullscreenLost = false; // exclusive fullscreen was left because the window isn't active
+    bool direct3D9 = false;      // the Direct3D 9 executable
 
     void Subclass();
 
@@ -219,6 +220,15 @@ namespace Window
         }
         lastMode = newMode;
         auto result = shSetRes.fastcall<int>(device, edx, viewport, width, height, mode, refresh, adapter);
+        // The Direct3D 9 renderer checks its formats against the desktop's current mode before it creates the device.
+        // While another program holds the screen in a mode of its own the checks fail, and the game went on without a
+        // renderer and crashed. The first setup waits until the screen can be used.
+        const auto start = GetTickCount64();
+        while (!result && direct3D9 && !*reinterpret_cast<void**>(device + 168) && GetTickCount64() - start < 60000)
+        {
+            Sleep(100);
+            result = shSetRes.fastcall<int>(device, edx, viewport, width, height, mode, refresh, adapter);
+        }
         if (result && viewport)
             windowReady.store(true);
         Subclass();
@@ -450,7 +460,9 @@ export void InitWindow()
         regs.edi = position.y;
     });
 
-    pattern = find_pattern("55 8B EC 83 EC 2C 83 7D 0C 00 53 56 57 8B F1 7F 09 8B 86 B4 00 00 00", "55 8B EC 83 EC 2C A1 ? ? ? ? 33 C5 89 45 FC 83 7D 0C 00 8B 45 08 53");
+    auto setRes11 = hook::pattern("55 8B EC 83 EC 2C 83 7D 0C 00 53 56 57 8B F1 7F 09 8B 86 B4 00 00 00");
+    direct3D9 = setRes11.empty();
+    pattern = direct3D9 ? hook::pattern("55 8B EC 83 EC 2C A1 ? ? ? ? 33 C5 89 45 FC 83 7D 0C 00 8B 45 08 53") : setRes11;
     shSetRes = safetyhook::create_inline(pattern.get_first(), SetRes);
 
     pattern = hook::pattern("55 8B EC 6A FF 68 ? ? ? ? 64 A1 00 00 00 00 50 83 EC 10 53 56 57 A1 ? ? ? ? 33 C5 50 8D 45 F4 64 A3 00 00 00 00 8B D9 89 5D F0 33 F6 39 35 ? ? ? ?");

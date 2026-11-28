@@ -21,6 +21,7 @@ import Movies;
 import Focus;
 import Cinematics;
 import Hud;
+import Pad;
 
 void InitializeGame()
 {
@@ -58,6 +59,7 @@ void InitializeGame()
 
     PsiOpsCamera::Init();
     PsiOpsCinematics::Init();
+    PsiOpsPad::Init();
 
     if (settings.Bool("MAIN.SkipIntro"))
     {

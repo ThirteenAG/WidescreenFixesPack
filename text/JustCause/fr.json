@@ -63,5 +63,8 @@
   "CutsceneBorders.pillarbox": "Bandes latérales",
   "CutsceneBorders.both": "Les deux",
   "CutsceneBorders.description": "Letterbox garde les bandes du jeu au-dessus et au-dessous des cinématiques ; Bandes latérales garde l'image en 4:3 entre des bandes sur les côtés sur les écrans plus larges ; Les deux fait les deux et montre le cadrage d'origine ; Désactivé remplit l'écran. S'applique immédiatement.",
-  "FOVFactor.description": "Multiplie le champ de vision en jeu. 1.0 conserve le cadrage d'origine ; des valeurs plus élevées élargissent la vue, jusqu'à 150 degrés de large. Les cinématiques gardent leur cadrage. S'applique immédiatement."
+  "FOVFactor.description": "Multiplie le champ de vision en jeu. 1.0 conserve le cadrage d'origine ; des valeurs plus élevées élargissent la vue, jusqu'à 150 degrés de large. Les cinématiques gardent leur cadrage. S'applique immédiatement.",
+  "menu.plugins": "Plugins",
+  "menu.restoredefaultshelp": "Rétablit les valeurs par défaut des réglages de cette page.",
+  "menu.restartwarning": "Certains réglages nécessitent un redémarrage du jeu."
 }

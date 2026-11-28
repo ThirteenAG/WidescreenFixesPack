@@ -12,6 +12,8 @@ export namespace PsiOpsFocus
     inline SafetyHookInline updateHook;
     inline void(__thiscall* requestPause)(void*, int) = nullptr;
     inline std::atomic<bool> enabled{ true };
+    // The game's pause level after its update: 0 while playing, above 0 for menus, dialogs and the focus pause
+    inline std::atomic<int> pauseLevel{};
 
     inline uintptr_t __fastcall Update(void* self, void*)
     {
@@ -27,7 +29,9 @@ export namespace PsiOpsFocus
         }
         if (pause)
             requestPause(self, 1);
-        return updateHook.unsafe_thiscall<uintptr_t>(self);
+        const auto result = updateHook.unsafe_thiscall<uintptr_t>(self);
+        pauseLevel.store(*reinterpret_cast<int*>(static_cast<uint8_t*>(self) + 0x70), std::memory_order_relaxed);
+        return result;
     }
 
     inline void Init()

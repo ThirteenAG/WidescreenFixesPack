@@ -4,8 +4,11 @@ module;
 #include "FixSettings.hpp"
 #include "Shared/CursorConfinement.hpp"
 #include <d3d9.h>
+#include <array>
 #include <atomic>
 #include <stdexcept>
+#include <utility>
+#include <vector>
 #include "FloatingPoint.hpp"
 
 export module Window;
@@ -320,6 +323,59 @@ export namespace GodfatherWindow
         return result;
     }
 
+    // A vertex buffer Lock fails while another program changes the display mode. The renderer ignores the result
+    // and wrote its vertices (the mouse cursor first) through the null pointer. A failed Lock now hands out scratch
+    // memory; the frame isn't shown anyway.
+    SafetyHookInline createVertexBufferHook;
+    std::array<SafetyHookInline, 4> lockHooks;
+    std::array<void*, 4> lockTargets{};
+    std::vector<uint8_t> lockScratch;
+
+    template<size_t I>
+    HRESULT WINAPI LockVertexBuffer(IDirect3DVertexBuffer9* buffer, UINT offset, UINT size, void** data, DWORD flags)
+    {
+        const auto result = lockHooks[I].unsafe_stdcall<HRESULT>(buffer, offset, size, data, flags);
+        if (FAILED(result) && data)
+        {
+            D3DVERTEXBUFFER_DESC description{};
+            const size_t length = size ? size : (SUCCEEDED(buffer->GetDesc(&description)) ? description.Size : 0);
+            if (lockScratch.size() < length + 1)
+                lockScratch.resize(length + 1);
+            *data = lockScratch.data();
+        }
+        return result;
+    }
+
+    template<size_t... I>
+    constexpr std::array<void*, sizeof...(I)> LockFunctions(std::index_sequence<I...>)
+    {
+        return { reinterpret_cast<void*>(&LockVertexBuffer<I>)... };
+    }
+
+    HRESULT WINAPI CreateVertexBuffer(IDirect3DDevice9* target, UINT length, DWORD usage, DWORD format, D3DPOOL pool,
+        IDirect3DVertexBuffer9** output, HANDLE* shared)
+    {
+        const auto result = createVertexBufferHook.unsafe_stdcall<HRESULT>(target, length, usage, format, pool, output, shared);
+        if (SUCCEEDED(result) && output && *output && target == device)
+        {
+            // Each kind of buffer of the runtime has its own Lock
+            static const auto functions = LockFunctions(std::make_index_sequence<std::tuple_size_v<decltype(lockHooks)>>{});
+            const auto lock = (*reinterpret_cast<void***>(*output))[11];
+            for (size_t i = 0; i < lockTargets.size(); ++i)
+            {
+                if (lockTargets[i] == lock)
+                    break;
+                if (!lockTargets[i])
+                {
+                    lockTargets[i] = lock;
+                    lockHooks[i] = safetyhook::create_inline(lock, functions[i]);
+                    break;
+                }
+            }
+        }
+        return result;
+    }
+
     HRESULT WINAPI CreateDevice(IDirect3D9* d3d, UINT adapter, D3DDEVTYPE type, HWND focus, DWORD behavior,
         D3DPRESENT_PARAMETERS* parameters, IDirect3DDevice9** output)
     {
@@ -341,6 +397,8 @@ export namespace GodfatherWindow
                 beginSceneHook = safetyhook::create_inline(methods[41], BeginScene);
             if (!endSceneHook)
                 endSceneHook = safetyhook::create_inline(methods[42], EndScene);
+            if (!createVertexBufferHook)
+                createVertexBufferHook = safetyhook::create_inline(methods[26], CreateVertexBuffer);
             if (parameters)
                 Size(*parameters);
         }

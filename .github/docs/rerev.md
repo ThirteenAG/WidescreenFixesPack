@@ -13,6 +13,7 @@
 ## Fixes
 
 - **Resolution list** — Every display mode of the monitor.
+- **Display loss** — When the display is off or asleep, the game waits until it is back instead of stopping with an error.
 - **Ultrawide and narrow screens** — The game renders at the screen's own aspect with the same vertical view (Hor+). Menus, the file viewer and other 2D screens keep their 16:9 shape in the middle of the screen.
 - **HUD** — The objective, the minimap and the equipment panels sit at the screen edges; button prompts and messages stay centered.
 - **Genesis scanner** — Black side panels extend the scanner's bezel across ultrawide displays while the scanner is raised.
@@ -25,7 +26,7 @@
 
 ## Settings
 
-Open **Options → Plugins → Resident Evil Revelations Fusion Fix** (the last row of the Options list) for the fix's settings and presets. **More pages** and **Previous pages** move through the settings, **Details** or F1 shows the full help of the selected setting, and **Back** returns. A notice appears when a changed setting needs a restart. `scripts/ResidentEvilRevelations.FusionFix.cfg` is created on first start; fusionfix.io and FusionFixHub change the same settings.
+Open **Options → Plugins → Resident Evil Revelations Fusion Fix** (the last row of the Options list) for the fix's settings and presets. Each list scrolls with Up and Down or the mouse wheel; categories open their own list, and **Back** returns to the row you came from. The bottom of the screen shows the start of the selected setting's help; **Details** or F1 shows all of it. A notice appears when a changed setting needs a restart. `scripts/ResidentEvilRevelations.FusionFix.cfg` is created on first start; fusionfix.io and FusionFixHub change the same settings.
 
 | Setting | Values | Default |
 |---|---|---|
@@ -54,7 +55,7 @@ The game supports Xbox controllers natively and shows their buttons.
 ## Known limits
 
 - The game's own Full Screen option uses exclusive full screen; window sizes follow the game's resolution list.
-- PlayStation and Nintendo icon styles have not yet been verified in game; controller diagrams and other artwork may retain Xbox labels.
+- PlayStation and Nintendo icons replace the button symbols in on-screen text; controller diagrams and other artwork keep their Xbox labels.
 
 ## Installation
 

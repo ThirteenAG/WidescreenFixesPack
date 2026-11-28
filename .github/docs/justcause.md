@@ -28,7 +28,7 @@
 
 ## Settings
 
-Change the settings on fusionfix.io or in FusionFixHub. The first launch creates `scripts/JustCause.FusionFix.cfg`.
+Settings › Plugins, in the main menu and in the pause menu, lists the fix and the other installed plugins. A plugin's page has its preset, a row per category (Display, Camera, Game) and Default settings; a category lists its settings with their values beside them, the current one bright, as on the game's own settings pages. Settings marked * apply after a restart. The line under the list describes the selected setting. Up/Down select (holding repeats), Left/Right change the value, Return opens a category, Escape goes back to the row it came from; Page Up/Page Down and Home/End jump through long lists and the mouse wheel scrolls them. A controller works the same way: d-pad or left stick, A, B, and the shoulder buttons for a page. F1 shows the whole help text when it is longer than two lines. fusionfix.io and FusionFixHub change the same settings. The first launch creates `scripts/JustCause.FusionFix.cfg`.
 
 | Setting | Values | Default | Applies |
 |---|---|---|---|
@@ -48,7 +48,6 @@ Presets: Vanilla keeps the original cinematic bars, shows the logo videos and le
 
 ## Known limits
 
-- No page in the game's own settings menu: its menu pages come from the game's packed menu data, so the fix's settings are on fusionfix.io and in FusionFixHub.
 - The controller uses the game's own controller bindings; button prompts show keyboard keys.
 
 ## Installation
@@ -56,7 +55,7 @@ Presets: Vanilla keeps the original cinematic bars, shows the logo videos and le
 1. Download the fix archive from this release.
 2. Extract the archive into the game folder, beside the game executable, preserving the folders in the archive.
 3. Launch the game once to create `scripts/JustCause.FusionFix.cfg`.
-4. Configure the fix on fusionfix.io or in FusionFixHub. Restart the game when an option requires it.
+4. Configure the fix in Settings › Plugins, on fusionfix.io or in FusionFixHub. Restart the game when an option requires it.
 
 
 

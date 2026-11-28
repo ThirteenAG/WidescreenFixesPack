@@ -79,5 +79,9 @@
   "checkupdates": "Nach Updates suchen",
   "checkupdates.description": "Prüft beim Aktivieren einmal auf eine neue Version. Ein Hinweis erscheint unter Plugins; FusionFixHub öffnet sich nach Spielende, falls installiert. Aus sendet keine Netzwerkanfrage.",
   "update.availablehub": "Ein Update für The Punisher Fusion Fix ist verfügbar. FusionFixHub öffnet sich nach Spielende.",
-  "update.availablesite": "Ein Update für The Punisher Fusion Fix ist auf {page} verfügbar."
+  "update.availablesite": "Ein Update für The Punisher Fusion Fix ist auf {page} verfügbar.",
+  "GamepadIcons": "Controller-Tasten",
+  "GamepadIcons.auto": "Auto",
+  "GamepadIcons.description": "Hinweise zeigen die Controllertasten, sobald er benutzt wird, nach Tastatur- oder Mauseingaben die Tasten. Auto: Xbox.",
+  "pad.interrogation": "Den rechten Stick bewegen"
 }

@@ -63,5 +63,8 @@
   "CutsceneBorders.pillarbox": "Bande laterali",
   "CutsceneBorders.both": "Entrambe",
   "CutsceneBorders.description": "Letterbox mantiene le bande del gioco sopra e sotto le scene; Bande laterali tiene l'immagine in 4:3 tra bande ai lati sugli schermi più larghi; Entrambe fa tutte e due e mostra l'inquadratura originale; Disattivato riempie lo schermo. Si applica subito.",
-  "FOVFactor.description": "Moltiplica il campo visivo di gioco. 1.0 mantiene l'inquadratura originale; valori più alti allargano la visuale, fino a 150 gradi in orizzontale. Le scene d'intermezzo mantengono la loro inquadratura. Si applica subito."
+  "FOVFactor.description": "Moltiplica il campo visivo di gioco. 1.0 mantiene l'inquadratura originale; valori più alti allargano la visuale, fino a 150 gradi in orizzontale. Le scene d'intermezzo mantengono la loro inquadratura. Si applica subito.",
+  "menu.plugins": "Plugin",
+  "menu.restoredefaultshelp": "Riporta le impostazioni di questa pagina ai valori predefiniti.",
+  "menu.restartwarning": "Alcune impostazioni richiedono il riavvio del gioco."
 }

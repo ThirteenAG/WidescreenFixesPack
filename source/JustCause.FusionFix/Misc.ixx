@@ -15,6 +15,7 @@ import Camera;
 import Window;
 import DeveloperOverlay;
 import Updates;
+import NativeMenu;
 
 struct testParam
 {
@@ -161,6 +162,7 @@ void InitializeGame()
     JCCamera::Install();
     JCOverlay::Install();
     JCUpdates::Init();
+    JCMenu::Init();
     JCResolution::Init();
     std::tie(Screen.nWidth, Screen.nHeight) = JCResolution::Desktop();
 

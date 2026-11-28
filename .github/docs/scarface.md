@@ -14,7 +14,7 @@
 
 Use the bundled `vorbisfile.dll` ASI loader together with Xidi's `dinput8.dll`, `Xidi.32.dll` and `Xidi.ini`.
 
-Open **Options → Plugins → Scarface Fusion Fix**. Other plugins with settings appear beside it. Left and Right change a value; Enter selects a page or confirms a preset. Move from an option to **Details** to read its help, with **More pages** for longer descriptions. Back returns through the pages. A separate restart line appears when a startup setting changes.
+Open **Options → Plugins → Scarface Fusion Fix**. Other plugins with settings appear beside it. Each list scrolls as you move through it, and categories open their own list. Left and Right change a value; Enter opens a category or confirms a preset. Back returns one level, to the row you came from. A separate restart line appears when a startup setting changes.
 
 The fix creates `scripts/Scarface.FusionFix.cfg` on first launch. FusionFixHub uses the same settings. FusionFixHub can override the fix's text language. Auto follows the game's language when it is supported. Vanilla, Recommended and Enhanced presets apply settings whose values differ across presets. Controller artwork, HUD placement and window mode are independent choices.
 

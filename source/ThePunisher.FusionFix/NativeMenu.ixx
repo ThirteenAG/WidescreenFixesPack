@@ -630,9 +630,13 @@ export namespace PunMenu
     // play and cutscenes draw none. Decided once a frame, before it is shown.
     inline ULONGLONG lastScreenDraw{};
     inline void (*NextFrame)(IDirect3DDevice9*) = nullptr;
+    inline bool ScreenShown()
+    {
+        return GetTickCount64() - lastScreenDraw < 250;
+    }
     inline void Presented(IDirect3DDevice9* device)
     {
-        RainDroplets::MenuOpen(GetTickCount64() - lastScreenDraw < 250);
+        RainDroplets::MenuOpen(ScreenShown());
         if (NextFrame)
             NextFrame(device);
     }

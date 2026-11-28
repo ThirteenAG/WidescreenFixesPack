@@ -20,11 +20,12 @@
 - **Focus and cursor** — Optional pause while unfocused and cursor confinement while the game is active. In windowed mode, the Windows pointer follows the game’s cursor visibility.
 - **Frame limiter** — A live limit from 30 to 1000 FPS, Unlimited, or the monitor's refresh rate.
 - **Skip intro** — Skip publisher, middleware and legal movies; story movies still play.
+- **Controller** — An Xbox-style controller works without setup, laid out like the console version, and prompts show its buttons while it is in use.
 - **Updates** — An optional update notice in the native Plugins menu. Update checks are off by default.
 
 ## Options
 
-Open **Options → Plugins → Psi-Ops Fusion Fix** from the title or pause menu. **Field of view factor** also appears in **Graphics**. Space selects a native menu row; Escape returns. More and Previous move between pages, and Details shows the selected option's full description.
+Open **Options → Plugins → Psi-Ops Fusion Fix** from the title or pause menu. **Field of view factor** also appears in **Graphics**. Space selects a native menu row; Escape returns. Each list scrolls a line at a time, also with the mouse wheel, and categories open their own list. **Details** below a list of settings shows the selected option's full description, and Back returns to the row you came from.
 
 The page has one Preset row: Vanilla, Recommended or Enhanced. Vanilla keeps the original cutscene letterbox; Recommended and Enhanced also add pillarbox bars. Presets preserve personal choices such as resolution, window mode and language. A separate notice appears when a changed setting needs a restart; reverting the setting clears the notice.
 
@@ -39,14 +40,33 @@ The page has one Preset row: Vanilla, Recommended or Enhanced. Vanilla keeps the
 | Resolution width / height | Desktop | Restart |
 | Confine cursor | On | Live |
 | Pause when unfocused | On | Live |
+| Controller buttons | Auto (Xbox) | Live |
 | Frame limit | 60 FPS | Live |
 | Check for updates | Off | Live |
 
 Resolution and language can also be configured through fusionfix.io or FusionFixHub. A resolution value of 0 uses the desktop.
 
+## Controller
+
+The bundled Xidi (`Xidi.32.dll` and `Xidi.ini` beside `PsiOps.exe`) turns an Xbox-style controller into the game's default keys and mouse, laid out like the console version. PlayStation and Switch controllers work through Steam Input or DS4Windows.
+
+| Button | Play | Menus |
+|---|---|---|
+| Left stick | Move | Select |
+| Right stick | Look and aim | Cursor |
+| RT / LT | Fire / telekinesis | |
+| A | Action and jump | Accept |
+| B | Wall move | Back |
+| X / Y | Melee / lock on | Back (Y) |
+| LB / RB | Mind drain / switch weapon | |
+| Left / right stick click | Crouch / sniper zoom | |
+| D-pad | Up: pyrokinesis, down: mind control, left: remote viewing, right: aura view | Select |
+| Back / Start | Inventory / pause | Inventory / back |
+
+While telekinesis is held, the D-pad raises and lowers the object; through the sniper scope it zooms in and out. While the controller was used last, objectives, tips and the menus' Cancel and Back show its buttons, with the console version's symbols for **Controller buttons** PlayStation; after keyboard or mouse input they show the keys again. Changed key bindings are not followed by the controller layout.
+
 ## Known limits
 
-- There is no controller support in the PC version.
 - If the installed font lacks an accented letter, menu text uses a readable spelling.
 - The fix uses immediate presentation so the frame limiter can control pacing; the game’s VSync setting is overridden.
 - Window mode and resolution changes require a restart. Alt+Enter and live window resizing are not supported; the native resolution picker keeps its legacy modes. Use the fix's resolution settings for other sizes.

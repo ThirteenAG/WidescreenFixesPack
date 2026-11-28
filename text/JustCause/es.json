@@ -63,5 +63,8 @@
   "CutsceneBorders.pillarbox": "Barras laterales",
   "CutsceneBorders.both": "Ambas",
   "CutsceneBorders.description": "Letterbox mantiene las barras del juego arriba y abajo de las escenas; Barras laterales mantiene la imagen en 4:3 entre barras a los lados en pantallas más anchas; Ambas hace las dos cosas y muestra el encuadre original; Desactivado llena la pantalla. Se aplica al instante.",
-  "FOVFactor.description": "Multiplica el campo de visión del juego. 1.0 mantiene el encuadre original; valores mayores amplían la vista, hasta 150 grados de ancho. Las cinemáticas mantienen su encuadre. Se aplica al instante."
+  "FOVFactor.description": "Multiplica el campo de visión del juego. 1.0 mantiene el encuadre original; valores mayores amplían la vista, hasta 150 grados de ancho. Las cinemáticas mantienen su encuadre. Se aplica al instante.",
+  "menu.plugins": "Plugins",
+  "menu.restoredefaultshelp": "Restablece los ajustes de esta página.",
+  "menu.restartwarning": "Reinicia el juego para aplicar algunos ajustes."
 }
