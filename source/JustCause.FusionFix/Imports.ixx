@@ -20,9 +20,8 @@ export namespace JCImports
             const auto nt = reinterpret_cast<const IMAGE_NT_HEADERS*>(base + dos->e_lfanew);
             const auto sections = IMAGE_FIRST_SECTION(nt);
             std::vector<uintptr_t> result;
-            auto add = [&](const uint32_t* operand)
+            auto add = [&](uintptr_t address)
             {
-                const uintptr_t address = *operand;
                 for (unsigned i = 0; i < nt->FileHeader.NumberOfSections; ++i)
                 {
                     const auto& section = sections[i];
@@ -39,10 +38,22 @@ export namespace JCImports
                     }
                 }
             };
+            // Import table slots, also those the game only loads into a register (mov esi, [slot]; call esi)
+            const auto& directory = nt->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT];
+            if (directory.VirtualAddress && directory.Size)
+            {
+                for (auto descriptor = reinterpret_cast<const IMAGE_IMPORT_DESCRIPTOR*>(base + directory.VirtualAddress); descriptor->Name; ++descriptor)
+                {
+                    for (auto thunk = reinterpret_cast<const uintptr_t*>(base + descriptor->FirstThunk); *thunk; ++thunk)
+                    {
+                        add(reinterpret_cast<uintptr_t>(thunk));
+                    }
+                }
+            }
             auto first = hook::pattern("FF 15 ? ? ? ?").get_first<uint32_t>(2);
-            add(first);
-            hook::pattern("FF 15 ? ? ? ?").for_each_result([&](hook::pattern_match match) { add(match.get<uint32_t>(2)); });
-            hook::pattern("FF 25 ? ? ? ?").for_each_result([&](hook::pattern_match match) { add(match.get<uint32_t>(2)); });
+            add(*first);
+            hook::pattern("FF 15 ? ? ? ?").for_each_result([&](hook::pattern_match match) { add(*match.get<uint32_t>(2)); });
+            hook::pattern("FF 25 ? ? ? ?").for_each_result([&](hook::pattern_match match) { add(*match.get<uint32_t>(2)); });
             return result;
         }();
         return slots;

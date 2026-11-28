@@ -52,6 +52,8 @@ Presets: Vanilla keeps the original cinematic bars, shows the logo videos and le
 
 ## Installation
 
+The fix works with the Steam and GOG versions of the game.
+
 1. Download the fix archive from this release.
 2. Extract the archive into the game folder, beside the game executable, preserving the folders in the archive.
 3. Launch the game once to create `scripts/JustCause.FusionFix.cfg`.
