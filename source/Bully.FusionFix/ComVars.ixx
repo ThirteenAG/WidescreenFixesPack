@@ -20,6 +20,7 @@ export GameRef<std::array<uint8_t, 48000>> HudQuads;
 export GameRef<int> HudQuadCount;
 export GameRef<uint8_t> MenuUp, MenuDown, MenuLeft, MenuRight;
 export GameRef<float> MenuScaleX, MenuScaleY, MenuMouseX, MenuMouseY;
+export std::atomic<int> MenuWheel{ 0 };     // WM_MOUSEWHEEL deltas since the menu last read them
 export GameRef<int> MenuLanguage;
 export GameRef<uint8_t> WindowedMode;
 export GameRef<uint8_t*> RendererState;

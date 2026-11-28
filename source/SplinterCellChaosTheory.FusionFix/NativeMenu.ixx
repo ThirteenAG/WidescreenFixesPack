@@ -4,6 +4,8 @@ module;
 #include <stdexcept>
 #include "FixSettings.hpp"
 #include "Shared/RWGTA/FixMenu.hpp"
+#include "Shared/MenuList.hpp"
+#include <atomic>
 #include <cmath>
 #include <cwctype>
 #include <functional>
@@ -108,17 +110,25 @@ export namespace CTMenu
     {
         Host host;
         void* page = nullptr, * item = nullptr, * list = nullptr, * stack = nullptr;
-        size_t descriptorPage = SIZE_MAX, rootStart = 0, rowStart = 0, selected = 0;
+        // The page's title and its help line: lists of the same row style, above and below the scrolling list
+        void* titleList = nullptr, * helpList = nullptr;
+        size_t index = RWGTAMenu::Model::RootPage;
+        std::vector<const RWGTAMenu::Row*> rows;    // the rows of the list, Back last (null)
         std::shared_ptr<CTLayout::Templates> templates;
         bool details = false, notice = false;
-        size_t helpIndex = 0, detailsReturn = 0, detailsPage = 0;
         std::vector<std::wstring> detailsLines;
+        int16_t shownFirst = 0;
+        std::string marks;
     };
     inline std::optional<ScreenState> screen;
     struct RetiredPage { void* page; void* stack; std::shared_ptr<CTLayout::Templates> templates; };
     inline std::vector<RetiredPage> retired;
     inline RWGTAMenu::Model model;
-    inline constexpr size_t RootLinks = 3, PageRows = 5;
+    // Rows of the scrolling list, Back included; the list's row step in its 640x480 frame
+    inline constexpr size_t Slots = 11;
+    inline constexpr int16_t ListLeft = 70, ListTop = 110, RowStep = 19, HelpRows = 4;
+    inline MenuList::WheelNotches wheel;
+    inline std::atomic<int> wheelDelta{ 0 };
 
     inline bool InStack(void* stack, void* page)
     {
@@ -165,6 +175,23 @@ export namespace CTMenu
         }
         return true;
     }
+    // The page is the top of its menu stack (no message box or other page over it)
+    inline bool OnTop()
+    {
+        if (!screen) return false;
+        const auto stack = MenuStack();
+        if (!stack || stack != screen->stack) return false;
+        const auto begin = Read<uintptr_t>(stack, 4), end = Read<uintptr_t>(stack, 8);
+        return begin && end >= begin + 8 && end - begin <= 8 * 64 && (end - begin) % 8 == 0 &&
+            Read<void*>(reinterpret_cast<void*>(end - 8), 0) == screen->page;
+    }
+    // The raw wheel while the page is on top: a row per notch, from the deltas (none lost or doubled)
+    inline bool WindowsMenuWheel(int delta)
+    {
+        if (!ready || !OnTop()) return false;
+        wheelDelta += delta;
+        return true;
+    }
     inline void DestroyPage(void* page)
     {
         if (!page) return;
@@ -178,13 +205,18 @@ export namespace CTMenu
         // helpers animate borrowed prototypes only when an index changes.
         // Set both to -1 before any package teardown can free those prototypes;
         // the post-Accept resets then touch only our still-live list fields.
-        Set<int16_t>(screen->list, 170, -1);
-        Set<int16_t>(screen->list, 172, -1);
-        // Native hover/leave dispatchers check this active bit after invoking
-        // handlers. Retirement during a handler must not animate freed source
-        // prototypes when those dispatchers continue with our retained list.
-        Set<uint8_t>(screen->list, 180, uint8_t(Read<uint8_t>(screen->list, 180) & ~2u));
+        for (auto list : { screen->list, screen->titleList, screen->helpList })
+        {
+            if (!list) continue;
+            Set<int16_t>(list, 170, -1);
+            Set<int16_t>(list, 172, -1);
+            // Native hover/leave dispatchers check this active bit after invoking
+            // handlers. Retirement during a handler must not animate freed source
+            // prototypes when those dispatchers continue with our retained list.
+            Set<uint8_t>(list, 180, uint8_t(Read<uint8_t>(list, 180) & ~2u));
+        }
         retired.push_back({ screen->page, screen->stack, screen->templates }); screen.reset(); model.Close();
+        bPluginsPageOpen = false;
     }
     inline void Frame(void* updatingPage)
     {
@@ -208,8 +240,6 @@ export namespace CTMenu
         displayHook.thiscall<void>(manager, page, char(0), char(1), char(0));
         if (screen && screen->page == page) Retire();
     }
-    inline size_t Links()
-    { return std::min(RootLinks, model.Pages().size() - std::min(screen->rootStart, model.Pages().size())); }
     inline void* TextElement(void* page, unsigned depth = 0)
     {
         if (!page || depth > 4) return nullptr;
@@ -276,16 +306,16 @@ export namespace CTMenu
     {
         return CTText::Style(Wide(text), metrics, Wide(Language()).c_str());
     }
-    inline void RowWide(const std::wstring& wide, bool disabled)
+    inline void RowWide(void* list, const std::wstring& wide, bool disabled)
     {
-        auto index = append(screen->list, nullptr, wide.c_str(), 0);
-        if (index >= 0 && index < Count(screen->list))
-            Set<uint8_t>(Read<void*>(screen->list, 108), size_t(index) * 60 + 53, disabled ? 1 : 0);
+        auto index = append(list, nullptr, wide.c_str(), 0);
+        if (index >= 0 && index < Count(list))
+            Set<uint8_t>(Read<void*>(list, 108), size_t(index) * 60 + 53, disabled ? 1 : 0);
     }
-    inline void Row(const std::string& text, bool disabled)
+    inline void Row(void* list, const std::string& text, bool disabled)
     {
-        auto metrics = RowMetrics(screen->list);
-        RowWide(Fit(Styled(text, metrics), metrics, metrics.width), disabled);
+        auto metrics = RowMetrics(list);
+        RowWide(list, Fit(Styled(text, metrics), metrics, metrics.width), disabled);
     }
     inline bool SettingRow(const RWGTAMenu::Row& row, bool enabled, void* pageToken)
     {
@@ -297,15 +327,107 @@ export namespace CTMenu
         if (!screen || screen->page != pageToken) return false;
         auto metrics = RowMetrics(screen->list);
         auto label = Styled(labelText, metrics);
-        RowWide(CTText::Setting(label, Styled(valueText, metrics), metrics), !enabled);
+        RowWide(screen->list, valueText.empty() ? Fit(label, metrics, metrics.width) : CTText::Setting(label, Styled(valueText, metrics), metrics), !enabled);
         return true;
     }
+    // A list that only shows text: no row selected or pressed
+    inline void Unselect(void* list)
+    {
+        select(list, nullptr, -1, 1, 1);
+        Set<int16_t>(list, 170, -1);
+        Set<int16_t>(list, 172, -1);
+    }
+    inline bool Disabled(void* list, int index)
+    {
+        return index < 0 || index >= Count(list) || Read<uint8_t>(Read<void*>(list, 108), size_t(index) * 60 + 53) != 0;
+    }
+    // The help line under the list: wrapped to its rows, the last one ending in "..." when it is longer
+    inline void Help(const std::string& text)
+    {
+        if (!screen || !screen->helpList) return;
+        clear(screen->helpList, nullptr);
+        const auto metrics = RowMetrics(screen->helpList);
+        auto wrap = [&](const std::wstring& wide)
+        {
+            std::vector<std::wstring> lines;
+            for (size_t at = 0; at < wide.size();)
+            {
+                while (at < wide.size() && iswspace(wide[at])) ++at;
+                if (at == wide.size()) break;
+                size_t end = at, space = std::wstring::npos;
+                while (end < wide.size() && metrics.Measure(wide.substr(at, end + 1 - at)) <= metrics.width)
+                {
+                    if (iswspace(wide[end])) space = end;
+                    ++end;
+                }
+                if (end < wide.size() && space != std::wstring::npos && space > at) end = space;
+                if (end == at) end = at + 1;
+                lines.push_back(wide.substr(at, end - at));
+                at = end;
+            }
+            return lines;
+        };
+        // All of the help when it fits its rows; else its first sentences that do (F1 shows all of it); else the key
+        const auto wide = Styled(text, metrics);
+        auto lines = wrap(wide);
+        for (size_t cut = wide.size(); lines.size() > size_t(HelpRows) && cut > 0;)
+        {
+            cut = wide.find_last_of(L".!?", cut - 1);
+            if (cut == std::wstring::npos) { lines = wrap(Styled("F1: " + model.Text("menu.details"), metrics)); break; }
+            if (cut + 1 < wide.size() && !iswspace(wide[cut + 1])) continue;
+            lines = wrap(wide.substr(0, cut + 1));
+        }
+        for (auto& line : lines) RowWide(screen->helpList, line, false);
+        Unselect(screen->helpList);
+    }
+    inline std::string PageTitle(size_t index);
+    // The native list follows the page's window: the selected row and the first row shown
+    inline void Show()
+    {
+        if (!screen || screen->details) return;
+        auto& window = model.Window(screen->index);
+        const auto selected = int16_t(window.Selected());
+        if (Read<int16_t>(screen->list, 168) != selected)
+            select(screen->list, nullptr, selected, 1, 1);
+        Set<int16_t>(screen->list, 162, int16_t(window.First()));
+        screen->shownFirst = int16_t(window.First());
+        // Rows above or below the shown ones: the font's arrows after the page's title
+        auto mark = [&](std::initializer_list<const wchar_t*> choices)
+        {
+            const auto metrics = RowMetrics(screen->titleList);
+            for (auto choice : choices)
+                if (metrics.Character(*choice) > 0)
+                    return std::string(" ") + asi_settings::text::Narrow(choice);
+            return std::string{};
+        };
+        std::string marks = window.Above() ? mark({ L"^" }) : "";
+        if (window.Below()) marks += mark({ L"v" });
+        if (marks != screen->marks)
+        {
+            screen->marks = marks;
+            clear(screen->titleList, nullptr);
+            Row(screen->titleList, PageTitle(screen->index) + marks, false);
+            Unselect(screen->titleList);
+        }
+        const auto row = window.Selected() < screen->rows.size() ? screen->rows[window.Selected()] : nullptr;
+        if (model.RestartRequired()) Help(model.Text("menu.restartwarning"));
+        else Help(row && !RWGTAMenu::Model::Opens(*row) ? model.Help(*row) : std::string{});
+    }
+    // A window move that keeps off rows that can't be chosen now (unavailable while playing)
+    template<class Step> inline void Move(Step step)
+    {
+        if (!screen || screen->details) return;
+        auto& window = model.Window(screen->index);
+        const auto start = window.Selected();
+        for (size_t guard = 0; guard <= screen->rows.size(); ++guard)
+        {
+            if (!step(window)) break;
+            if (!Disabled(screen->list, int(window.Selected()))) break;
+            if (window.Selected() == start) break;
+        }
+        Show();
+    }
     inline void Populate();
-inline constexpr size_t DetailLines = 5;
-inline size_t DetailPages()
-{
-    return screen ? std::max(size_t(1), (screen->detailsLines.size() + DetailLines - 1) / DetailLines) : 1;
-}
 inline std::wstring DetailsWide(const std::string& text)
 {
     if (text.size() > 65536) return {};
@@ -349,20 +471,18 @@ inline std::vector<std::wstring> WrapDetails(const std::wstring& text, double wi
     flush();
     return lines;
 }
+// The whole help of a row (or a notice) in the list, Back under it; the list scrolls when it is longer
 inline void PopulateDetails()
 {
     if (!screen || !screen->details) return;
-    const auto pages = DetailPages();
-    screen->detailsPage = std::min(screen->detailsPage, pages - 1);
+    clear(screen->titleList, nullptr);
+    Row(screen->titleList, screen->notice ? RWGTAMenu::PluginText(FixSettings(), Language(), "update.title") : model.Text("menu.details"), false);
+    Unselect(screen->titleList);
     clear(screen->list, nullptr);
-    Row((screen->notice ? RWGTAMenu::PluginText(FixSettings(), Language(), "update.title") : model.Text("menu.details")) + " (" + std::to_string(screen->detailsPage + 1) + "/" + std::to_string(pages) + ")", true);
-    for (size_t i = 0; i < DetailLines; ++i)
-    {
-        const auto at = screen->detailsPage * DetailLines + i;
-        RowWide(at < screen->detailsLines.size() ? screen->detailsLines[at] : L"", true);
-    }
-    if (pages > 1) Row(model.Text("menu.next"), false);
-    Row(model.Text("menu.back"), false);
+    for (const auto& line : screen->detailsLines) RowWide(screen->list, line, true);
+    Row(screen->list, model.Text("menu.back"), false);
+    Help("");
+    Set<int16_t>(screen->list, 162, 0);
     select(screen->list, nullptr, int16_t(Count(screen->list) - 1), 1, 1);
 }
 inline void EndDetails()
@@ -370,29 +490,21 @@ inline void EndDetails()
     if (!screen || !screen->details) return;
     if (screen->notice) { Close(); return; }
     screen->details = false; screen->detailsLines.clear();
-    screen->selected = screen->detailsReturn;
     Populate();
-}
-inline void StepDetails(int direction)
-{
-    if (!screen || !screen->details) return;
-    const auto pages = DetailPages();
-    screen->detailsPage = direction < 0 ? (screen->detailsPage + pages - 1) % pages : (screen->detailsPage + 1) % pages;
-    PopulateDetails();
 }
 inline void BeginDetails()
 {
-    if (!screen || screen->descriptorPage == SIZE_MAX) return;
+    if (!screen || screen->details) return;
     const auto token = screen->page;
+    const auto at = model.Window(screen->index).Selected();
+    if (at >= screen->rows.size() || !screen->rows[at] || RWGTAMenu::Model::Opens(*screen->rows[at])) return;
     const auto snapshot = model;
-    const auto rows = snapshot.VisibleRows(screen->descriptorPage);
-    const auto at = screen->rowStart + screen->helpIndex;
-    if (at >= rows.size()) return;
-    auto title = snapshot.Label(*rows[at]);
+    const auto& row = *screen->rows[at];
+    auto title = snapshot.Label(row);
     if (!screen || screen->page != token) return;
-    auto value = snapshot.Value(*rows[at]);
+    auto value = snapshot.Value(row);
     if (!screen || screen->page != token) return;
-    auto help = snapshot.Help(*rows[at]);
+    auto help = snapshot.Help(row);
     if (!screen || screen->page != token || help.empty()) return;
     if (!value.empty()) title += ": " + value;
     const auto metrics = RowMetrics(screen->list);
@@ -406,18 +518,12 @@ inline void BeginDetails()
         return std::isfinite(width) && (part.empty() || width > 0) ? width : INFINITY;
     });
     if (lines.empty()) return;
-    screen->detailsReturn = screen->selected; screen->detailsPage = 0;
     screen->detailsLines = std::move(lines); screen->details = true;
     PopulateDetails();
 }
     inline bool WindowsMenuHelp(bool pressed)
     {
-        if (!ready || busy || !screen || screen->descriptorPage == SIZE_MAX || GetForegroundWindow() != hGameWindow) return false;
-        const auto stack = MenuStack();
-        if (!stack || stack != screen->stack) return false;
-        const auto begin = Read<uintptr_t>(stack, 4), end = Read<uintptr_t>(stack, 8);
-        if (!begin || end < begin + 8 || end - begin > 8 * 64 || (end - begin) % 8 ||
-            Read<void*>(reinterpret_cast<void*>(end - 8), 0) != screen->page) return false;
+        if (!ready || busy || !screen || screen->index == RWGTAMenu::Model::RootPage || !OnTop()) return false;
         if (pressed)
         {
             BusyScope scope;
@@ -429,117 +535,88 @@ inline void BeginDetails()
     inline std::string PageTitle(size_t index)
     {
         const auto& page = model.Pages()[index];
-        return page.plugin && page.plugin->module == module ?
-            RWGTAMenu::PluginText(FixSettings(), Language(), "plugin.shortname") : page.title;
+        return page.plugin && page.plugin->module == module && index != RWGTAMenu::Model::RootPage &&
+            page.title == OtherPlugins::Name(*page.plugin) ? RWGTAMenu::PluginText(FixSettings(), Language(), "plugin.shortname") : page.title;
     }
+    inline std::string RowLabel(const RWGTAMenu::Row& row)
+    {
+        return row.kind == RWGTAMenu::RowKind::Plugin ? PageTitle(row.target) : model.Label(row);
+    }
+    // The page's rows, all in the list (it shows Slots of them and scrolls), Back last
     inline void Populate()
     {
         if (!screen) return;
         if (screen->details) { PopulateDetails(); return; }
         auto pageToken = screen->page;
-        auto root = screen->descriptorPage == SIZE_MAX;
-        auto rows = root ? std::vector<const RWGTAMenu::Row*>{} : model.VisibleRows(screen->descriptorPage);
+        if (screen->index >= model.Pages().size()) screen->index = RWGTAMenu::Model::RootPage;
+        auto rows = model.ListRows(screen->index, true);
         if (!screen || screen->page != pageToken) return;
-        auto links = root ? Links() : 0;
+        clear(screen->titleList, nullptr);
+        Row(screen->titleList, PageTitle(screen->index), false);
+        Unselect(screen->titleList);
+        screen->marks.clear();
         clear(screen->list, nullptr);
-        Row(root ? model.Text("menu.plugins") : PageTitle(screen->descriptorPage), true);
-        if (root)
+        for (auto row : rows)
         {
-            for (size_t i = 0; i < links; ++i) Row(PageTitle(screen->rootStart + i), false);
-            if (screen->rootStart) Row(model.Text("menu.previous"), false);
-            if (screen->rootStart + links < model.Pages().size()) Row(model.Text("menu.next"), false);
-        }
-        else
-        {
-            screen->rowStart = rows.empty() ? 0 : std::min(screen->rowStart, ((rows.size() - 1) / PageRows) * PageRows);
-            auto count = std::min(PageRows, rows.size() - screen->rowStart);
-            for (size_t i = 0; i < count; ++i)
+            if (!row) { Row(screen->list, model.Text("menu.back"), false); continue; }
+            if (RWGTAMenu::Model::Opens(*row))
             {
-                auto row = rows[screen->rowStart + i];
-                auto enabled = model.Enabled(*row, screen->host.pause);
-                if (!screen || screen->page != pageToken) return;
-                if (!SettingRow(*row, enabled, pageToken)) return;
+                Row(screen->list, RowLabel(*row), false);
+                continue;
             }
-            if (screen->rowStart) Row(model.Text("menu.previous"), false);
-            if (screen->rowStart + count < rows.size()) Row(model.Text("menu.next"), false);
-            if (count)
-            {
-                if (screen->selected < count) screen->helpIndex = screen->selected;
-                screen->helpIndex = std::min(screen->helpIndex, count - 1);
-                Row(model.Text("menu.details"), false);
-            }
-            if (model.RestartRequired()) Row(model.Text("menu.restartwarning"), true);
-            else if (count) Row(model.Help(*rows[screen->rowStart + screen->helpIndex]), true);
-            else Row("", true);
+            auto enabled = model.Enabled(*row, screen->host.pause);
+            if (!screen || screen->page != pageToken) return;
+            if (!SettingRow(*row, enabled, pageToken)) return;
         }
-        Row(model.Text("menu.back"), false);
-        auto count = Count(screen->list) - 1;
-        screen->selected = std::min(screen->selected, size_t(std::max(0, count - 1)));
-        auto rowData = Read<void*>(screen->list, 108);
-        auto chosen = int(screen->selected + 1);
-        while (chosen < Count(screen->list) - 1 && Read<uint8_t>(rowData, size_t(chosen) * 60 + 53)) ++chosen;
-        screen->selected = size_t(chosen - 1);
-        select(screen->list, nullptr, int16_t(chosen), 1, 1);
+        screen->rows = std::move(rows);
+        Show();
     }
+    // The selected row: left (-1), right (+1) or accept (0); a plugin or a category opens, Back goes up a level
     inline void Action(int direction)
     {
         if (!screen) return;
         auto pageToken = screen->page;
-        auto selected = Read<int16_t>(screen->list, 168);
-        if (selected < 1 || selected >= Count(screen->list)) return;
         if (screen->details)
         {
-            if (direction) StepDetails(direction);
-            else if (DetailPages() > 1 && selected == int(DetailLines + 1)) StepDetails(1);
-            else EndDetails();
+            if (!direction) EndDetails();
             return;
         }
-        screen->selected = size_t(selected - 1);
-        if (screen->descriptorPage != SIZE_MAX)
+        auto& window = model.Window(screen->index);
+        const auto selected = Read<int16_t>(screen->list, 168);
+        if (selected >= 0 && size_t(selected) < screen->rows.size() && size_t(selected) != window.Selected())
+            window.Select(size_t(selected));
+        const auto at = window.Selected();
+        if (at >= screen->rows.size()) return;
+        const auto* row = screen->rows[at];
+        if (!row)
         {
-            auto rows = model.VisibleRows(screen->descriptorPage);
+            if (direction) return;
+            const auto parent = model.Back(screen->index);
+            if (parent == SIZE_MAX) { Close(); return; }
+            screen->index = parent;
+        }
+        else if (RWGTAMenu::Model::Opens(*row))
+        {
+            if (direction) return;
+            const auto page = model.Enter(*row);
+            if (page == SIZE_MAX) return;
+            screen->index = page;
+        }
+        else
+        {
+            model.Change(*row, direction, screen->host.pause);
             if (!screen || screen->page != pageToken) return;
-            auto count = std::min(PageRows, rows.size() - std::min(screen->rowStart, rows.size()));
-            if (screen->selected < count)
-            {
-                model.Change(*rows[screen->rowStart + screen->selected], direction, screen->host.pause);
-                if (!screen || screen->page != pageToken) return;
-            }
-            else if (!direction)
-            {
-                auto at = screen->selected - count;
-                if (screen->rowStart && !at) screen->rowStart -= PageRows;
-                else
-                {
-                    if (screen->rowStart) --at;
-                    const bool next = screen->rowStart + count < rows.size();
-                    if (next && !at) screen->rowStart += PageRows;
-                    else
-                    {
-                        if (next) --at;
-                        if (count && !at) { BeginDetails(); return; }
-                        screen->descriptorPage = SIZE_MAX; screen->rowStart = 0;
-                    }
-                }
-                screen->selected = 0;
-            }
         }
-        else if (!direction)
-        {
-            auto links = Links(), at = screen->selected;
-            if (at < links) { screen->descriptorPage = screen->rootStart + at; screen->rowStart = 0; screen->selected = 0; model.PageShown(screen->descriptorPage); }
-            else
-            {
-                at -= links;
-                if (screen->rootStart && !at) { screen->rootStart -= RootLinks; screen->selected = 0; }
-                else
-                {
-                    if (screen->rootStart) --at;
-                    if (screen->rootStart + links < model.Pages().size() && !at) { screen->rootStart += RootLinks; screen->selected = 0; }
-                    else { Close(); return; }
-                }
-            }
-        }
+        Populate();
+    }
+    // Esc and the pad's back: up a level, the row it came from selected; the plugins list closes
+    inline void Back()
+    {
+        if (!screen) return;
+        if (screen->details) { EndDetails(); return; }
+        const auto parent = model.Back(screen->index);
+        if (parent == SIZE_MAX) { Close(); return; }
+        screen->index = parent;
         Populate();
     }
     inline bool ListContract(void* list, bool ownsBindings = false)
@@ -586,19 +663,45 @@ inline void BeginDetails()
                     Read<void*>(host.list, offset + 12), offset == 36 ? templates->pages[0] : Read<void*>(host.list, offset + 8));
             }
         }
-        auto targetPoint = Read<void*>(list, 4);
-        // The source menu may already have faded out behind Settings.
-        // The private list's parent tint must leave its native row colors intact.
-        Set<uint32_t>(targetPoint, 4, 0xFFFFFFFFu);
-        Set<uint32_t>(targetPoint, 8, uint16_t(70) | (uint32_t(110) << 16));
-        Set<int8_t>(list, 164, Read<int8_t>(host.list, 164));
-        Set<uint8_t>(list, 166, 12);
-        Set<uint32_t>(list, 176, Read<uint32_t>(host.list, 176));
-        Set<uint8_t>(list, 180, uint8_t(Read<uint8_t>(host.list, 180) | 0x42));
-        Set<uint8_t>(list, 184, Read<uint8_t>(host.list, 184));
+        // The list (Slots rows that scroll), its title row above and two help rows below: lists of the same style
+        auto place = [&](void* target, int16_t top, uint8_t rows, bool input)
+        {
+            auto targetPoint = Read<void*>(target, 4);
+            // The source menu may already have faded out behind Settings.
+            // The private list's parent tint must leave its native row colors intact.
+            Set<uint32_t>(targetPoint, 4, 0xFFFFFFFFu);
+            Set<uint32_t>(targetPoint, 8, uint16_t(ListLeft) | (uint32_t(uint16_t(top)) << 16));
+            Set<int8_t>(target, 164, Read<int8_t>(host.list, 164));
+            Set<uint8_t>(target, 166, rows);
+            Set<uint32_t>(target, 176, Read<uint32_t>(host.list, 176));
+            Set<uint8_t>(target, 180, uint8_t(input ? Read<uint8_t>(host.list, 180) | 0x42 : Read<uint8_t>(host.list, 180) & ~2u));
+            Set<uint8_t>(target, 184, Read<uint8_t>(host.list, 184));
+        };
+        auto extra = [&](const char* id, int16_t top, uint8_t rows) -> void*
+        {
+            auto wrapper = makeItem(nullptr, nullptr, 10);
+            auto target = wrapper ? Read<void*>(wrapper, 8) : nullptr;
+            if (!target) { if (wrapper) DestroyPage(wrapper); return nullptr; }
+            for (auto offset : { 36u, 56u, 76u })
+            {
+                if (!Read<void*>(host.list, offset + 8)) continue;
+                Set<void*>(target, offset + 4, Read<void*>(host.list, offset + 4));
+                bindStyle(static_cast<uint8_t*>(target) + offset, nullptr,
+                    Read<void*>(host.list, offset + 12), offset == 36 ? templates->pages[0] : Read<void*>(host.list, offset + 8));
+            }
+            place(target, top, rows, false);
+            Set<uint32_t>(wrapper, 4, crc32(0, id, uint32_t(strlen(id))));
+            addChild(page, nullptr, wrapper);
+            return target;
+        };
+        place(list, ListTop + RowStep, uint8_t(Slots), true);
         Set<uint32_t>(item, 4, crc32(0, "WFP.AdvancedOptions.List", 24));
         Set<uint32_t>(page, 20, crc32(0, "WFP.AdvancedOptions", 19));
         addChild(page, nullptr, item); // Native page now owns wrapper/list.
+        auto titleList = extra("WFP.AdvancedOptions.Title", ListTop, 1);
+        auto helpList = extra("WFP.AdvancedOptions.Help", int16_t(ListTop + RowStep * int16_t(Slots + 1) + 6), uint8_t(HelpRows));
+        if (!titleList || !helpList)
+        { DestroyPage(page); LogOnce("native title/help list allocation failed"); return; }
         auto stack = getStack(host.manager, nullptr);
         if (!ListContract(list, true) || !stack || !RowMetrics(list).font)
         { DestroyPage(page); LogOnce("native private page style/stack contract failed"); return; }
@@ -606,7 +709,7 @@ inline void BeginDetails()
         const auto displayJoined = CTDisplay::JoinedFor(host.manager);
         auto joined = controlsJoined ? CTControls::Settings : std::set<std::string>{};
         if (displayJoined) joined.insert(CTDisplay::Settings.begin(), CTDisplay::Settings.end());
-        model.OpenPlugins(module, Language(), 4096, joined);
+        model.OpenMenu(module, Language(), Slots, joined);
         auto currentHost = hosts.find(host.list);
         if (currentHost == hosts.end() || currentHost->second.serial != host.serial ||
             controlsJoined != CTControls::JoinedFor(host.manager) ||
@@ -618,6 +721,11 @@ inline void BeginDetails()
             model.Close(); DestroyPage(page); LogOnce("native source host changed during model discovery"); return;
         }
         screen.emplace(); screen->host = host; screen->page = page; screen->item = item; screen->list = list; screen->stack = stack; screen->templates = std::move(templates);
+        screen->titleList = titleList; screen->helpList = helpList;
+        bPluginsPageOpen = true;
+        model.Window(RWGTAMenu::Model::RootPage).Reset();
+        wheel.Clear();
+        wheelDelta = 0;
         auto current = [&]
         {
             auto binding = hosts.find(host.list);
@@ -719,7 +827,6 @@ inline void BeginDetails()
         screen->details = true;
         screen->notice = true;
         screen->detailsLines = std::move(lines);
-        screen->detailsPage = 0;
         PopulateDetails();
     }
 
@@ -751,9 +858,7 @@ inline void BeginDetails()
         if (screen && item == screen->item)
         {
             BusyScope scope;
-            if (screen->details) EndDetails();
-            else if (screen->descriptorPage == SIZE_MAX) Close();
-            else { screen->descriptorPage = SIZE_MAX; screen->rowStart = 0; screen->selected = 0; Populate(); }
+            Back();
             return 1;
         }
         return cancelHook.thiscall<char>(item);
@@ -765,6 +870,23 @@ inline void BeginDetails()
         { BusyScope scope; if (screen->details) EndDetails(); else BeginDetails(); return 1; }
         if (screen && list == screen->list && event && (*event == VK_LEFT || *event == VK_RIGHT))
         { BusyScope scope; Action(*event == VK_LEFT ? -1 : 1); return 1; }
+        // Up/Down wrap at the ends as the game's lists do, Page Up/Down a window, Home/End the ends; the list
+        // scrolls with them. The wheel comes raw (WindowsMenuWheel).
+        if (screen && list == screen->list && event && !screen->details)
+        {
+            BusyScope scope;
+            switch (*event)
+            {
+                case VK_UP: Move([](MenuList::Window& w) { return w.Move(-1); }); return 1;
+                case VK_DOWN: Move([](MenuList::Window& w) { return w.Move(1); }); return 1;
+                case VK_PRIOR: Move([](MenuList::Window& w) { return w.Page(-1); }); return 1;
+                case VK_NEXT: Move([](MenuList::Window& w) { return w.Page(1); }); return 1;
+                case VK_HOME: Move([](MenuList::Window& w) { return w.Edge(-1); }); return 1;
+                case VK_END: Move([](MenuList::Window& w) { return w.Edge(1); }); return 1;
+                case 0xEC: case 0xED: return 1;
+                default: break;
+            }
+        }
         return keyHook.thiscall<char>(list, item, event);
     }
     inline char __fastcall Display(void* manager, void*, void* page, char show, char modal, char priority)
@@ -883,10 +1005,28 @@ inline void BeginDetails()
         Frame(page);
         if (!busy && screen && page == screen->page && !screen->details)
         {
-            auto selected = Read<int16_t>(screen->list, 168);
-            auto moved = selected > 0 && screen->selected != size_t(selected - 1);
-            if (moved) screen->selected = size_t(selected - 1);
-            if (moved || RWGTAMenu::Model::Changed().exchange(false)) { BusyScope scope; Populate(); }
+            BusyScope scope;
+            // The mouse moves the native selection over the shown rows (and its arrows the first row): the window
+            // follows it
+            auto& window = model.Window(screen->index);
+            const auto selected = Read<int16_t>(screen->list, 168);
+            const auto first = Read<int16_t>(screen->list, 162);
+            bool moved = false;
+            if (first != screen->shownFirst && first >= 0)
+            {
+                for (size_t guard = 0; int16_t(window.First()) != first && guard < 512; ++guard)
+                    if (!window.Scroll(first > int16_t(window.First()) ? 1 : -1)) break;
+                moved = true;
+            }
+            if (selected >= 0 && size_t(selected) != window.Selected() && size_t(selected) < window.Count())
+            {
+                window.Point(size_t(selected) - std::min(window.First(), size_t(selected)));
+                moved = true;
+            }
+            for (int notches = wheel.Take(wheelDelta.exchange(0)); notches; notches += notches > 0 ? -1 : 1)
+                moved |= window.Scroll(notches > 0 ? -1 : 1);
+            if (RWGTAMenu::Model::Changed().exchange(false)) Populate();
+            else if (moved) Show();
         }
         if (!busy) { CTControls::Tick(page); CTDisplay::Tick(page); }
     }
@@ -1062,6 +1202,7 @@ export namespace CTMenu
         NativeMenuTick = nullptr;
         NativeWindowsMenuMouse = WindowsMenuMouse;
         NativeWindowsMenuHelp = WindowsMenuHelp;
+        NativeWindowsMenuWheel = WindowsMenuWheel;
         ready = true;
     }
 }

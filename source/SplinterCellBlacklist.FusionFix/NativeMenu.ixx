@@ -11,6 +11,7 @@ module;
 #include <cstddef>
 #include "Shared/RWGTA/FixMenu.hpp"
 #include "Shared/RWGTA/UpdateCheck.hpp"
+#include "Shared/MenuList.hpp"
 #include <array>
 #include <deque>
 #include <map>
@@ -30,8 +31,11 @@ export namespace BlacklistMenu
     using Slot = BlacklistMenuABI::Slot;
     constexpr int32_t Advanced = 0x6000;
     constexpr int32_t RowCommand = 0x6100;
-    constexpr size_t PageRows = 6;
-    constexpr size_t RootPage = std::numeric_limits<size_t>::max();
+    // Rows shown at once; the list scrolls through the rest
+    constexpr size_t Slots = 10;
+    // Capitals in the list's row and in the line under the title
+    constexpr size_t RowColumns = 30, LineColumns = 34;
+    constexpr size_t RootPage = RWGTAMenu::Model::RootPage;
     inline Bridge bridge;
     inline HMODULE self = nullptr;
     inline SafetyHookInline settingsHook, performHook, backHook, destroyHook, updateHook;
@@ -51,7 +55,7 @@ export namespace BlacklistMenu
         explicit PreserveBool(bool& value) : target(value), previous(value) { target = true; }
         ~PreserveBool() { target = previous; }
     };
-    enum class Kind { Page, Previous, Next, Back, Model, Text };
+    enum class Kind { Page, Back, Model, Text };
     struct Host;
     struct Binding
     {
@@ -77,14 +81,15 @@ export namespace BlacklistMenu
         void* manager = nullptr;
         int32_t advanced = Advanced;
         bool alive = true, open = false, details = false, renderedDetails = false, notice = false;
-        size_t helpOffset = 0;
-        int32_t helpReturn = 0, nextSelection = -1;
+        MenuList::Window helpWindow;
+        // The row the list had selected, and one it moved to that the window follows next update
+        int32_t lastIndex = 0, follow = -1;
+        // Updates since a rebuild during which the list still moves back to the row it had before, which isn't a move
+        int settle = 0;
         std::wstring helpTitle;
         std::vector<std::wstring> helpLines;
         uint64_t generation = 1;
-        size_t page = RootPage, rootStart = 0, rowStart = 0;
-        size_t renderedPage = RootPage, renderedStart = 0, renderedRowStart = 0;
-        bool rendered = false;
+        size_t page = RootPage;
         RWGTAMenu::Model model;
         std::array<Item, 14> items;
         size_t count = 0;
@@ -95,11 +100,12 @@ export namespace BlacklistMenu
     // Keep invalidated C++ bindings until the complete manager update unwinds.
     inline std::vector<std::shared_ptr<Host>> retired;
     inline std::weak_ptr<Host> active;
+    inline MenuList::WheelNotches wheel;
     struct Pending
     {
         std::weak_ptr<Host> host;
         uint64_t generation;
-        size_t page, rootStart, rowStart, row;
+        size_t page, row;
         int direction;
         bool open;
         uint32_t inputMask;
@@ -175,6 +181,18 @@ export namespace BlacklistMenu
         MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, value.data(), static_cast<int>(value.size()), result.data(), length);
         return result;
     }
+    inline std::string Language();
+    // The game's menus are in capitals
+    inline std::wstring Upper(std::wstring value)
+    {
+        auto tag = Wide(Language());
+        if (int size = LCMapStringEx(tag.c_str(), LCMAP_UPPERCASE, value.data(), int(value.size()), nullptr, 0, nullptr, nullptr, 0); size > 0)
+        {
+            std::wstring upper(size, L'\0');
+            if (LCMapStringEx(tag.c_str(), LCMAP_UPPERCASE, value.data(), int(value.size()), upper.data(), size, nullptr, nullptr, 0)) return upper;
+        }
+        return value;
+    }
     inline std::string Language()
     {
         auto language = FixSettings().Get("MAIN.TextLanguage");
@@ -196,7 +214,7 @@ export namespace BlacklistMenu
         if (!ready || busy || !Live(host) || pending.size() >= 64 || host.manager != currentManager ||
             Bridge::Read<int32_t>(host.tiered, 592) != (open ? 1 : 12) ||
             (!open && Bridge::Read<uint8_t>(host.list, 553) != 0) || !OwnsFocus(host, open ? 1 : 12)) return false;
-        pending.push_back({ host.shared_from_this(), host.generation, host.page, host.rootStart, host.rowStart, row, direction, open,
+        pending.push_back({ host.shared_from_this(), host.generation, host.page, row, direction, open,
             Bridge::Read<uint32_t>(host.manager, 0x5A0), bridge.GameMode() });
         return true;
     }
@@ -224,6 +242,32 @@ export namespace BlacklistMenu
         }
         return 1;
     }
+    // The help line under the title: the whole help when it fits, else its first whole sentences that do (F1 shows
+    // all of it), else the F1 hint
+    inline std::wstring HelpLine(Host& host, const std::wstring& help)
+    {
+        const auto hint = Wide(host.model.Text("menu.helphint"));
+        if (help.empty()) return {};
+        if (MenuText::Wrap(help, LineColumns).size() == 1) return help;
+        for (size_t cut = help.size(); cut > 0;)
+        {
+            cut = help.find_last_of(L".!?", cut - 1);
+            if (cut == std::wstring::npos) break;
+            if (cut + 1 < help.size() && !std::iswspace(help[cut + 1])) continue;
+            const auto shown = help.substr(0, cut + 1);
+            if (MenuText::Wrap(shown + L"  " + hint, LineColumns).size() == 1) return shown + L"  " + hint;
+        }
+        return hint;
+    }
+    inline void Hint(Host& host, int32_t index)
+    {
+        if (host.details || index < 0 || size_t(index) >= host.count) return;
+        auto& item = host.items[index];
+        std::wstring hint;
+        if (item.kind == Kind::Model) hint = HelpLine(host, Wide(host.model.Help(item.model)));
+        if (host.model.RestartRequired()) hint = Wide(host.model.Text("menu.restartwarning"));
+        bridge.Caption(host.scene, 928, Upper(hint));
+    }
     inline uint8_t __fastcall Selected(Binding* binding, void*, Slot*, int32_t index)
     {
         auto host = binding->owner.lock();
@@ -235,15 +279,9 @@ export namespace BlacklistMenu
             Bridge::Write<int32_t>(host->scene, 1052, index);
             if (!busy)
             {
-                auto& item = host->items[index];
-                auto hint = item.label;
-                if (item.kind == Kind::Model)
-                {
-                    auto lines = MenuText::Wrap(Wide(host->model.Help(item.model)));
-                    hint = (lines.empty() ? std::wstring{} : lines.front()) + L"  " + Wide(host->model.Text("menu.helphint"));
-                }
-                if (!item.value.empty()) hint += L"  " + item.value;
-                if (snapshot.Current()) bridge.Caption(host->scene, 928, hint);
+                // The window follows after this signal unwinds
+                host->follow = index;
+                if (!host->details) Hint(*host, index);
             }
         }
         return 1;
@@ -275,13 +313,13 @@ export namespace BlacklistMenu
             value = host.model.Value(item.model);
             if (!snapshot.Current()) return false;
         }
-        auto display = label;
-        if (!cycler && !value.empty()) display += L"  " + Wide(value);
+        auto display = Upper(label);
+        if (!cycler && !value.empty()) display += L"  " + Upper(Wide(value));
         auto result = bridge.AddRow(host.list, display, &item.command, cycler ? 18 : 15);
         if (!snapshot.Current() || result <= 0)
         { Log("row creation refused at row " + std::to_string(index)); return false; }
-        item.label = label;
-        item.value = Wide(value);
+        item.label = Upper(label);
+        item.value = Upper(Wide(value));
         item.enabled = enabled;
         item.cycler = cycler;
         return true;
@@ -340,11 +378,6 @@ export namespace BlacklistMenu
     }
     inline bool Populate(Host& host)
     {
-        Item selectedItem;
-        auto previousIndex = Bridge::Read<int32_t>(host.list, 576);
-        bool preserveSelection = host.rendered && host.renderedDetails == host.details && host.renderedPage == host.page && host.renderedStart == host.rootStart && host.renderedRowStart == host.rowStart &&
-            previousIndex >= 0 && static_cast<size_t>(previousIndex) < host.count;
-        if (preserveSelection) selectedItem = host.items[previousIndex];
         ++host.generation; // rows are rebound; old queued widget events expire
         Snapshot snapshot(host);
         PreserveBool guard(busy);
@@ -356,43 +389,35 @@ export namespace BlacklistMenu
         bridge.Clear(host.list);
         if (!snapshot.Current()) return false;
         host.count = 0;
+        host.follow = -1;
         std::wstring title = Wide(host.model.Text("menu.plugins"));
+        int32_t selectedIndex = 0;
         if (host.details)
         {
             title = host.helpTitle;
-            const auto end = std::min(host.helpLines.size(), host.helpOffset + PageRows);
-            for (size_t i = host.helpOffset; i < end; ++i)
+            std::vector<uintptr_t> keys;
+            for (size_t i = 0; i < host.helpLines.size(); ++i) keys.push_back(i + 1);
+            host.helpWindow.SetSlots(Slots);
+            host.helpWindow.Update(keys);
+            for (size_t i = host.helpWindow.First(); i < host.helpWindow.First() + host.helpWindow.Shown(); ++i)
                 if (!ItemRow(host, Kind::Text, 0, nullptr, host.helpLines[i])) return false;
-            if (host.helpOffset && !ItemRow(host, Kind::Previous, 0, nullptr, Wide(host.model.Text("menu.previous")))) return false;
-            if (end < host.helpLines.size() && !ItemRow(host, Kind::Next, 0, nullptr, Wide(host.model.Text("menu.next")))) return false;
-        }
-        else if (host.page == RootPage)
-        {
-            auto pages = host.model.Pages();
-            auto end = std::min(pages.size(), host.rootStart + PageRows);
-            for (size_t i = host.rootStart; i < end; ++i)
-                if (!ItemRow(host, Kind::Page, i, nullptr, Wide(pages[i].title))) return false;
-            if (host.rootStart && !ItemRow(host, Kind::Previous, 0, nullptr, Wide(host.model.Text("menu.previous")))) return false;
-            if (end < pages.size() && !ItemRow(host, Kind::Next, 0, nullptr, Wide(host.model.Text("menu.next")))) return false;
+            selectedIndex = int32_t(host.helpWindow.Slot());
         }
         else
         {
-            auto rows = host.model.VisibleRows(host.page);
-            if (!snapshot.Current()) return false;
             if (host.page >= host.model.Pages().size()) return false;
-            title = Wide(host.model.Pages()[host.page].title);
-            auto end = std::min(rows.size(), host.rowStart + PageRows);
-            for (size_t i = host.rowStart; i < end; ++i)
+            if (host.page != RootPage) title = Wide(host.model.Pages()[host.page].title);
+            // The game's own lists have no Back row: B / Esc go back a level
+            for (auto row : host.model.Shown(host.page, false))
             {
-                if (!snapshot.Current() || !ItemRow(host, Kind::Model, 0, rows[i], Wide(host.model.Label(*rows[i])))) return false;
+                if (!snapshot.Current()) return false;
+                if (!row) continue;
+                auto label = Wide(host.model.Label(*row));
+                if (!snapshot.Current() || !ItemRow(host, RWGTAMenu::Model::Opens(*row) ? Kind::Page : Kind::Model, 0, row, label)) return false;
             }
-            if (host.rowStart && !ItemRow(host, Kind::Previous, 0, nullptr, Wide(host.model.Text("menu.previous")))) return false;
-            if (end < rows.size() && !ItemRow(host, Kind::Next, 0, nullptr, Wide(host.model.Text("menu.next")))) return false;
+            selectedIndex = int32_t(host.model.Window(host.page).Slot());
         }
-        if (!host.details && host.model.RestartRequired())
-            for (const auto& line : MenuText::Wrap(Wide(host.model.Text("menu.restartwarning"))))
-                if (!ItemRow(host, Kind::Text, 0, nullptr, line)) return false;
-        if (!ItemRow(host, Kind::Back, 0, nullptr, Wide(host.model.Text("menu.back")))) return false;
+        if (!host.count) return false;
         // Native settings builders re-enable the list and allocate its row pool
         // through virtual SetMaxVisibleItems before touching cycler controls.
         Bridge::Write<uint8_t>(host.list, 696, 1);
@@ -400,39 +425,46 @@ export namespace BlacklistMenu
         if (auto failure = snapshot.Failure())
         { Log(std::string("row pool context lost before configure: ") + failure); return false; }
         if (!Configure(host) || !snapshot.Current()) return false;
-        bridge.Caption(host.scene, 924, title);
+        bridge.Caption(host.scene, 924, Upper(title));
         if (!snapshot.Current()) return false;
-        bridge.Caption(host.scene, 928, Wide(host.model.Text(host.details ? "menu.back" : "menu.helphint")));
+        bridge.Caption(host.scene, 928, host.details ? Upper(Wide(host.model.Text("menu.back"))) : std::wstring{});
         if (!snapshot.Current()) return false;
-        int32_t selectedIndex = 0;
-        if (preserveSelection)
-            for (size_t i = 0; i < host.count; ++i)
-            {
-                auto& item = host.items[i];
-                if (item.kind == selectedItem.kind && item.page == selectedItem.page &&
-                    (item.kind != Kind::Model || (item.model.kind == selectedItem.model.kind &&
-                        item.model.plugin == selectedItem.model.plugin && item.model.setting == selectedItem.model.setting)))
-                {
-                    selectedIndex = static_cast<int32_t>(i);
-                    break;
-                }
-            }
-        if (host.nextSelection >= 0)
-        {
-            selectedIndex = std::clamp(host.nextSelection, 0, int32_t(host.count) - 1);
-            host.nextSelection = -1;
-        }
+        selectedIndex = std::clamp(selectedIndex, 0, int32_t(host.count) - 1);
         // An inactive tier must not steal the stock root's focus before PushTier.
         reinterpret_cast<void(__thiscall*)(void*, int32_t, int32_t)>(bridge.selectRow)(host.list, selectedIndex, snapshot.tier == 12 ? 1 : 0);
         snapshot.rebuilding = false;
         if (!snapshot.Current()) return false;
         Bridge::Write<int32_t>(host.scene, 1052, Bridge::Read<int32_t>(host.list, 576));
-        host.renderedPage = host.page;
-        host.renderedStart = host.rootStart;
-        host.renderedRowStart = host.rowStart;
-        host.rendered = true;
-        host.renderedDetails = host.details;
+        host.lastIndex = Bridge::Read<int32_t>(host.list, 576);
+        host.follow = -1;
+        host.settle = 3;
+        Hint(host, host.lastIndex);
         return true;
+    }
+    // The list moved its selection (keys, pad, mouse): within its rows, and wrapping there. A step off its last row
+    // (or its first) moves the window instead while there are more rows
+    inline bool Follow(Host& host, int32_t index)
+    {
+        auto& window = host.details ? host.helpWindow : host.model.Window(host.page);
+        const auto shown = int32_t(host.count), last = host.lastIndex;
+        host.lastIndex = index;
+        const auto first = window.First();
+        if (shown >= 3 && window.Count() > size_t(shown) && last == shown - 1 && index == 0) window.Move(1);
+        else if (shown >= 3 && window.Count() > size_t(shown) && last == 0 && index == shown - 1) window.Move(-1);
+        else { window.Point(size_t(index)); return false; }
+        return window.First() != first || int32_t(window.Slot()) != index;
+    }
+    // Wheel notches move the window a row each, Page Up/Down and Home/End as in every list
+    inline bool Navigate(Host& host, int notches, int key)
+    {
+        auto& window = host.details ? host.helpWindow : host.model.Window(host.page);
+        const auto index = Bridge::Read<int32_t>(host.list, 576);
+        if (index >= 0 && size_t(index) < host.count) window.Point(size_t(index));
+        bool changed = false;
+        for (; notches; notches += notches > 0 ? -1 : 1) changed |= window.Scroll(notches > 0 ? -1 : 1);
+        if (key == VK_PRIOR || key == VK_NEXT) changed |= window.Page(key == VK_NEXT ? 1 : -1);
+        if (key == VK_HOME || key == VK_END) changed |= window.Edge(key == VK_END ? 1 : -1);
+        return changed;
     }
     inline void Close(Host& host)
     {
@@ -451,7 +483,16 @@ export namespace BlacklistMenu
         if (Bridge::Read<int32_t>(host.tiered, 592) == 1)
         {
             auto lists = Bridge::Read<void**>(host.tiered, 612);
-            if (lists && lists[1]) Bridge::Write<int32_t>(host.scene, 1052, Bridge::Read<int32_t>(lists[1], 576));
+            if (lists && lists[1])
+            {
+                // The focus can stay on a row widget of our list that the help lines reused; give it back to the
+                // Options row, as the game's own submenus leave it
+                const auto index = Bridge::Read<int32_t>(lists[1], 576);
+                if (index >= 0 && index < Bridge::Read<int32_t>(lists[1], 644))
+                    reinterpret_cast<void(__thiscall*)(void*, int32_t, int32_t)>(bridge.selectRow)(lists[1], index, 1);
+                if (!snapshot.Owner()) return;
+                Bridge::Write<int32_t>(host.scene, 1052, Bridge::Read<int32_t>(lists[1], 576));
+            }
         }
         if (active.lock() == snapshot.host)
         {
@@ -477,7 +518,7 @@ export namespace BlacklistMenu
         auto old = active.lock();
         if (old && old.get() != &host) Close(*old);
         if (!snapshot.Current() || Bridge::Read<int32_t>(host.tiered, 592) != 1) return;
-        host.model.OpenPlugins(self, Language(), PageRows, {}, true);
+        host.model.OpenMenu(self, Language(), Slots);
         if (!snapshot.Current())
         {
             if (snapshot.Owner())
@@ -493,11 +534,10 @@ export namespace BlacklistMenu
         snapshot.generation = host.generation;
         OpenRollback rollback{ snapshot.host, host.generation };
         host.page = RootPage;
-        host.rootStart = 0;
-        host.rowStart = 0;
-        host.rendered = false;
+        host.model.Window(host.page).Reset();
         host.details = host.notice = false;
         host.helpLines.clear();
+        NativeMenuWheel = 0; NativeMenuKey = 0; wheel.Clear();
         active = snapshot.host;
         ++snapshot.generation; // Populate advances once before binding rows
         ++rollback.generation;
@@ -508,7 +548,7 @@ export namespace BlacklistMenu
         if (!snapshot.Owner() || Bridge::Read<int32_t>(host.tiered, 616) != 13 ||
             Bridge::Read<int32_t>(host.tiered, 592) != 12) return;
         snapshot.tier = 12;
-        bridge.Caption(host.scene, 924, Wide(host.model.Text("menu.plugins")));
+        bridge.Caption(host.scene, 924, Upper(Wide(host.model.Text("menu.plugins"))));
         rollback.complete = snapshot.Current();
         NativeMenuOpen.store(rollback.complete);
     }
@@ -523,15 +563,13 @@ export namespace BlacklistMenu
             {
                 if (host.notice) { Close(host); return; }
                 host.details = false;
-                host.nextSelection = host.helpReturn;
                 host.helpLines.clear();
             }
             else
             {
-                if (host.page == RootPage) { Close(host); return; }
-                host.model.PageShown(host.page);
-                host.page = RootPage;
-                host.rowStart = 0;
+                const auto parent = host.model.Back(host.page);
+                if (parent == SIZE_MAX) { Close(host); return; }
+                host.page = parent;
             }
             ++host.generation;
         }
@@ -539,31 +577,22 @@ export namespace BlacklistMenu
         {
             auto item = host.items[index];
             if (direction != 0 && item.kind != Kind::Model) return;
+            if (!host.details) host.model.Window(host.page).Point(index);
             switch (item.kind)
             {
             case Kind::Page:
-                host.page = item.page;
-                host.rowStart = 0;
-                host.model.PageShown(host.page);
+            {
+                const auto page = host.model.Enter(item.model);
+                if (page == SIZE_MAX) return;
+                host.page = page;
                 ++host.generation;
                 break;
-            case Kind::Previous:
-                if (host.details) host.helpOffset = host.helpOffset >= PageRows ? host.helpOffset - PageRows : 0;
-                else if (host.page == RootPage) host.rootStart = host.rootStart >= PageRows ? host.rootStart - PageRows : 0;
-                else host.rowStart = host.rowStart >= PageRows ? host.rowStart - PageRows : 0;
-                ++host.generation;
-                break;
-            case Kind::Next:
-                if (host.details) host.helpOffset += PageRows;
-                else if (host.page == RootPage) host.rootStart += PageRows;
-                else host.rowStart += PageRows;
-                ++host.generation;
-                break;
+            }
             case Kind::Model:
                 host.model.Change(item.model, direction, snapshot.gameMode != 11);
                 if (!snapshot.Current()) return;
                 break;
-            default: break;
+            default: return;
             }
         }
         snapshot.generation = host.generation; // only our navigation advances it
@@ -591,11 +620,10 @@ export namespace BlacklistMenu
         if (!host) return;
         if (!host->open) Open(*host);
         if (!Live(*host) || !host->open || !OwnsFocus(*host, 12)) return;
-        host->helpLines = MenuText::Wrap(text);
+        host->helpLines = MenuText::Wrap(Upper(text), RowColumns);
         host->helpTitle = Wide(RWGTAMenu::PluginText(FixSettings(), Language(), "update.title"));
-        host->helpOffset = 0;
+        host->helpWindow.Reset();
         host->details = host->notice = true;
-        host->nextSelection = 0;
         if (!Populate(*host) && Live(*host) && host->open) Close(*host);
     }
 
@@ -606,24 +634,32 @@ export namespace BlacklistMenu
         OriginalExit(code);
     }
 
+    // F1 shows the selected row's whole help and closes it again
     inline void ShowHelp()
     {
         auto host = active.lock();
-        if (!host || !Live(*host) || !host->open || host->details) return;
+        if (!host || !Live(*host) || !host->open) return;
         Snapshot snapshot(*host);
         if (!snapshot.Current()) return;
+        if (host->details)
+        {
+            if (host->notice) { Close(*host); return; }
+            host->details = false;
+            host->helpLines.clear();
+            if (!Populate(*host) && Live(*host) && host->open) Close(*host);
+            return;
+        }
         const auto selected = Bridge::Read<int32_t>(host->list, 576);
         if (selected < 0 || size_t(selected) >= host->count) return;
         const auto item = host->items[selected];
         if (item.kind != Kind::Model) return;
-        auto lines = MenuText::Wrap(Wide(host->model.Help(item.model)));
+        host->model.Window(host->page).Point(size_t(selected));
+        auto lines = MenuText::Wrap(Upper(Wide(host->model.Help(item.model))), RowColumns);
         if (lines.empty() || !snapshot.Current()) return;
         host->helpTitle = item.label;
         host->helpLines = std::move(lines);
-        host->helpReturn = selected;
-        host->helpOffset = 0;
+        host->helpWindow.Reset();
         host->details = true;
-        host->nextSelection = 0;
         if (!Populate(*host) && Live(*host) && host->open) Close(*host);
     }
 
@@ -637,25 +673,38 @@ export namespace BlacklistMenu
         {
             auto host = event.host.lock();
             if (!host || !Live(*host) || host->generation != event.generation ||
-                host->page != event.page || host->rootStart != event.rootStart || host->rowStart != event.rowStart || host->manager != currentManager ||
+                host->page != event.page || host->manager != currentManager ||
                 Bridge::Read<uint32_t>(host->manager, 0x5A0) != event.inputMask || bridge.GameMode() != event.gameMode) continue;
             if (!OwnsFocus(*host, event.open ? 1 : 12)) continue;
             if (event.open) Open(*host);
             else Activate(*host, event.row, event.direction);
         }
         auto host = active.lock();
-        if (host && Live(*host) && host->open && Bridge::Read<int32_t>(host->tiered, 592) == 12 &&
-            Bridge::Read<uint8_t>(host->list, 553) == 0 && RWGTAMenu::Model::Changed().exchange(false))
+        if (!host || !Live(*host) || !host->open || Bridge::Read<int32_t>(host->tiered, 592) != 12 ||
+            Bridge::Read<uint8_t>(host->list, 553) != 0)
         {
-            if (OwnsFocus(*host, 12))
-            {
-                if (!Populate(*host))
-                {
-                    Log("changed row population refused; returning to stock Options");
-                    if (Live(*host) && host->open) Close(*host);
-                }
-            }
-            else RWGTAMenu::Model::Changed() = true;
+            NativeMenuWheel = 0; NativeMenuKey = 0;
+            return;
+        }
+        if (!OwnsFocus(*host, 12)) return;
+        bool rebuild = RWGTAMenu::Model::Changed().exchange(false);
+        const auto follow = std::exchange(host->follow, -1);
+        if (host->settle > 0)
+        {
+            --host->settle;
+            if (Bridge::Read<int32_t>(host->list, 576) != host->lastIndex && host->lastIndex >= 0 && size_t(host->lastIndex) < host->count)
+                reinterpret_cast<void(__thiscall*)(void*, int32_t, int32_t)>(bridge.selectRow)(host->list, host->lastIndex, 1);
+        }
+        // Only the row the list has selected now counts
+        else if (follow >= 0 && size_t(follow) < host->count && Bridge::Read<int32_t>(host->list, 576) == follow)
+            rebuild |= Follow(*host, follow);
+        const int notches = wheel.Take(NativeMenuWheel.exchange(0));
+        const int key = NativeMenuKey.exchange(0);
+        if (notches || key) rebuild |= Navigate(*host, notches, key);
+        if (rebuild && !Populate(*host))
+        {
+            Log("changed row population refused; returning to stock Options");
+            if (Live(*host) && host->open) Close(*host);
         }
     }
     inline void Prepare(void* scene, int32_t tier)

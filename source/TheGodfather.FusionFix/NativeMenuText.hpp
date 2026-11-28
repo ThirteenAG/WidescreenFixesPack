@@ -56,6 +56,13 @@ namespace GodfatherMenu::MenuText
         return true;
     }
 
+    // One row's text: cut at the row's width with an ellipsis
+    inline void Shorten(std::wstring& text, size_t maximum = 44)
+    {
+        if (text.size() > maximum)
+            text = text.substr(0, maximum - 3) + L"...";
+    }
+
     inline bool Fits(const std::wstring& text)
     {
         return text.size() <= 96 && text.find(L'\n') == std::wstring::npos;

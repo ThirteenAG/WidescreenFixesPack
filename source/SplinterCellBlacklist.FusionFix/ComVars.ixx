@@ -9,6 +9,9 @@ export HWND WindowHandle = nullptr;
 export void (*UpdateCameraCullBias)(float) = nullptr;
 export std::atomic<bool> NativeMenuOpen{ false };
 export std::atomic<bool> NativeHelpRequested{ false };
+// While the fix's menu is open: the wheel's raw delta and the last Page Up/Down, Home or End key for its list
+export std::atomic<int> NativeMenuWheel{ 0 };
+export std::atomic<int> NativeMenuKey{ 0 };
 export std::atomic<bool> ResetShoulderKey{ true };
 
 // UWindowsViewport, set by the viewport's input update every frame

@@ -74,8 +74,11 @@ export namespace NeoRenderer
 
     // Window messages reach the overlay first; the hotkey itself is read at the frame boundary because the game's
     // DirectInput keyboard can take the key messages.
+    inline void (*MenuMessage)(UINT, WPARAM) = nullptr;
     inline bool Message(HWND window, UINT message, WPARAM wParam, LPARAM lParam, LRESULT& result)
     {
+        if (MenuMessage)
+            MenuMessage(message, wParam);
         if (Window.load() == window && (message == WM_ACTIVATEAPP || message == WM_NCDESTROY))
             DirectInputRawMouse::Clear();
         if constexpr (!WFP::DeveloperOverlay)

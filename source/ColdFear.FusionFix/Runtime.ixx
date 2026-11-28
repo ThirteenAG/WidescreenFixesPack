@@ -126,6 +126,8 @@ export namespace ColdFearRuntime
         }
         if (message == WM_DESTROY)
             RWGTA::UpdateCheck::OnExit();
+        if (message == WM_MOUSEWHEEL && ColdFearMenu::Get().open)
+            ColdFearMenu::Get().wheelDelta += GET_WHEEL_DELTA_WPARAM(wParam);
         const auto native = CallWindowProcW(OriginalWindowProc, window, message, wParam, lParam);
         if (focusMessage && !gainingFocus)
             SyncFocus();
@@ -258,6 +260,9 @@ export namespace ColdFearRuntime
             ColdFearOverlay::Present(device, Window);
         };
         D3D9Options::beforeReset = ColdFearOverlay::BeforeReset;
+        // A full screen device lost to another window: the game releases its buffers and textures for the Reset and goes
+        // on drawing without them when the Reset fails, so the Reset waits until the device can be reset
+        D3D9Options::waitForDevice = true;
         D3D9Options::HookCreation();
 
         RWGTA::UpdateCheck::Config update;

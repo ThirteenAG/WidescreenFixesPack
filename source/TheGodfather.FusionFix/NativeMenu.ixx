@@ -2,8 +2,12 @@ module;
 
 #include <stdafx.h>
 #include "FixSettings.hpp"
+#include "NativeMenuText.hpp"
 #include "Shared/RWGTA/FixMenu.hpp"
+#include "Shared/PadInput.hpp"
+#include "Shared/RainDroplets.hpp"
 #include <array>
+#include <atomic>
 #include <map>
 #include <stdexcept>
 
@@ -15,27 +19,21 @@ import ResolutionPicker;
 
 import Input;
 import ComVars;
+import Window;
 
 export namespace GodfatherMenu
 {
-    enum class Kind
-    {
-        Plugin,
-        Setting,
-        Back,
-        Previous,
-        Next,
-        Details,
-        Text
-    };
+    using Kind = View::Kind;
     struct Item
     {
         Kind kind{};
-        size_t index{};
-        RWGTAMenu::Row row{};
+        const RWGTAMenu::Row* row{};
         std::string label, help;
         bool enabled{ true };
     };
+    // The row slots of the Video page the lists scroll through (Back included), from the top of the page
+    constexpr size_t Slots{ 8 };
+    constexpr float RowTop{ 110.0f }, RowStep{ 36.0f };
     struct State
     {
         HMODULE module{};
@@ -54,6 +52,10 @@ export namespace GodfatherMenu
         size_t selected{};
         uint32_t inputMask{};
         ULONGLONG settleAt{};
+        MenuList::Repeat repeat[2];
+        MenuList::StickAxis stick;
+        MenuList::WheelNotches notches;
+        std::atomic<int> wheel{}, pageKeys{}, edgeKeys{};
         SafetyHookInline gammaHook, actionsHook;
     };
     State state;
@@ -85,6 +87,15 @@ export namespace GodfatherMenu
         if (name.empty() || name.size() == 512)
             return nullptr;
         return Get(api.levelRoot(0), name.c_str());
+    }
+    // The game's screens (a vtable, then its four screens): while one is up (1) a menu is on the screen
+    bool AnyScreen()
+    {
+        auto* screens = Read<void*>(GodfatherMenuScreens.is_initialized() ? GodfatherMenuScreens.get_ptr() : nullptr);
+        for (size_t offset = 4; screens && offset <= 16; offset += 4)
+            if (Read<int>(Read<void*>(screens, offset), 32 + layoutShift) == 1)
+                return true;
+        return false;
     }
     Value* VideoRoot()
     {
@@ -247,6 +258,7 @@ export namespace GodfatherMenu
             if (state.open && index >= 0 && static_cast<size_t>(index) < state.items.size())
             {
                 state.selected = index;
+                state.model.Window(state.view.page).Point(static_cast<size_t>(index));
                 for (size_t i = 0; i < state.items.size(); ++i)
                     if (i != state.selected)
                         Frame(Get(state.root, ("wfpRow" + std::to_string(i)).c_str()), "normal");
@@ -343,6 +355,9 @@ export namespace GodfatherMenu
     }
     void HideRows()
     {
+        for (auto name : { "wfpUp", "wfpDown" })
+            if (auto mark = Get(state.root, name))
+                Set(mark, "_visible", 0.0f);
         for (int i = 0; i < 9; ++i)
         {
             auto name = "wfpRow" + std::to_string(i);
@@ -421,43 +436,36 @@ export namespace GodfatherMenu
         }
     }
     void Close();
+    // The shown list in the page's rows: the game's option buttons for rows and Back, its arrows for values, text
+    // fields for the notice; the marks of more rows above and below
     void Build()
     {
         state.items.clear();
         HideRows();
-        state.view.selected = state.selected;
-        if (!state.view.Build(state.model, false, 8))
+        if (!state.view.Build(state.model, false))
         {
             Close();
             return;
         }
-        state.selected = state.view.selected;
         for (const auto& shown : state.view.items)
         {
-            auto kind = Kind::Text;
-            switch (shown.kind)
-            {
-                case View::Kind::Page: kind = Kind::Plugin; break;
-                case View::Kind::Row: kind = Kind::Setting; break;
-                case View::Kind::Previous: kind = Kind::Previous; break;
-                case View::Kind::Next: kind = Kind::Next; break;
-                case View::Kind::Details: kind = Kind::Details; break;
-                case View::Kind::Back: kind = Kind::Back; break;
-                default: break;
-            }
-            auto help = shown.kind == View::Kind::Row ? state.model.Help(shown.row) : std::string{};
-            state.items.push_back({ kind, shown.index, shown.row, asi_settings::text::Narrow(shown.text),
-                std::move(help), shown.enabled });
+            std::string help;
+            std::wstring wide;
+            if (shown.kind == Kind::Row && !RWGTAMenu::Model::Opens(*shown.row) && MenuText::Convert(state.model.Help(*shown.row), wide))
+                help = asi_settings::text::Narrow(wide);
+            state.items.push_back({ shown.kind, shown.row, asi_settings::text::Narrow(shown.text), std::move(help), shown.enabled });
         }
-        const auto count = std::min(size_t(8), state.items.size());
-        state.selected = count ? std::min(state.selected, count - 1) : 0;
+        auto& window = state.model.Window(state.view.page);
+        const bool notice = !state.view.notice.empty();
+        const auto count = std::min(Slots + (notice ? 4 : 0), state.items.size());
+        state.selected = notice ? count - 1 : std::min(window.Slot(), count - 1);
         for (size_t i = 0; i < count; ++i)
         {
             const auto index = i;
+            const float y = RowTop + RowStep * static_cast<float>(i);
             if (state.items[i].kind == Kind::Text)
             {
-                auto text = TextField("wfpText" + std::to_string(i), 29100.0f + static_cast<float>(i),
-                    70.0f, 110.0f + 36.0f * static_cast<float>(i), 650.0f, 35.0f);
+                auto text = TextField("wfpText" + std::to_string(i), 29100.0f + static_cast<float>(i), 70.0f, y, 650.0f, 35.0f);
                 Set(text, "text", state.items[i].label);
                 Set(text, "_visible", 1.0f);
                 continue;
@@ -472,7 +480,7 @@ export namespace GodfatherMenu
                 continue;
             }
             Set(widget, "_x", 70.0f);
-            Set(widget, "_y", 110.0f + 36.0f * static_cast<float>(i));
+            Set(widget, "_y", y);
             Set(widget, "_visible", 1.0f);
             Set(widget, "wfpIndex", static_cast<float>(index));
             Set(widget, "wfpDirection", 0.0f);
@@ -482,8 +490,7 @@ export namespace GodfatherMenu
             FitButton(widget, 400.0f);
             Focus(widget, i == state.selected);
             const auto& item = state.items[index];
-            if (item.kind == Kind::Setting &&
-                (item.row.kind == RWGTAMenu::RowKind::Setting || item.row.kind == RWGTAMenu::RowKind::Preset))
+            if (item.kind == Kind::Row && (item.row->kind == RWGTAMenu::RowKind::Setting || item.row->kind == RWGTAMenu::RowKind::Preset))
             {
                 for (int direction : { -1, 1 })
                 {
@@ -495,21 +502,31 @@ export namespace GodfatherMenu
                     if (!arrow)
                         continue;
                     Set(arrow, "_x", direction < 0 ? 470.0f : 520.0f);
-                    Set(arrow, "_y", 110.0f + 36.0f * static_cast<float>(i));
+                    Set(arrow, "_y", y);
                     Set(arrow, "_visible", 1.0f);
                     Set(arrow, "wfpIndex", static_cast<float>(index));
                     Set(arrow, "wfpDirection", static_cast<float>(direction));
                     Label(arrow, direction < 0 ? "<" : ">", item.help);
                     FitButton(arrow, 35.0f);
+                    Focus(arrow, false);
                 }
+            }
+        }
+        // An ellipsis in the page's text font says there are more rows that way
+        if (!notice)
+        {
+            for (auto [name, depth, y, shown] : { std::tuple{ "wfpUp", 29300.0f, RowTop - 22.0f, window.Above() },
+                     std::tuple{ "wfpDown", 29301.0f, RowTop + RowStep * static_cast<float>(count) - 6.0f, window.Below() } })
+            {
+                auto mark = TextField(name, depth, 70.0f, y, 400.0f, 24.0f);
+                Set(mark, "text", std::string("..."));
+                Set(mark, "_visible", shown ? 1.0f : 0.0f);
             }
         }
         ShowHelp(count ? state.items[state.selected].help : std::string{});
         ShowRestart();
         auto title = state.view.page < state.model.Pages().size() ? state.model.Pages()[state.view.page].title
             : state.model.Text("menu.plugins");
-        if (state.view.count > 1)
-            title += " (" + std::to_string(state.view.physical + 1) + "/" + std::to_string(state.view.count) + ")";
         auto heading = TextField("wfpTitle", 29200.0f, 70.0f, 70.0f, 650.0f, 35.0f);
         Set(heading, "text", title);
         Set(heading, "_visible", 1.0f);
@@ -526,6 +543,24 @@ export namespace GodfatherMenu
         ShowRestart();
         Set(Get(state.root, "wfpTitle"), "_visible", 0.0f);
     }
+    // Esc, B or the Back row: the list it came from, on the row it came from; the game's page from the plugins list
+    void Back()
+    {
+        if (!state.view.notice.empty())
+        {
+            state.view.notice.clear();
+            Build();
+            return;
+        }
+        const auto parent = state.model.Back(state.view.page);
+        if (parent == SIZE_MAX)
+        {
+            Close();
+            return;
+        }
+        state.view.page = parent;
+        Build();
+    }
     void Act()
     {
         const auto command = std::exchange(state.command, -1);
@@ -536,20 +571,37 @@ export namespace GodfatherMenu
             if (state.open)
                 return;
             state.open = true;
-            state.selected = 0;
+            state.view = {};
+            state.model.Window(RWGTAMenu::Model::RootPage).Reset();
+            state.notches.Clear();
             Stock(false);
             Build();
             return;
         }
         if (!state.open || command < 0 || static_cast<size_t>(command) >= state.items.size())
             return;
-        state.view.selected = static_cast<size_t>(command);
-        if (!state.view.Activate(state.model, false, state.direction))
+        const auto item = state.items[command];
+        if (!item.enabled || item.kind == Kind::Text)
+            return;
+        if (state.view.notice.empty())
+            state.model.Window(state.view.page).Point(static_cast<size_t>(command));
+        if (item.kind == Kind::Back)
         {
-            Close();
+            if (!state.direction)
+                Back();
             return;
         }
-        state.selected = state.view.selected;
+        if (RWGTAMenu::Model::Opens(*item.row))
+        {
+            if (state.direction)
+                return;
+            const auto target = state.model.Enter(*item.row);
+            if (target == SIZE_MAX)
+                return;
+            state.view.page = target;
+        }
+        else
+            state.model.Change(*item.row, state.direction, false);
         Build();
     }
     void Joined()
@@ -563,10 +615,26 @@ export namespace GodfatherMenu
             state.items.clear();
             state.view = {};
             state.selected = 0;
-            state.model.OpenPlugins(state.module, state.language, 32, {}, true);
+            state.model.OpenMenu(state.module, state.language, Slots);
             RememberRestartValues();
         }
         Label(Get(state.root, "wfpPlugins"), state.model.Text("menu.plugins"), {});
+    }
+    // Window messages: the wheel (raw deltas, the remainder kept), Page Up/Down, Home/End
+    bool Message(HWND, UINT id, WPARAM wParam, LPARAM, LRESULT& result)
+    {
+        if (!state.open)
+            return false;
+        if (id == WM_MOUSEWHEEL)
+            state.wheel += state.notches.Take(GET_WHEEL_DELTA_WPARAM(wParam));
+        else if (id == WM_KEYDOWN && (wParam == VK_PRIOR || wParam == VK_NEXT))
+            state.pageKeys += wParam == VK_NEXT ? 1 : -1;
+        else if (id == WM_KEYDOWN && (wParam == VK_HOME || wParam == VK_END))
+            state.edgeKeys = wParam == VK_END ? 1 : -1;
+        else
+            return false;
+        result = 0;
+        return true;
     }
     void Input()
     {
@@ -578,10 +646,11 @@ export namespace GodfatherMenu
         if (!acceptsInput)
         {
             state.inputMask = 0;
+            state.wheel = state.pageKeys = state.edgeKeys = 0;
             return;
         }
         uint32_t mask{};
-        const int keys[]{ VK_UP, VK_DOWN, VK_LEFT, VK_RIGHT, VK_RETURN, VK_ESCAPE, VK_F6, VK_F1 };
+        const int keys[]{ VK_UP, VK_DOWN, VK_LEFT, VK_RIGHT, VK_RETURN, VK_ESCAPE, VK_F6 };
         for (size_t i = 0; i < std::size(keys); ++i)
             if (GetAsyncKeyState(keys[i]) < 0)
                 mask |= 1u << i;
@@ -597,48 +666,58 @@ export namespace GodfatherMenu
         }
         if (state.items.empty())
             return;
-        const auto previous = state.selected;
-        state.selected = std::min(state.selected, state.items.size() - 1);
-        if (pressed & 1)
+        auto& window = state.model.Window(state.view.page);
+        const bool list = state.view.notice.empty();
+        bool moved = false;
+        // Up/Down from the keys, the d-pad and the stick, held: the game's menu repeat
+        XINPUT_STATE pad{};
+        DWORD slot{};
+        const bool read = PadInput::Read(pad, slot);
+        const int axis = read ? state.stick.Direction(pad.Gamepad.sThumbLY) : 0;
+        const auto now = GetTickCount64();
+        for (int i = 0; i < 2; ++i)
         {
-            state.view.selected = state.selected;
-            state.view.Move(-1);
-            state.selected = state.view.selected;
+            const bool down = (mask & (1u << i)) || (read && (pad.Gamepad.wButtons & (i ? XINPUT_GAMEPAD_DPAD_DOWN : XINPUT_GAMEPAD_DPAD_UP))) ||
+                axis == (i ? -1 : 1);
+            if (state.repeat[i].Step(down, now) && list)
+                moved |= window.Move(i ? 1 : -1);
         }
-        if (pressed & 2)
+        const int wheel = state.wheel.exchange(0);
+        for (int i = 0; list && i < std::abs(wheel); ++i)
+            moved |= window.Scroll(wheel > 0 ? -1 : 1);
+        const int pages = state.pageKeys.exchange(0);
+        for (int i = 0; list && i < std::abs(pages); ++i)
+            moved |= window.Page(pages > 0 ? 1 : -1);
+        if (const int edge = state.edgeKeys.exchange(0); list && edge)
+            moved |= window.Edge(edge);
+        if (read && list)
         {
-            state.view.selected = state.selected;
-            state.view.Move(1);
-            state.selected = state.view.selected;
+            static bool shoulders[2]{};
+            for (int i = 0; i < 2; ++i)
+            {
+                const bool down = pad.Gamepad.wButtons & (i ? XINPUT_GAMEPAD_RIGHT_SHOULDER : XINPUT_GAMEPAD_LEFT_SHOULDER);
+                if (down && !std::exchange(shoulders[i], down))
+                    moved |= window.Page(i ? 1 : -1);
+                shoulders[i] = down;
+            }
         }
-        if (pressed & ((1u << 6) | (1u << 7)))
+        if (moved)
         {
-            for (size_t i = 0; i < state.items.size(); ++i)
-                if (state.items[i].kind == Kind::Details)
-                    state.command = static_cast<int>(i);
-            state.direction = 0;
+            Build();
             return;
         }
         if (pressed & (1u << 5))
         {
+            state.command = static_cast<int>(state.items.size()) - 1;
+            state.direction = 0;
             for (size_t i = 0; i < state.items.size(); ++i)
                 if (state.items[i].kind == Kind::Back)
                     state.command = static_cast<int>(i);
-            state.direction = 0;
         }
         else if (pressed & ((1u << 2) | (1u << 3) | (1u << 4)))
         {
             state.command = static_cast<int>(state.selected);
             state.direction = pressed & (1u << 2) ? -1 : pressed & (1u << 3) ? 1 : 0;
-        }
-        if (previous != state.selected)
-        {
-            for (size_t i = 0; i < state.items.size(); ++i)
-            {
-                auto name = "wfpRow" + std::to_string(i);
-                Focus(Get(state.root, name.c_str()), i == state.selected);
-            }
-            ShowHelp(state.items[state.selected].help);
         }
     }
     void Install(Value* root)
@@ -674,7 +753,7 @@ export namespace GodfatherMenu
         state.language = FixSettings().Get("MAIN.TextLanguage");
         if (state.language.empty() || state.language == "auto")
             state.language = state.autoLanguage;
-        state.model.OpenPlugins(state.module, state.language, 32, {}, true);
+        state.model.OpenMenu(state.module, state.language, Slots);
         RememberRestartValues();
         auto source = Get(root, "test");
         auto widget = Clone(source, "wfpPlugins", 25002.0f);
@@ -765,6 +844,7 @@ export namespace GodfatherMenu
                 }
             }
         }
+        RainDroplets::MenuOpen(AnyScreen());
         if (tick)
             tick();
         state.busy = false;
@@ -783,6 +863,11 @@ export namespace GodfatherMenu
         auto gamma = GammaEntry();
         auto actions = find_pattern("8B 44 24 0C 83 EC 1C 83 F8 FF 53 55 56 57 8B 7C 24 34 8B F1");
         state.gammaHook = safetyhook::create_inline(gamma, Gamma);
+        const auto message = GodfatherWindow::message;
+        GodfatherWindow::message = [message](HWND target, UINT id, WPARAM wParam, LPARAM lParam, LRESULT& result)
+        {
+            return Message(target, id, wParam, lParam, result) || (message && message(target, id, wParam, lParam, result));
+        };
         state.actionsHook = safetyhook::create_inline(actions, Actions);
         GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_PIN | GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS,
                            reinterpret_cast<LPCWSTR>(&Init), &state.module);

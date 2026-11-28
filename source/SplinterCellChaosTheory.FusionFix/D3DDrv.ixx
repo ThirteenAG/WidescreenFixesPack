@@ -7,6 +7,7 @@ module;
 #include <atomic>
 #include <stdexcept>
 #include "Shared/SplinterCell/PreferredAdapter.hpp"
+#include "Shared/RainDroplets.hpp"
 
 export module D3DDrv;
 
@@ -345,6 +346,8 @@ void OnResolutionChange(int32_t width, int32_t height, bool bFullscreen)
 void BeforePresent(SafetyHookContext& regs)
 {
     UpdateXidiProfile();
+    // No screen drops over the menus (the optic cable view is gameplay)
+    RainDroplets::MenuOpen((CMenusManager::IsMainMenuDisplayed() && !CMenusManager::IsMenuDisplayed(Page::P_opticcable)) || bPluginsPageOpen);
 
     if ((CMenusManager::IsMainMenuDisplayed() && !CMenusManager::IsMenuDisplayed(Page::P_Briefing) &&
         !CMenusManager::IsMenuDisplayed(Page::P_LoadOut) && !CMenusManager::IsMenuDisplayed(Page::P_LoadOut2) &&

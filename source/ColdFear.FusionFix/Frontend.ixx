@@ -4,12 +4,15 @@ module;
 #include <d3d9.h>
 #include "FixSettings.hpp"
 #include <algorithm>
+#include <array>
 #include <cctype>
 #include <cstring>
 #include <string>
 #include <string_view>
 #include <vector>
 #include "Shared/RWGTA/FixMenu.hpp"
+#include "Shared/MenuList.hpp"
+#include <atomic>
 
 export module Frontend;
 
@@ -25,8 +28,9 @@ export module Frontend;
 // slot, names it WFPOptions and adds the page and the Options row to the cfg text as the parser reads it.
 //
 // - The page first lists the plugins (the fix first), even when it is alone; Enter opens one. A plugin's page: its
-//   Preset row, its settings, Restore defaults (RWGTAMenu::Model, Plugins layout). A plugin with more rows than fit
-//   continues on further parts, which the row on top switches (left, right). Back returns to the list.
+//   Preset row, its settings or a row per category opening that category, Restore defaults (RWGTAMenu::Model, menu
+//   layout). Every list scrolls through the page's rows a row at a time: moving past the first or last row shown, or
+//   the wheel. Back returns to the list the page was opened from, on the row it came from.
 // - Rows show "Label: Value"; left and right step through the values, Enter steps forward. The help of the row
 //   selected shows below the rows.
 // - The rows have no text key: an item whose key is unknown draws the text the code puts into it, which the fix
@@ -37,13 +41,16 @@ export namespace ColdFearMenu
     constexpr int OptionPage = 6;           // Option
     constexpr const char* PageName = "WFPOptions";
     constexpr float EntryCode = 7000.0f;    // the Plugins row of Options
-    constexpr float SwitchCode = 7001.0f;   // the part row
+    constexpr float SwitchCode = 7001.0f;   // the line above the rows: the help pages' title, the mark of rows above
     constexpr float FirstRowCode = 7002.0f;
     constexpr float BackCode = 7020.0f;
     constexpr float NoticeCode = 7030.0f;
     constexpr float DescriptionCode = 17.0f;    // the game's help line
     constexpr int RowCount = 6;
-    constexpr int DescriptionItem = RowCount + 2;   // the help line's place on the fix's page
+    constexpr int BelowItem = RowCount + 2;         // the line below the rows: the mark of rows below
+    constexpr int DescriptionItem = RowCount + 3;   // the help lines' places on the fix's page
+    constexpr size_t DescriptionLines = 3;
+    constexpr size_t DescriptionLength = 78;        // the game draws its small text in pieces of 80 letters
     constexpr int RowWidth = 470;
 
     // A page of the menu (the code's "this") and its items
@@ -61,11 +68,12 @@ export namespace ColdFearMenu
     {
         HMODULE host = nullptr;
         RWGTAMenu::Model model;
-        std::vector<size_t> entries;        // the first page of each plugin, in the list's order
-        std::vector<const RWGTAMenu::Row*> rows; // the rows of the part shown
-        size_t part = 0;                    // the model's page shown
-        size_t listFirst = 0;
-        bool list = false;                  // the list of plugins is shown
+        std::vector<const RWGTAMenu::Row*> rows; // the rows in the page's window, slot by slot
+        size_t view = RWGTAMenu::Model::RootPage; // the model's page shown
+        int lastSelected = -1;              // the item selected in the last frame
+        bool below = false;                 // rows below the window: the mark under the rows
+        std::atomic<int> wheelDelta{ 0 };
+        MenuList::WheelNotches wheel;
         bool open = false;                  // the page is shown; it's set up again when it's opened the next time
         bool frontend = true;
         HWND window = nullptr;
@@ -76,7 +84,7 @@ export namespace ColdFearMenu
         std::wstring helpTitle;
         std::vector<std::wstring> helpLines;
         std::string notice;
-        std::wstring description;           // the help line below the rows, written again after the game's frame
+        std::array<std::wstring, DescriptionLines> description; // the help below the rows, written again after the game's frame
         bool startSkipped = false;
         void (*skipStart)(uint8_t*) = nullptr;
         std::string cfg;                    // MenuPC.cfg with the fix's page, while the parser reads it
@@ -143,47 +151,23 @@ export namespace ColdFearMenu
     // ---------------------------------------------------------------------------------------------------------------
     // Pages and rows
 
-    // The parts of the plugin of the model's page shown: first and count
-    inline std::pair<size_t, size_t> Parts()
-    {
-        auto& s = Get();
-        auto& pages = s.model.Pages();
-        if (s.part >= pages.size())
-            return { 0, 0 };
-        auto plugin = pages[s.part].plugin;
-        size_t first = s.part, last = s.part;
-        while (first > 0 && pages[first - 1].plugin == plugin)
-            --first;
-        while (last + 1 < pages.size() && pages[last + 1].plugin == plugin)
-            ++last;
-        return { first, last - first + 1 };
-    }
-
     // The plugins with settings, the fix first: each time the page is opened, since Ultimate ASI Loader loads them one
     // after another and some only after the fix's init
     inline bool Build()
     {
         auto& s = Get();
-        s.model.OpenPlugins(s.host, Language(), RowCount);
-        s.entries.clear();
-        auto& pages = s.model.Pages();
-        for (size_t i = 0; i < pages.size(); ++i)
-        {
-            if (i == 0 || pages[i].plugin != pages[i - 1].plugin)
-                s.entries.push_back(i);
-        }
-        s.part = 0;
-        s.listFirst = 0;
-        s.list = true;
-        return !pages.empty();
+        s.model.OpenMenu(s.host, Language(), RowCount);
+        s.view = RWGTAMenu::Model::RootPage;
+        s.model.Window(s.view).Reset();
+        s.lastSelected = -1;
+        s.wheel.Clear();
+        s.wheelDelta = 0;
+        return !s.model.Pages().empty();
     }
 
-    // The name of a plugin in the list
-    inline std::string EntryText(size_t entry)
+    inline bool List()
     {
-        auto& s = Get();
-        auto& page = s.model.Pages()[s.entries[entry]];
-        return OtherPlugins::Name(*page.plugin);
+        return Get().view == RWGTAMenu::Model::RootPage;
     }
 
     // The row's line: its label and its value
@@ -309,20 +293,40 @@ export namespace ColdFearMenu
         s.model.Close();
     }
 
-    // The help line below the rows: the game draws a longer text in pieces of 80 characters and puts the second piece
-    // far to the right, so the line ends at a word before that; F1 shows the whole help
-    inline std::wstring Short(std::wstring text)
+    // The help below the rows in lines of the game's small text, broken at words; a longer help ends with "..." on the
+    // last line and F1 shows the whole of it
+    inline std::array<std::wstring, DescriptionLines> Short(std::wstring text)
     {
-        constexpr size_t MaxLength = 79;
-        if (text.size() <= MaxLength)
-            return text;
-        auto end = text.rfind(L' ', MaxLength - 3);
-        if (end == std::wstring::npos || end == 0)
-            end = MaxLength - 3;
-        text.resize(end);
-        while (!text.empty() && (text.back() == L',' || text.back() == L'.' || text.back() == L' '))
-            text.pop_back();
-        return text + L"...";
+        std::array<std::wstring, DescriptionLines> lines;
+        for (auto& c : text)
+        {
+            if (c == L'\n' || c == L'\r')
+                c = L' ';
+        }
+        for (size_t line = 0; line < DescriptionLines && !text.empty(); ++line)
+        {
+            if (text.size() <= DescriptionLength)
+            {
+                lines[line] = text;
+                break;
+            }
+            const size_t room = line + 1 == DescriptionLines ? DescriptionLength - 3 : DescriptionLength;
+            auto end = text.rfind(L' ', room);
+            if (end == std::wstring::npos || end == 0)
+                end = room;
+            lines[line] = text.substr(0, end);
+            text.erase(0, end);
+            while (!text.empty() && text.front() == L' ')
+                text.erase(text.begin());
+            if (line + 1 == DescriptionLines && !text.empty())
+            {
+                auto& last = lines[line];
+                while (!last.empty() && (last.back() == L',' || last.back() == L'.' || last.back() == L' '))
+                    last.pop_back();
+                last += L"...";
+            }
+        }
+        return lines;
     }
 
     inline size_t HelpPages()
@@ -337,9 +341,10 @@ export namespace ColdFearMenu
         if (s.details || selected < 0)
             return;
         const int row = RowIndex(ItemAt(page, selected));
-        if ((!s.list && (row < 0 || row >= int(s.rows.size()))) || (s.list && s.notice.empty()))
+        const bool notice = row < 0 || row >= int(s.rows.size()) || RWGTAMenu::Model::Opens(*s.rows[row]);
+        if (notice && (!List() || s.notice.empty()))
             return;
-        auto text = Wide(s.list ? s.notice : s.model.Help(*s.rows[row]));
+        auto text = Wide(notice ? s.notice : s.model.Help(*s.rows[row]));
         if (text.empty())
             return;
         s.helpLines.clear();
@@ -360,7 +365,7 @@ export namespace ColdFearMenu
             while (!text.empty() && (text.front() == L' ' || text.front() == L'\n' || text.front() == L'\r'))
                 text.erase(text.begin());
         }
-        s.helpTitle = Wide(s.list ? HostText("menu.plugins") : s.model.Label(*s.rows[row]));
+        s.helpTitle = Wide(notice ? HostText("menu.plugins") : s.model.Label(*s.rows[row]));
         s.helpTitle.resize(std::min(size_t(48), s.helpTitle.size()));
         s.helpSelection = selected;
         s.helpPage = 0;
@@ -395,6 +400,7 @@ export namespace ColdFearMenu
             *(uint8_t*)(item + ItemField::Selectable) = 0;
             *(int32_t*)(item + ItemField::Width) = visible ? RowWidth : 0;
         }
+
         s.description = Short(Wide(HostText("menu.detailsnav")));
     }
 
@@ -436,7 +442,7 @@ export namespace ColdFearMenu
             s.open = true;
             if (!Build())
                 return;
-            Select(page, s.list ? FirstRowCode : SwitchCode);
+            Select(page, FirstRowCode);
         }
         auto& pages = s.model.Pages();
         if (pages.empty())
@@ -452,35 +458,75 @@ export namespace ColdFearMenu
             return;
         }
 
-        SetText(ItemAt(page, 0), Upper(Wide(HostText("menu.plugins"))));
+        // The title: the page's name (the plugins list, a plugin, a category), upper case like the game's titles
+        const auto& title = s.view == RWGTAMenu::Model::RootPage ? HostText("menu.plugins") : pages[s.view].title;
+        SetText(ItemAt(page, 0), Upper(Wide(title)));
         *(int32_t*)(ItemAt(page, 0) + ItemField::Width) = RowWidth;
 
-        // The row on top: the plugin's name and its part (the fonts have no arrows)
-        if (int item = FindItem(page, SwitchCode); item >= 0)
+        auto& window = s.model.Window(s.view);
+        s.model.Shown(s.view, false);
+        auto& selected = *(int32_t*)(page + PageField::Selected);
+        const auto slotOf = [&](int item) { return item >= 0 ? RowIndex(ItemAt(page, item)) : -1; };
+        const auto backItem = FindItem(page, BackCode);
+        // Moving past the first or last row shown scrolls the list instead, like the game's longer lists; from Back
+        // the list wraps to its ends
+        const int previous = slotOf(s.lastSelected), current = slotOf(selected);
+        const int shownRows = int(window.Shown());
+        if (s.lastSelected >= 0 && selected != s.lastSelected)
         {
-            auto pItem = ItemAt(page, item);
-            std::string text;
-            if (!s.list)
+            if (previous == 0 && current != 1 && window.Above())
             {
-                auto [first, count] = Parts();
-                text = OtherPlugins::Name(*pages[s.part].plugin);
-                if (count > 1)
-                    text += "  -  " + std::to_string(s.part - first + 1) + "/" + std::to_string(count);
+                window.Move(-1);
+                Select(page, FirstRowCode);
             }
-            else if (s.entries.size() > RowCount)
-                text = HostText("menu.plugins") + "  -  " + std::to_string(s.listFirst / RowCount + 1) + "/" +
-                    std::to_string((s.entries.size() + RowCount - 1) / RowCount);
-            SetText(pItem, Wide(text));
-            const bool visible = !s.list || s.entries.size() > RowCount;
-            *(int32_t*)(pItem + ItemField::Width) = visible ? RowWidth : 0;
-            *(uint8_t*)(pItem + ItemField::Selectable) = visible;
-            *(uint8_t*)(pItem + ItemField::Visible) = visible;
+            else if (previous == shownRows - 1 && current < 0 && window.Below())
+            {
+                window.Move(1);
+                Select(page, FirstRowCode + float(shownRows - 1));
+            }
+            else if (s.lastSelected == backItem && current == 0 && window.Above())
+            {
+                window.Edge(-1);
+                Select(page, FirstRowCode);
+            }
+            else if (s.lastSelected == backItem && current >= 0 && window.Below())
+            {
+                window.Edge(1);
+                Select(page, FirstRowCode + float(window.Slot()));
+            }
+            else if (current >= 0)
+                window.Point(size_t(current));
         }
+        else if (current >= 0 && size_t(current) != window.Slot())
+            window.Point(size_t(current));
+        // The wheel moves the list a row per notch; the selection stays on the rows shown
+        bool scrolled = false;
+        for (int notches = s.wheel.Take(s.wheelDelta.exchange(0)); notches; notches += notches > 0 ? -1 : 1)
+            scrolled |= window.Scroll(notches > 0 ? -1 : 1);
+        if (scrolled)
+        {
+            Sound(0);
+            if (slotOf(selected) >= 0)
+                Select(page, FirstRowCode + float(window.Slot()));
+        }
+        s.lastSelected = selected;
 
-        s.rows.clear();
-        if (!s.list)
-            s.rows = s.model.VisibleRows(s.part);
-        int used = s.list ? int(std::min(size_t(RowCount), s.entries.size() - s.listFirst)) : int(s.rows.size());
+        s.rows = s.model.Shown(s.view, false);
+        const int used = int(s.rows.size());
+        // Rows above or below the window: a small mark above or below the rows
+        const auto mark = [&](float code, bool shown, const wchar_t* text)
+        {
+            if (int item = FindItem(page, code); item >= 0)
+            {
+                auto pItem = ItemAt(page, item);
+                SetText(pItem, shown ? text : L"");
+                *(int32_t*)(pItem + ItemField::Width) = shown ? RowWidth : 0;
+                *(uint8_t*)(pItem + ItemField::Selectable) = 0;
+                *(uint8_t*)(pItem + ItemField::Visible) = shown;
+            }
+        };
+        mark(SwitchCode, window.Above(), L"...");
+        s.below = window.Below();
         for (int i = 0; i < RowCount; ++i)
         {
             int item = FindItem(page, FirstRowCode + float(i));
@@ -488,30 +534,24 @@ export namespace ColdFearMenu
                 continue;
             auto pItem = ItemAt(page, item);
             bool shown = i < used;
-            std::string text;
-            if (shown)
-                text = s.list ? EntryText(s.listFirst + size_t(i)) : RowText(*s.rows[i]);
-            SetText(pItem, Wide(text));
+            SetText(pItem, Wide(shown ? RowText(*s.rows[i]) : std::string()));
             *(int32_t*)(pItem + ItemField::Width) = shown ? RowWidth : 0;
             *(uint8_t*)(pItem + ItemField::Selectable) = shown;
             *(uint8_t*)(pItem + ItemField::Visible) = shown;
         }
 
         // A row that isn't there anymore (a shorter page): the first row there is
-        auto& selected = *(int32_t*)(page + PageField::Selected);
         if (selected >= 0 && !*(uint8_t*)(ItemAt(page, selected) + ItemField::Selectable))
-            Select(page, s.list || used > 0 ? FirstRowCode : BackCode);
+            Select(page, used > 0 ? FirstRowCode : BackCode);
 
         std::string description;
         if (selected >= 0)
         {
             auto pSelected = ItemAt(page, selected);
             int row = RowIndex(pSelected);
-            if (*(float*)(pSelected + ItemField::Code) == SwitchCode)
-                description = HostText("WFP_PAGE_DESCRIPTION");
-            else if (s.list && row >= 0)
+            if (List() && row >= 0)
                 description = s.notice.empty() ? HostText("WFP_PLUGINS_DESCRIPTION") : s.notice;
-            else if (row >= 0 && row < int(s.rows.size()))
+            else if (row >= 0 && row < int(s.rows.size()) && !RWGTAMenu::Model::Opens(*s.rows[row]))
                 description = RowHelp(*s.rows[row]);
         }
         s.description = Short(Wide(description));
@@ -524,12 +564,24 @@ export namespace ColdFearMenu
     {
         auto& s = Get();
         if (*(int32_t*)(page + PageField::Index) != PageSlot || !s.open || s.model.Pages().empty() ||
-            *(int32_t*)(page + PageField::Count) <= DescriptionItem)
+            *(int32_t*)(page + PageField::Count) <= DescriptionItem + int(DescriptionLines) - 1)
             return;
-        auto item = ItemAt(page, DescriptionItem);
-        SetText(item, s.description);
-        *(uint8_t*)(item + ItemField::Visible) = !s.description.empty();
-        *(int32_t*)(item + ItemField::Width) = RowWidth;
+        // The mark of rows below the window, a line like the help line (found by its place too)
+        {
+            auto mark = ItemAt(page, BelowItem);
+            const bool shown = s.below && !s.details;
+            SetText(mark, shown ? L"..." : L"");
+            *(int32_t*)(mark + ItemField::Width) = shown ? 40 : 0;
+            *(uint8_t*)(mark + ItemField::Selectable) = 0;
+            *(uint8_t*)(mark + ItemField::Visible) = shown;
+        }
+        for (size_t line = 0; line < s.description.size(); ++line)
+        {
+            auto item = ItemAt(page, DescriptionItem + int(line));
+            SetText(item, s.description[line]);
+            *(uint8_t*)(item + ItemField::Visible) = !s.description[line].empty();
+            *(int32_t*)(item + ItemField::Width) = RowWidth;
+        }
     }
 
     // Enter (direction 0), left (-1) or right (1) on the item selected; false: not the fix's, the game handles it
@@ -561,49 +613,34 @@ export namespace ColdFearMenu
             return true;
         }
 
-        // Back from a plugin's page to the list
+        // Back from a page to the list it was opened from, on the row it came from; from the plugins list to Options
         if (code == BackCode)
         {
-            if (direction != 0 || s.list || s.entries.empty())
+            if (direction != 0)
                 return false;
-            const size_t entry = size_t(std::upper_bound(s.entries.begin(), s.entries.end(), s.part) - s.entries.begin()) - 1;
-            s.listFirst = entry / RowCount * RowCount;
-            s.list = true;
-            Select(page, FirstRowCode + float(entry % RowCount));
+            const auto parent = s.model.Back(s.view);
+            if (parent == SIZE_MAX)
+                return false;
+            s.view = parent;
+            Select(page, FirstRowCode + float(s.model.Window(s.view).Slot()));
+            s.lastSelected = -1;
             Sound(1);
             return true;
         }
-        if (s.list)
-        {
-            if (code == SwitchCode && s.entries.size() > RowCount)
-            {
-                const size_t count = (s.entries.size() + RowCount - 1) / RowCount;
-                s.listFirst = ((s.listFirst / RowCount + (direction < 0 ? count - 1 : 1)) % count) * RowCount;
-                Sound(0);
-                return true;
-            }
-            int row = RowIndex(item);
-            if (row < 0 || s.listFirst + size_t(row) >= s.entries.size() || direction < 0)
-                return false;
-            s.list = false;
-            s.part = s.entries[s.listFirst + size_t(row)];
-            s.model.PageShown(s.part);
-            Select(page, SwitchCode);
-            Sound(2);
-            return true;
-        }
-        if (code == SwitchCode)
-        {
-            auto [first, count] = Parts();
-            if (count < 2)
-                return true;
-            size_t step = direction < 0 ? count - 1 : 1;
-            s.part = first + (s.part - first + step) % count;
-            s.model.PageShown(s.part);
-            Sound(0);
-            return true;
-        }
         int row = RowIndex(item);
+        if (row >= 0 && row < int(s.rows.size()) && RWGTAMenu::Model::Opens(*s.rows[row]))
+        {
+            if (direction != 0)
+                return true;
+            if (const auto target = s.model.Enter(*s.rows[row]); target != SIZE_MAX)
+            {
+                s.view = target;
+                Select(page, FirstRowCode);
+                s.lastSelected = -1;
+                Sound(2);
+            }
+            return true;
+        }
         if (row >= 0 && row < int(s.rows.size()))
         {
             s.model.Change(*s.rows[row], direction, false);
@@ -611,6 +648,30 @@ export namespace ColdFearMenu
             return true;
         }
         return false;
+    }
+
+    // The game's Back (Escape, the pad's back button) on a page: on the fix's page it closes the details or returns one
+    // level like its Back row; false: the game goes back to the page's parent
+    inline bool Cancel(uint8_t* page)
+    {
+        auto& s = Get();
+        if (*(int32_t*)(page + PageField::Index) != PageSlot || !s.open || s.model.Pages().empty())
+            return false;
+        if (s.details)
+        {
+            s.details = false;
+            *(int32_t*)(page + PageField::Selected) = s.helpSelection;
+            Sound(1);
+            return true;
+        }
+        const auto parent = s.model.Back(s.view);
+        if (parent == SIZE_MAX)
+            return false;
+        s.view = parent;
+        Select(page, FirstRowCode + float(s.model.Window(s.view).Slot()));
+        s.lastSelected = -1;
+        Sound(1);
+        return true;
     }
 
     // ---------------------------------------------------------------------------------------------------------------
@@ -686,7 +747,7 @@ export namespace ColdFearMenu
 
         // The page: title, page row, the rows, the description, Back
         added += "\r\n[" + std::string(PageName) + "]\r\n";
-        added += line("NUM_ITEM", std::to_string(RowCount + 4));
+        added += line("NUM_ITEM", std::to_string(RowCount + 4 + int(DescriptionLines)));
         added += line("ITEM_SELECT", "1");
         added += line("ITEM_SPACING", "2");
         auto item = [&](int index) { return "\r\n[" + std::string(PageName) + ".Item" + std::to_string(index) + "]\r\n"; };
@@ -699,8 +760,11 @@ export namespace ColdFearMenu
                 added += line("Y", "178");
             added += line("WIDTH", std::to_string(RowWidth)) + line("HEIGHT", "20") + line("TEXT_ANIM_POS", "false") + line("RETURN_FLOAT", std::to_string(7002 + i));
         }
-        added += item(DescriptionItem) + line("TYPE", "Static") + line("TEXT_SMALL", "true") + line("X", "84") + line("Y", "-100") + line("WIDTH", "470") + line("TEXT_ANIM_POS", "false") + line("TEXT_ANIM_ALPHA", "false") + line("RETURN_FLOAT", std::to_string(int(DescriptionCode)));
-        added += item(RowCount + 3) + line("X", "135") + line("Y", "-70") + line("TEXT_ANIM_POS", "false") + line("TEXT", "STR_MN_MAIN_SCREEN_BACK") + line("DEST", "Option") + line("RETURN_FLOAT", "7020");
+        added += item(RowCount + 2) + line("TYPE", "Static") + line("X", "520") + line("WIDTH", "40") + line("HEIGHT", "20") + line("TEXT_ANIM_POS", "false") + line("TEXT_ANIM_ALPHA", "false");
+        // The help: lines of the game's small text between the rows and Back
+        for (int i = 0; i < int(DescriptionLines); ++i)
+            added += item(DescriptionItem + i) + line("TYPE", "Static") + line("TEXT_SMALL", "true") + line("X", "84") + line("Y", std::to_string(-112 + 13 * i)) + line("WIDTH", "470") + line("TEXT_ANIM_POS", "false") + line("TEXT_ANIM_ALPHA", "false") + line("RETURN_FLOAT", std::to_string(int(DescriptionCode)));
+        added += item(DescriptionItem + int(DescriptionLines)) + line("X", "135") + line("Y", "-70") + line("TEXT_ANIM_POS", "false") + line("TEXT", "STR_MN_MAIN_SCREEN_BACK") + line("DEST", "Option") + line("RETURN_FLOAT", "7020");
         s.cfg += added;
         return s.cfg.c_str();
     }

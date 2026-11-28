@@ -33,6 +33,7 @@ export namespace REWindow
     inline std::atomic<int> resettingMode{ -1 };
     inline std::atomic<bool> changingMode{ false };
     inline bool placementPending{};
+    inline std::atomic<int> wheelDelta{ 0 };    // mouse wheel movement since the Plugins menu last read it
     inline std::atomic<uint32_t> modeVersion{ 0 };
     inline int framedWidth = 0, framedHeight = 0;
     inline int lastWidth = 0, lastHeight = 0, lastMode = -1;
@@ -149,6 +150,10 @@ export namespace REWindow
                     return 0;
                 }
             }
+        }
+        else if (message == WM_MOUSEWHEEL)
+        {
+            wheelDelta += GET_WHEEL_DELTA_WPARAM(wParam);
         }
         else if (message == placeMessage)
         {

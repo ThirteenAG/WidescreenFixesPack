@@ -5,6 +5,9 @@ module;
 #include "FixSettings.hpp"
 #include <set>
 #include "Shared/RWGTA/FixMenu.hpp"
+#include "Shared/MenuList.hpp"
+#include "Shared/PadInput.hpp"
+#include <atomic>
 
 export module NativeMenu;
 
@@ -470,34 +473,6 @@ export namespace SCMenu
         }
     }
 
-    struct Host
-    {
-        void* parent = nullptr, * entry = nullptr, * panel = nullptr, * savedTab = nullptr;
-        void* title = nullptr, * help = nullptr, * sample = nullptr;
-        std::vector<void*> buttons, values;
-        std::vector<Item> items;
-        float rowWidth = 0;
-        std::optional<RWGTAMenu::Row> helpRow;
-        std::string helpLabel;
-        std::wstring detailsText;
-        std::vector<std::wstring> detailsLines;
-        void* detailsFont = nullptr;
-        float detailsWidth = 0, detailsSpacing = 0;
-        size_t detailsPage = 0;
-        bool details = false, detailsDirty = false, detailsNext = false;
-        bool pause = false, open = false;
-        size_t page = SIZE_MAX, rootStart = 0, rowStart = 0, selected = 0;
-    };
-    inline std::map<void*, Host> hosts;
-    inline Host* active = nullptr;
-    inline RWGTAMenu::Model model;
-    inline constexpr size_t RootLinks = 3, PageRows = 5, ContentRows = 2;
-    inline void RenderDetails(Host& host, void* canvas);
-    inline void BeginDetails(Host& host);
-    inline void EndDetails(Host& host);
-    inline bool DetailsKey(Host& host, int key);
-    inline void SelectDetailsNavigation(Host& host, bool next);
-    inline void DetailsStep(Host& host, int direction);
     struct Caption
     {
         std::wstring requested;
@@ -506,11 +481,8 @@ export namespace SCMenu
         bool fitted = false;
     };
     inline std::map<void*, Caption> captions;
-    inline void Label(void* button, const std::string& text)
+    inline std::wstring Upper(std::wstring wide)
     {
-        if (!button) return;
-        auto wide = Wide(text);
-        for (auto& c : wide) if (c < 32 || c == 8232 || c == 8233) c = L' ';
         auto locale = Wide(Language());
         int size = LCMapStringEx(locale.c_str(), LCMAP_UPPERCASE, wide.data(), int(wide.size()), nullptr, 0, nullptr, nullptr, 0);
         if (size > 0)
@@ -518,13 +490,53 @@ export namespace SCMenu
             std::wstring upper(size, L'\0');
             if (LCMapStringEx(locale.c_str(), LCMAP_UPPERCASE, wide.data(), int(wide.size()), upper.data(), size, nullptr, nullptr, 0)) wide = std::move(upper);
         }
+        return wide;
+    }
+    // A caption fitted to its control when it is drawn (see FitLabel); the button font has capitals only
+    inline void Label(void* button, const std::string& text)
+    {
+        if (!button) return;
+        auto wide = Wide(text);
+        for (auto& c : wide) if (c < 32 || c == 8232 || c == 8233) c = L' ';
+        wide = Upper(std::move(wide));
         auto& caption = captions[button];
         if (caption.requested != wide) { caption.requested = std::move(wide); caption.fitted = false; }
     }
+    inline std::string Utf8(const std::wstring& value)
+    {
+        int count = WideCharToMultiByte(CP_UTF8, 0, value.data(), int(value.size()), nullptr, 0, nullptr, nullptr);
+        std::string result(count, '\0');
+        if (count) WideCharToMultiByte(CP_UTF8, 0, value.data(), int(value.size()), result.data(), count, nullptr, nullptr);
+        return result;
+    }
+    inline float Measure(void* canvas, const std::wstring& value, float spacing, float height)
+    {
+        float w = 0, h = 0;
+        textSize(canvas, nullptr, value.c_str(), &w, &h);
+        if (!std::isfinite(w) || !std::isfinite(h) || h > height || (!value.empty() && w <= 0)) return INFINITY;
+        return w + float(value.size()) * spacing;
+    }
+    // A missing glyph must not silently disappear from a caption
+    inline void MarkMissing(void* canvas, std::wstring& value, float height)
+    {
+        for (auto& c : value)
+        {
+            if (c == L' ') continue;
+            if (!std::isfinite(Measure(canvas, std::wstring(1, c), 0, height))) c = L'?';
+        }
+    }
+    inline std::wstring Ellipsis(void* canvas, std::wstring value, float width, float spacing, float height)
+    {
+        if (Measure(canvas, value, spacing, height) <= width) return value;
+        while (!value.empty() && Measure(canvas, value + L"...", spacing, height) > width)
+        {
+            value.pop_back();
+            if (!value.empty() && value.back() >= 0xD800 && value.back() <= 0xDBFF) value.pop_back();
+        }
+        return Measure(canvas, value + L"...", spacing, height) <= width ? value + L"..." : L"";
+    }
     inline void FitLabel(void* button, void* canvas)
     {
-        if (active && active->open && active->details)
-            RenderDetails(*active, canvas);
         auto found = captions.find(button);
         if (found == captions.end() || !textSize || !canvas) return;
         auto font = Object(canvas, L"Font");
@@ -535,34 +547,11 @@ export namespace SCMenu
         if (!std::isfinite(width) || !std::isfinite(height) || !std::isfinite(spacing) || width <= 0 || height <= 0) return;
         auto& caption = found->second;
         if (caption.fitted && caption.font == font && caption.width == width && caption.height == height && caption.spacing == spacing) return;
-        auto measure = [&](const std::wstring& value)
-        {
-            float w = 0, h = 0;
-            textSize(canvas, nullptr, value.c_str(), &w, &h);
-            if (!std::isfinite(w) || !std::isfinite(h) || h > height || (!value.empty() && w <= 0)) return INFINITY;
-            return w + float(value.size()) * spacing;
-        };
         auto value = caption.requested;
-        // A missing glyph must not silently disappear from a plugin caption.
-        for (auto& c : value)
-        {
-            if (c == L' ') continue;
-            if (!std::isfinite(measure(std::wstring(1, c)))) c = L'?';
-        }
-        if (measure(value) > width)
-        {
-            while (!value.empty() && measure(value + L"...") > width)
-            {
-                value.pop_back();
-                if (!value.empty() && value.back() >= 0xD800 && value.back() <= 0xDBFF) value.pop_back();
-            }
-            value = measure(value + L"...") <= width ? value + L"..." : L"";
-        }
-        int count = WideCharToMultiByte(CP_UTF8, 0, value.data(), int(value.size()), nullptr, 0, nullptr, nullptr);
-        std::string fitted(count, '\0');
-        WideCharToMultiByte(CP_UTF8, 0, value.data(), int(value.size()), fitted.data(), count, nullptr, nullptr);
+        MarkMissing(canvas, value, height);
+        value = Ellipsis(canvas, value, width, spacing, height);
         bool previous = busy; busy = true;
-        String(button, L"Text", fitted);
+        String(button, L"Text", Utf8(value));
         busy = previous;
         caption.font = font; caption.width = width; caption.height = height; caption.spacing = spacing; caption.fitted = true;
     }
@@ -597,37 +586,215 @@ export namespace SCMenu
         }
         return true;
     }
-    inline void Focus(Host& host)
+
+    // The Plugins page: the game's own key list (EPCOptionKeysListBox, the Controls page's scrolling list with its
+    // scroll bar), a row per entry with the value in a text button where the key boxes are; the page's title above
+    // it, the selected row's help below it in the Graphics page's label style, and Back in the place of the page's
+    // Reset To Default button.
+    struct Host
     {
-        if (host.details) return;
-        bool previous = busy; busy = true;
-        for (size_t i = 0; i < host.buttons.size(); ++i)
+        void* parent = nullptr, * entry = nullptr, * panel = nullptr, * savedTab = nullptr, * sample = nullptr;
+        void* title = nullptr, * area = nullptr, * list = nullptr, * back = nullptr;
+        std::vector<void*> help, values, items;
+        std::vector<const RWGTAMenu::Row*> rows;
+        std::vector<bool> wide;
+        std::wstring helpText;
+        void* helpFont = nullptr;
+        float helpWidth = 0, itemHeight = 18, firstOffset = 3;
+        size_t page = RWGTAMenu::Model::RootPage, slots = 1;
+        float shownPos = -1;
+        bool pause = false, open = false, helpDirty = true;
+        // Input the page reads itself: held keys and the pad (XInput) repeat at the game's menu rate
+        MenuList::Repeat up, down, left, right, pageUp, pageDown, padUp, padDown, padLeft, padRight;
+        MenuList::StickAxis stickX, stickY;
+        WORD pad = 0;
+        bool padSeen = false;
+    };
+    inline std::map<void*, Host> hosts;
+    inline Host* active = nullptr;
+    inline RWGTAMenu::Model model;
+    inline MenuList::WheelNotches wheel;
+    inline std::atomic<int> wheelDelta{ 0 };
+    inline constexpr size_t HelpLines = 2;
+
+    inline void* Popup(Host& host)
+    {
+        return Object(Object(host.parent, L"Root"), L"m_MessageBoxCW");
+    }
+    // The game's message box is up (a row's help, a notice): it has the keys
+    inline bool PopupShown(Host& host)
+    {
+        auto popup = Popup(host);
+        return popup && Bool(popup, L"bWindowVisible");
+    }
+    inline const RWGTAMenu::Row* Selected(Host& host)
+    {
+        auto index = model.Window(host.page).Selected();
+        return index < host.rows.size() ? host.rows[index] : nullptr;
+    }
+
+    // The selected row's help, wrapped to the help lines in the label font (measured when they are drawn)
+    inline void WrapHelp(Host& host, void* canvas)
+    {
+        if (host.help.empty() || !canvas || !textSize) return;
+        auto font = Object(canvas, L"Font");
+        float width = 0, height = 0;
+        if (!font || !Get(host.help[0], L"WinWidth", L"FloatProperty", width) || !Get(host.help[0], L"WinHeight", L"FloatProperty", height)) return;
+        width -= 4;
+        if (!host.helpDirty && host.helpFont == font && host.helpWidth == width) return;
+        std::wstring text = host.helpText;
+        MarkMissing(canvas, text, height);
+        // Every line of a text wrapped at spaces to the help's width
+        auto wrap = [&](const std::wstring& source)
         {
-            bool selected = i == host.selected;
-            Bool(host.buttons[i], L"m_bSelected", &selected);
+            std::vector<std::wstring> result;
+            size_t begin = 0;
+            while (begin < source.size())
+            {
+                while (begin < source.size() && source[begin] == L' ') ++begin;
+                if (begin == source.size()) break;
+                size_t end = begin, space = std::wstring::npos;
+                while (end < source.size())
+                {
+                    size_t next = end + 1;
+                    if (source[end] >= 0xD800 && source[end] <= 0xDBFF && next < source.size()) ++next;
+                    if (Measure(canvas, source.substr(begin, next - begin), 0, height) > width) break;
+                    if (source[end] == L' ') space = end;
+                    end = next;
+                }
+                if (end == begin) end = begin + 1;
+                else if (end < source.size() && space != std::wstring::npos && space > begin) end = space;
+                result.push_back(source.substr(begin, end - begin));
+                begin = end;
+            }
+            return result;
+        };
+        // The whole help when it fits the lines; else its first sentences that do (F1 shows all of it); else the key
+        auto lines = wrap(text);
+        for (size_t cut = text.size(); lines.size() > HelpLines && cut > 0;)
+        {
+            cut = text.find_last_of(L".!?", cut - 1);
+            if (cut == std::wstring::npos) { lines = wrap(Wide(model.Text("menu.detailskey"))); break; }
+            if (cut + 1 < text.size() && text[cut + 1] != L' ') continue;
+            lines = wrap(text.substr(0, cut + 1));
+        }
+        const bool previous = busy; busy = true;
+        for (size_t i = 0; i < host.help.size(); ++i)
+            String(host.help[i], L"Text", i < lines.size() ? Utf8(lines[i]) : "");
+        busy = previous;
+        host.helpFont = font;
+        host.helpWidth = width;
+        host.helpDirty = false;
+    }
+
+    // The list's scroll position, the selected row and the help follow the page's window
+    inline void Show(Host& host)
+    {
+        auto& window = model.Window(host.page);
+        const bool previous = busy; busy = true;
+        for (size_t i = 0; i < host.rows.size() && i < host.items.size(); ++i)
+        {
+            bool selected = i == window.Selected();
+            Bool(host.items[i], L"bSelected", &selected);
             Bool(host.values[i], L"m_bSelected", &selected);
         }
-        if (host.open && host.selected < host.items.size())
+        if (auto bar = Object(host.list, L"VertSB"))
         {
-            const auto& item = host.items[host.selected];
-            if (!item.link)
-            {
-                host.helpRow = item.row;
-                host.helpLabel = item.label;
-            }
-            const auto help = !item.link ? model.Help(item.row) :
-                item.link == -4 && host.helpRow ? model.Help(*host.helpRow) : std::string{};
-            Label(host.help, help.empty() ? "" : model.Text("menu.detailskey") + "  " + help);
-            ActivateWindow(host.buttons[host.selected]);
+            host.shownPos = float(window.First());
+            Set(bar, L"Pos", L"FloatProperty", host.shownPos);
         }
+        std::wstring help;
+        if (model.RestartRequired())
+            help = Wide(model.Text("menu.restartwarning")) + L"  ";
+        if (auto row = Selected(host))
+            help += Wide(model.Help(*row));
+        for (auto& c : help) if (c < 32 || c == 8232 || c == 8233) c = L' ';
+        if (help != host.helpText) { host.helpText = std::move(help); host.helpDirty = true; }
         busy = previous;
     }
+
+    // The page's rows into the list; the items are made again only when the rows changed
+    inline void Populate(Host& host)
+    {
+        if (!host.list) return;
+        const bool previous = busy; busy = true;
+        if (host.page >= model.Pages().size()) host.page = RWGTAMenu::Model::RootPage;
+        auto rows = model.ListRows(host.page, false);
+        Label(host.title, model.Pages()[host.page].title);
+        if (host.back)
+        {
+            Label(host.back, model.Text("menu.back"));
+            Invoke(host.back, L"ShowWindow");
+            Invoke(host.back, L"BringToFront");
+        }
+        auto buttonClass = findObject(nullptr, nullptr, L"EchelonMenus.EPCTextButton", 0);
+        void* listClass = nullptr; Get(host.list, L"ListClass", L"ClassProperty", listClass);
+        auto items = Object(host.list, L"Items");
+        int highlight = 0, highlightPadding = 0;
+        Get(host.list, L"m_IHighLightWidth", L"IntProperty", highlight);
+        Get(host.list, L"m_IHighLightRightPadding", L"IntProperty", highlightPadding);
+        const float valueWidth = float(std::max(60, highlight + highlightPadding - 6));
+        int font = 0; Get(host.sample, L"Font", L"IntProperty", font);
+        if (rows != host.rows)
+        {
+            Invoke(host.list, L"Clear");
+            host.items.clear();
+            for (size_t i = 0; i < rows.size(); ++i)
+            {
+                if (i == host.values.size())
+                {
+                    auto value = buttonClass ? Create(host.area, true, buttonClass, 0, 0, valueWidth, host.itemHeight) : nullptr;
+                    if (!value || !ControlContract(value)) { if (value) Invoke(value, L"HideWindow"); break; }
+                    uint8_t align = 0;
+                    Set(value, L"Font", L"IntProperty", font); Set(value, L"Align", L"ByteProperty", align);
+                    // The text inset in its bar as in the game's combo boxes
+                    Set(value, L"m_fLMarge", L"FloatProperty", 3.0f);
+                    String(value, L"ToolTipString", "");
+                    Invoke(value, L"HideWindow");
+                    host.values.push_back(value);
+                }
+                Call append(items, L"Append");
+                if (!listClass || !append.Put(L"C", L"ClassProperty", listClass) || !append.Run()) break;
+                auto item = append.Result();
+                if (!item || !Set(item, L"m_Control", L"ObjectProperty", host.values[i])) break;
+                // Rows without key boxes, as the page's other settings
+                bool noBoxes = true; Bool(item, L"m_bIsNotSelectable", &noBoxes);
+                host.items.push_back(item);
+            }
+            host.rows = rows;
+        }
+        uint8_t centre = 2; Get(host.sample, L"Align", L"ByteProperty", centre);
+        host.wide.assign(host.items.size(), false);
+        for (size_t i = 0; i < host.rows.size() && i < host.items.size(); ++i)
+        {
+            const auto& row = *host.rows[i];
+            const bool enabled = model.Enabled(row, host.pause);
+            bool disabled = !enabled;
+            // Plugins, categories and the page's actions are entries like the menus' own (a button across the row);
+            // settings are a caption of the list with their value where the key boxes are
+            const bool wide = RWGTAMenu::Model::Opens(row) || row.kind == RWGTAMenu::RowKind::RestoreDefaults ||
+                row.kind == RWGTAMenu::RowKind::Action || row.kind == RWGTAMenu::RowKind::SettingsFile;
+            host.wide[i] = wide;
+            const auto value = enabled ? model.Value(row) : model.Text("menu.unavailable");
+            String(host.items[i], L"Caption", wide ? "" : model.Label(row));
+            Label(host.values[i], wide ? model.Label(row) + (value.empty() ? "" : "  " + value) : value);
+            uint8_t align = wide ? centre : 0;
+            Set(host.values[i], L"Align", L"ByteProperty", align);
+            Bool(host.values[i], L"bDisabled", &disabled);
+            Set(host.values[i], L"WinWidth", L"FloatProperty", valueWidth);
+        }
+        Show(host);
+        busy = previous;
+    }
+
     inline void Close(Host& host, bool restore = true)
     {
         bool oldBusy = busy; busy = true;
-        host.open = false; host.details = false; host.helpRow.reset(); host.detailsLines.clear(); host.detailsText.clear();
+        host.open = false;
+        bPluginsMenuOpen = false;
         bool selected = false; Bool(host.entry, L"m_bSelected", &selected);
         if (host.panel) Invoke(host.panel, L"HideWindow");
+        if (host.back) Invoke(host.back, L"HideWindow");
         if (restore && host.savedTab)
         {
             Call change(host.parent, L"ChangeTopButtonSelection");
@@ -638,306 +805,272 @@ export namespace SCMenu
         if (active == &host) { active = nullptr; model.Close(); }
         busy = oldBusy;
     }
-    inline size_t Links(const Host& host)
-    {
-        return std::min(RootLinks, model.Pages().size() - std::min(host.rootStart, model.Pages().size()));
-    }
-    inline void Populate(Host& host)
-    {
-        if (host.details) return;
-        const bool root = host.page == SIZE_MAX;
-        host.items.clear();
-        auto title = root ? model.Text("menu.plugins") : model.Pages()[host.page].title;
-        if (model.RestartRequired()) title += " - " + model.Text("menu.restartwarning");
-        Label(host.title, title);
-        if (root)
-        {
-            auto links = Links(host);
-            for (size_t i = 0; i < links; ++i)
-                host.items.push_back({ {}, model.Pages()[host.rootStart + i].title, "", int(host.rootStart + i + 1) });
-            if (host.rootStart) host.items.push_back({ {}, model.Text("menu.previous"), "", -2 });
-            if (host.rootStart + links < model.Pages().size()) host.items.push_back({ {}, model.Text("menu.next"), "", -3 });
-        }
-        else
-        {
-            auto rows = model.VisibleRows(host.page);
-            if (host.rowStart >= rows.size()) host.rowStart = 0;
-            for (size_t i = host.rowStart; i < rows.size() && i < host.rowStart + ContentRows; ++i)
-                host.items.push_back({ *rows[i], model.Label(*rows[i]), model.Value(*rows[i]), 0, model.Enabled(*rows[i], host.pause) });
-            if (host.rowStart) host.items.push_back({ {}, model.Text("menu.previous"), "", -2 });
-            if (host.rowStart + ContentRows < rows.size()) host.items.push_back({ {}, model.Text("menu.next"), "", -3 });
-            host.items.push_back({ {}, model.Text("menu.details"), "", -4 });
-        }
-        host.items.push_back({ {}, model.Text("menu.back"), "", -1 });
-        for (size_t i = 0; i < host.buttons.size(); ++i)
-        {
-            auto button = host.buttons[i], value = host.values[i];
-            Invoke(value, L"HideWindow");
-            Set(button, L"WinWidth", L"FloatProperty", host.rowWidth);
-            if (i >= host.items.size()) { Invoke(button, L"HideWindow"); continue; }
-            auto& item = host.items[i];
-            bool disabled = !item.enabled;
-            String(button, L"ToolTipString", "");
-            if (!item.link)
-            {
-                Set(button, L"WinWidth", L"FloatProperty", host.rowWidth * 0.60f - 8);
-                Label(value, disabled ? model.Text("menu.unavailable") : item.value);
-                Bool(value, L"bDisabled", &disabled); Invoke(value, L"ShowWindow");
-            }
-            Label(button, item.label); Bool(button, L"bDisabled", &disabled); Invoke(button, L"ShowWindow");
-        }
-        host.selected = std::min(host.selected, host.items.size() - 1); Focus(host);
-    }
-    inline std::string DetailsUtf8(const std::wstring& value)
-    {
-        if (value.empty()) return {};
-        const int count = WideCharToMultiByte(CP_UTF8, 0, value.data(), int(value.size()), nullptr, 0, nullptr, nullptr);
-        std::string result(count, '\0');
-        WideCharToMultiByte(CP_UTF8, 0, value.data(), int(value.size()), result.data(), count, nullptr, nullptr);
-        return result;
-    }
 
-    inline void SelectDetailsNavigation(Host& host, bool next)
+    inline void Back(Host& host)
     {
-        host.detailsNext = next && host.detailsLines.size() > PageRows;
-        bool backSelected = !host.detailsNext, nextSelected = host.detailsNext;
-        Bool(host.buttons[PageRows], L"m_bSelected", &backSelected);
-        Bool(host.values[PageRows], L"m_bSelected", &nextSelected);
-        ActivateWindow(host.detailsNext ? host.values[PageRows] : host.buttons[PageRows]);
-    }
-
-    inline std::wstring DetailsWide(const std::string& text)
-    {
-        if (text.size() > size_t(INT_MAX)) return {};
-        const int count = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, text.data(), int(text.size()), nullptr, 0);
-        if (count <= 0) return {};
-        std::wstring result(count, L'\0');
-        MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, text.data(), int(text.size()), result.data(), count);
-        result = MenuCharacters(result);
-        for (auto& c : result) if (c < 32 || c == 8232 || c == 8233) c = L' ';
-        const auto locale = Wide(Language());
-        const int upperCount = LCMapStringEx(locale.c_str(), LCMAP_UPPERCASE, result.data(), int(result.size()), nullptr, 0, nullptr, nullptr, 0);
-        if (upperCount > 0)
-        {
-            std::wstring upper(upperCount, L'\0');
-            if (LCMapStringEx(locale.c_str(), LCMAP_UPPERCASE, result.data(), int(result.size()), upper.data(), upperCount, nullptr, nullptr, 0)) result = std::move(upper);
-        }
-        return result;
-    }
-
-    inline void BeginDetails(Host& host)
-    {
-        if (host.page == SIZE_MAX || !host.helpRow) return;
-        const auto help = model.Help(*host.helpRow);
-        if (help.empty()) return;
-        host.detailsText = DetailsWide(help);
-        if (host.detailsText.empty()) return;
-        host.details = true;
-        host.detailsDirty = true;
-        host.detailsNext = false;
-        host.detailsPage = 0;
-        host.detailsFont = nullptr;
-        host.detailsLines.clear();
-        ActivateWindow(host.panel);
-    }
-
-    inline void EndDetails(Host& host)
-    {
-        host.details = false;
-        host.detailsLines.clear();
-        host.detailsText.clear();
+        auto parent = model.Back(host.page);
+        if (parent == SIZE_MAX) { Close(host); return; }
+        host.page = parent;
         Populate(host);
     }
 
-    inline void DetailsStep(Host& host, int direction)
+    inline void Click(Host& host)
     {
-        const auto pages = std::max(size_t(1), (host.detailsLines.size() + PageRows - 1) / PageRows);
-        host.detailsPage = direction < 0 ? (host.detailsPage + pages - 1) % pages : (host.detailsPage + 1) % pages;
-        host.detailsDirty = true;
+        if (auto root = Object(host.parent, L"Root")) Invoke(root, L"PlayClickSound");
     }
 
-    inline bool DetailsKey(Host& host, int key)
+    // The selected row: left (-1), right (+1) or accept (0); accepting a plugin or a category opens it
+    inline void Accept(Host& host, int direction)
     {
-        if (key == VK_ESCAPE || key == VK_F1)
-            EndDetails(host);
-        else if (key == VK_LEFT || key == VK_PRIOR)
-            DetailsStep(host, -1);
-        else if (key == VK_RIGHT || key == VK_NEXT)
-            DetailsStep(host, 1);
-        else if (key == VK_UP || key == VK_DOWN || key == VK_TAB)
-            SelectDetailsNavigation(host, !host.detailsNext);
-        else if (key == VK_RETURN)
+        auto row = Selected(host);
+        if (!row) return;
+        if (RWGTAMenu::Model::Opens(*row))
         {
-            if (host.detailsNext) DetailsStep(host, 1); else EndDetails(host);
+            if (direction) return;
+            auto page = model.Enter(*row);
+            if (page == SIZE_MAX) return;
+            host.page = page;
         }
-        else
-            return false;
+        else if (!model.Change(*row, direction, host.pause) && direction)
+            return;
+        if (!direction) Click(host);
+        Populate(host);
+    }
+
+    // The selected row's whole help in the game's message box
+    inline void Details(Host& host)
+    {
+        auto row = Selected(host);
+        if (!row || RWGTAMenu::Model::Opens(*row)) return;
+        auto help = model.Help(*row);
+        if (help.empty()) return;
+        Call message(Popup(host), L"CreateMessageBox");
+        if (!message.Put(L"_NotifyWindow", L"ObjectProperty", host.panel) ||
+            !message.PutText(L"Title", Utf8(Upper(Wide(model.Label(*row))))) || !message.PutText(L"Message", help) ||
+            !message.Put(L"Buttons", L"ByteProperty", uint8_t(2)) || !message.Put(L"ESCResult", L"ByteProperty", uint8_t(3)) ||
+            !message.Put(L"EnterResult", L"ByteProperty", uint8_t(3)) || !message.Run())
+            LogOnce("details", host.panel, "native message box unavailable");
+    }
+
+    // A key press on the page; false for keys it leaves to the game
+    inline bool Key(Host& host, int key)
+    {
+        auto& window = model.Window(host.page);
+        switch (key)
+        {
+            case VK_UP: window.Move(-1); break;
+            case VK_DOWN: window.Move(1); break;
+            case VK_PRIOR: window.Page(-1); break;
+            case VK_NEXT: window.Page(1); break;
+            case VK_HOME: window.Edge(-1); break;
+            case VK_END: window.Edge(1); break;
+            case VK_LEFT: Accept(host, -1); return true;
+            case VK_RIGHT: Accept(host, 1); return true;
+            case VK_RETURN: Accept(host, 0); return true;
+            case VK_ESCAPE: case VK_BACK: Back(host); return true;
+            case VK_F1: Details(host); return true;
+            default: return false;
+        }
+        Show(host);
         return true;
     }
 
-    inline void RenderDetails(Host& host, void* canvas)
+    // Once a frame while the page is open: held keys repeat, the pad, the wheel, the scroll bar
+    inline void Frame(Host& host)
     {
-        if (!canvas || !textSize || !host.details || host.buttons.size() <= PageRows || host.values.size() <= PageRows)
-            return;
-        const auto font = Object(canvas, L"Font");
-        float height = 0, spacing = 0, margin = 0;
-        if (!font || !Get(host.buttons[0], L"WinHeight", L"FloatProperty", height)) return;
-        Get(host.buttons[0], L"m_fFontSpacing", L"FloatProperty", spacing);
-        Get(host.buttons[0], L"m_fLMarge", L"FloatProperty", margin);
-        const auto width = host.rowWidth - std::max(0.0f, margin) * 2 - 2;
-        if (!std::isfinite(width) || !std::isfinite(height) || !std::isfinite(spacing) || width <= 0 || height <= 0)
-            return;
-        if (host.detailsFont != font || host.detailsWidth != width || host.detailsSpacing != spacing)
+        auto& window = model.Window(host.page);
+        if (PopupShown(host))
         {
-            auto measure = [&](const std::wstring& value)
-            {
-                float w = 0, h = 0;
-                textSize(canvas, nullptr, value.c_str(), &w, &h);
-                return std::isfinite(w) && std::isfinite(h) && h <= height ? w + float(value.size()) * spacing : INFINITY;
-            };
-            host.detailsLines.clear();
-            size_t begin = 0;
-            while (begin < host.detailsText.size())
-            {
-                while (begin < host.detailsText.size() && host.detailsText[begin] == L' ') ++begin;
-                if (begin == host.detailsText.size()) break;
-                size_t end = begin, space = std::wstring::npos;
-                while (end < host.detailsText.size())
-                {
-                    size_t next = end + 1;
-                    if (host.detailsText[end] >= 0xD800 && host.detailsText[end] <= 0xDBFF && next < host.detailsText.size()) ++next;
-                    // Individual native captions are bounded independently of the
-                    // complete description; a long line continues on another row.
-                    if (next - begin > 240 || measure(host.detailsText.substr(begin, next - begin)) > width) break;
-                    if (host.detailsText[end] == L' ') space = end;
-                    end = next;
-                }
-                // Native fonts can refuse a glyph; retain it for the existing
-                // visible missing-glyph handling rather than dropping text.
-                if (end == begin)
-                {
-                    end = begin + 1;
-                    if (host.detailsText[begin] >= 0xD800 && host.detailsText[begin] <= 0xDBFF && end < host.detailsText.size()) ++end;
-                }
-                else if (end < host.detailsText.size() && space != std::wstring::npos && space > begin) end = space;
-                host.detailsLines.push_back(host.detailsText.substr(begin, end - begin));
-                begin = end;
-            }
-            host.detailsFont = font;
-            host.detailsWidth = width;
-            host.detailsSpacing = spacing;
-            host.detailsDirty = true;
+            host.padSeen = false;
+            wheel.Clear();
+            wheelDelta = 0;
+            return;
         }
-        if (!host.detailsDirty) return;
-        const bool previous = busy; busy = true;
-        const auto pages = std::max(size_t(1), (host.detailsLines.size() + PageRows - 1) / PageRows);
-        host.detailsPage = std::min(host.detailsPage, pages - 1);
-        Label(host.title, host.helpLabel + " (" + std::to_string(host.detailsPage + 1) + "/" + std::to_string(pages) + ")");
-        for (size_t i = 0; i < PageRows; ++i)
+        const auto now = GetTickCount64();
+        const bool focused = GetForegroundWindow() == hGameWindow;
+        auto held = [focused](int key) { return focused && (GetAsyncKeyState(key) & 0x8000) != 0; };
+        bool moved = false;
+        // The press itself comes as a key event; these are its repeats
+        if (host.up.Step(held(VK_UP), now, false)) moved |= window.Move(-1);
+        if (host.down.Step(held(VK_DOWN), now, false)) moved |= window.Move(1);
+        if (host.pageUp.Step(held(VK_PRIOR), now, false)) moved |= window.Page(-1);
+        if (host.pageDown.Step(held(VK_NEXT), now, false)) moved |= window.Page(1);
+        if (host.left.Step(held(VK_LEFT), now, false)) { Accept(host, -1); return; }
+        if (host.right.Step(held(VK_RIGHT), now, false)) { Accept(host, 1); return; }
+
+        XINPUT_STATE state{};
+        DWORD slot = 0;
+        if (PadInput::Read(state, slot))
         {
-            auto button = host.buttons[i];
-            Invoke(host.values[i], L"HideWindow");
-            Set(button, L"WinWidth", L"FloatProperty", host.rowWidth);
-            bool disabled = true, selected = false;
-            Bool(button, L"bDisabled", &disabled);
-            Bool(button, L"m_bSelected", &selected);
-            const auto line = host.detailsPage * PageRows + i;
-            if (line < host.detailsLines.size())
-            {
-                Label(button, DetailsUtf8(host.detailsLines[line]));
-                Invoke(button, L"ShowWindow");
-            }
-            else
-                Invoke(button, L"HideWindow");
+            const WORD buttons = state.Gamepad.wButtons;
+            // Buttons held when the page opened (the press that opened it) act only after a release
+            const WORD pressed = host.padSeen ? WORD(buttons & ~host.pad) : 0;
+            host.pad = buttons;
+            host.padSeen = true;
+            const int y = host.stickY.Direction(state.Gamepad.sThumbLY), x = host.stickX.Direction(state.Gamepad.sThumbLX);
+            const bool upHeld = (buttons & XINPUT_GAMEPAD_DPAD_UP) || y > 0, downHeld = (buttons & XINPUT_GAMEPAD_DPAD_DOWN) || y < 0;
+            const bool leftHeld = (buttons & XINPUT_GAMEPAD_DPAD_LEFT) || x < 0, rightHeld = (buttons & XINPUT_GAMEPAD_DPAD_RIGHT) || x > 0;
+            if (host.padUp.Step(upHeld, now)) moved |= window.Move(-1);
+            if (host.padDown.Step(downHeld, now)) moved |= window.Move(1);
+            if (pressed & XINPUT_GAMEPAD_LEFT_SHOULDER) moved |= window.Page(-1);
+            if (pressed & XINPUT_GAMEPAD_RIGHT_SHOULDER) moved |= window.Page(1);
+            if (host.padLeft.Step(leftHeld, now)) { Accept(host, -1); return; }
+            if (host.padRight.Step(rightHeld, now)) { Accept(host, 1); return; }
+            if (pressed & XINPUT_GAMEPAD_A) { Accept(host, 0); return; }
+            if (pressed & XINPUT_GAMEPAD_B) { Back(host); return; }
+            if (pressed & XINPUT_GAMEPAD_Y) { Details(host); return; }
         }
-        auto back = host.buttons[PageRows], next = host.values[PageRows];
-        bool disabled = false;
-        Bool(back, L"bDisabled", &disabled);
-        Set(back, L"WinWidth", L"FloatProperty", host.rowWidth * 0.60f - 8);
-        Label(back, model.Text("menu.back"));
-        Invoke(back, L"ShowWindow");
-        Bool(next, L"bDisabled", &disabled);
-        Label(next, model.Text("menu.next"));
-        Invoke(next, pages > 1 ? L"ShowWindow" : L"HideWindow");
-        Label(host.help, model.Text("menu.detailshint"));
-        host.detailsDirty = false;
-        SelectDetailsNavigation(host, host.detailsNext);
-        busy = previous;
+        else
+            host.padSeen = true;
+
+        for (int notches = wheel.Take(wheelDelta.exchange(0)); notches; notches += notches > 0 ? -1 : 1)
+            moved |= window.Scroll(notches > 0 ? -1 : 1);
+
+        // The scroll bar's arrows and thumb move the list: the window follows
+        if (auto bar = Object(host.list, L"VertSB"))
+        {
+            float pos = 0;
+            if (Get(bar, L"Pos", L"FloatProperty", pos) && pos != host.shownPos)
+            {
+                const int target = int(std::lround(pos));
+                for (int guard = 0; int(window.First()) != target && guard < 512; ++guard)
+                {
+                    if (!window.Scroll(target > int(window.First()) ? 1 : -1))
+                        break;
+                }
+                moved = true;
+            }
+        }
+        if (moved) Show(host);
     }
 
-    inline void Activate(Host& host, int direction)
+    inline bool __cdecl MenuWheel(int delta)
     {
-        if (host.selected >= host.items.size()) return;
-        auto item = host.items[host.selected];
-        if (!item.link) model.Change(item.row, direction, host.pause);
-        else if (!direction)
-        {
-            if (item.link == -1)
-            {
-                if (host.page == SIZE_MAX) { Close(host); return; }
-                model.PageShown(host.page); host.page = SIZE_MAX; host.rowStart = host.selected = 0;
-            }
-            else if (item.link == -2)
-            {
-                auto& start = host.page == SIZE_MAX ? host.rootStart : host.rowStart;
-                const auto step = host.page == SIZE_MAX ? RootLinks : ContentRows;
-                start = start >= step ? start - step : 0; host.selected = 0;
-            }
-            else if (item.link == -3)
-            {
-                (host.page == SIZE_MAX ? host.rootStart : host.rowStart) += host.page == SIZE_MAX ? RootLinks : ContentRows; host.selected = 0;
-            }
-            else if (item.link == -4)
-            {
-                BeginDetails(host);
-                return;
-            }
-            else
-            {
-                host.page = size_t(item.link - 1); host.rowStart = host.selected = 0; model.PageShown(host.page);
-            }
-        }
-        Populate(host);
+        if (!active || !active->open || PopupShown(*active)) return false;
+        wheelDelta += delta;
+        return true;
     }
+
+    // The slot under a point of the list (its coordinates); SIZE_MAX outside the rows
+    inline size_t SlotAt(const Host& host, float y)
+    {
+        if (y < host.firstOffset || host.itemHeight <= 0) return SIZE_MAX;
+        auto slot = size_t((y - host.firstOffset) / host.itemHeight);
+        return slot < host.slots ? slot : SIZE_MAX;
+    }
+
     inline bool BuildPanel(Host& host)
     {
         if (host.panel) return true;
         auto cls = findObject(nullptr, nullptr, L"UWindow.UWindowDialogClientWindow", 0);
         auto buttonClass = findObject(nullptr, nullptr, L"EchelonMenus.EPCTextButton", 0);
+        auto listClass = findObject(nullptr, nullptr, L"EchelonMenus.EPCOptionKeysListBox", 0);
+        auto labelClass = findObject(nullptr, nullptr, L"UWindow.UWindowLabelControl", 0);
         auto area = Object(host.parent, L"m_ControlsArea");
         float x, y, w, h;
-        if (!cls || !buttonClass || !Get(area, L"WinLeft", L"FloatProperty", x) || !Get(area, L"WinTop", L"FloatProperty", y) ||
+        if (!cls || !buttonClass || !listClass || !labelClass || !Get(area, L"WinLeft", L"FloatProperty", x) || !Get(area, L"WinTop", L"FloatProperty", y) ||
             !Get(area, L"WinWidth", L"FloatProperty", w) || !Get(area, L"WinHeight", L"FloatProperty", h) || w < 300 || h < 140) return false;
+        // The pause menu's pages hold their Reset To Default button at the bottom: the page ends above its frame
+        float pageHeight = h;
+        if (auto inner = Object(area, L"m_ResetToDefault"); inner && !Object(host.parent, L"m_ResetToDefault"))
+        {
+            float top = 0;
+            if (Get(inner, L"WinTop", L"FloatProperty", top) && top > 100 && top < h)
+                pageHeight = top - 16;
+        }
         auto panel = Create(host.parent, false, cls, x, y, w, h);
         if (!panel) return false;
-        int font = 0; uint8_t align = 0;
-        Get(host.sample, L"Font", L"IntProperty", font); Get(host.sample, L"Align", L"ByteProperty", align);
-        auto control = [&](float top, float left = 0, float width = 0)
+        struct Cleanup
         {
-            auto result = Create(panel, true, buttonClass, left, top, width ? width : w, 18);
-            if (result && !ControlContract(result)) return static_cast<void*>(nullptr);
-            if (result) { Set(result, L"Font", L"IntProperty", font); Set(result, L"Align", L"ByteProperty", align); }
-            return result;
-        };
-        auto title = control(0);
-        auto help = control(h - 18);
-        std::vector<void*> buttons, values;
-        for (size_t i = 0; i < PageRows + 1; ++i)
+            void* panel;
+            bool committed = false;
+            ~Cleanup() { if (!committed) Invoke(panel, L"HideWindow"); }
+        } cleanup{ panel };
+        int font = 0; Get(host.sample, L"Font", L"IntProperty", font);
+        uint8_t left = 0;
+        // The list in its own client window, so the value buttons share its coordinates (as on the Controls page)
+        const float helpHeight = 14, listTop = 20;
+        const float listSpace = pageHeight - listTop - helpHeight * float(HelpLines) - 4;
+        auto listArea = Create(panel, false, cls, 0, listTop, w, listSpace);
+        if (!listArea) return false;
+        auto list = Create(listArea, true, listClass, 0, 0, w, listSpace);
+        float itemHeight = 0;
+        int firstOffset = 3;
+        if (!list || !Type(list, L"EPCOptionKeysListBox") || !Get(list, L"ItemHeight", L"FloatProperty", itemHeight) ||
+            itemHeight < 8 || !Object(list, L"VertSB") || !Object(list, L"Items") || !Call(list, L"Clear").function) return false;
+        Get(list, L"m_IFirstItemYOffset", L"IntProperty", firstOffset);
+        bool behind = true; Bool(list, L"bAlwaysBehind", &behind);
+        // A height in which the list paints whole rows and its scroll bar counts the same number of rows
+        size_t slots = 1;
+        while (float(firstOffset) + float(slots + 1) * itemHeight + 1 < listSpace) ++slots;
+        const float listHeight = float(firstOffset) + float(slots) * itemHeight + 1;
+        if (int(listHeight / itemHeight) != int(slots))
+            LogOnce("open", list, "list rows and scroll bar range differ");
+        Set(listArea, L"WinHeight", L"FloatProperty", listHeight);
+        Set(list, L"WinHeight", L"FloatProperty", listHeight);
+        Invoke(list, L"Resized");
+        // The page's title, like the list's title rows: capitals in the list's colour, left aligned
+        uint32_t listColor = 0;
+        Get(list, L"TextColor", L"StructProperty", listColor);
+        auto title = Create(panel, false, labelClass, 5, 4, w - 10, 16);
+        if (!title || !Type(title, L"UWindowLabelControl") || !Set(title, L"Font", L"IntProperty", font) ||
+            !Set(title, L"Align", L"ByteProperty", left) || !Set(title, L"TextColor", L"StructProperty", listColor) ||
+            !String(title, L"Text", "")) return false;
+        // The Graphics page's labels give the help its font and colour; the pause menu makes that page when it is
+        // first shown, the list's text colour and the labels' normal font stand in until then
+        int labelFont = 0;
+        uint32_t labelColor = 0;
+        Get(list, L"TextColor", L"StructProperty", labelColor);
+        auto label = Object(Object(host.parent, L"m_GraphicArea"), L"m_LResolution");
+        if (Type(label, L"UWindowLabelControl"))
         {
-            auto top = 22.0f + float(i) * 19;
-            buttons.push_back(control(top));
-            values.push_back(control(top, w * 0.60f, w * 0.40f));
-            for (auto row : { buttons.back(), values.back() })
-            {
-                if (!row) continue;
-                bool noKeyboard = false; Bool(row, L"bNoKeyboard", &noKeyboard);
-                Invoke(row, L"SetAcceptsFocus");
-            }
-            if (values.back()) Invoke(values.back(), L"HideWindow");
+            Get(label, L"Font", L"IntProperty", labelFont);
+            Get(label, L"TextColor", L"StructProperty", labelColor);
         }
-        if (!title || !help || std::find(buttons.begin(), buttons.end(), nullptr) != buttons.end() || std::find(values.begin(), values.end(), nullptr) != values.end()) { Invoke(panel, L"HideWindow"); return false; }
-        bool disabled = true; Bool(title, L"bDisabled", &disabled); Bool(help, L"bDisabled", &disabled);
-        host.panel = panel; host.title = title; host.help = help; host.buttons = std::move(buttons); host.values = std::move(values); host.rowWidth = w;
+        std::vector<void*> help;
+        for (size_t i = 0; i < HelpLines; ++i)
+        {
+            auto line = Create(panel, false, labelClass, 4, pageHeight - helpHeight * float(HelpLines - i) - 2, w - 8, helpHeight);
+            if (!line || !Type(line, L"UWindowLabelControl") || !Set(line, L"Font", L"IntProperty", labelFont) ||
+                !Set(line, L"Align", L"ByteProperty", left) || !Set(line, L"TextColor", L"StructProperty", labelColor) ||
+                !String(line, L"Text", "")) return false;
+            help.push_back(line);
+        }
+        // Back in the page's Reset To Default button (the pause menu's pages have their own, inside the page)
+        float offsetX = 0, offsetY = 0;
+        auto reset = Object(host.parent, L"m_ResetToDefault");
+        if (!reset)
+        {
+            reset = Object(area, L"m_ResetToDefault");
+            offsetX = x;
+            offsetY = y;
+        }
+        if (reset)
+        {
+            float bx = 0, by = 0, bw = 0, bh = 0;
+            int backFont = 0;
+            uint8_t backAlign = 0;
+            if (Type(reset, L"EPCTextButton") && Get(reset, L"WinLeft", L"FloatProperty", bx) && Get(reset, L"WinTop", L"FloatProperty", by) &&
+                Get(reset, L"WinWidth", L"FloatProperty", bw) && Get(reset, L"WinHeight", L"FloatProperty", bh) &&
+                Get(reset, L"Font", L"IntProperty", backFont) && Get(reset, L"Align", L"ByteProperty", backAlign))
+            {
+                host.back = Create(host.parent, true, Read<void*>(reset, 36), bx + offsetX, by + offsetY, bw, bh);
+                if (host.back && ControlContract(host.back))
+                {
+                    Set(host.back, L"Font", L"IntProperty", backFont); Set(host.back, L"Align", L"ByteProperty", backAlign);
+                    String(host.back, L"ToolTipString", "");
+                    Invoke(host.back, L"HideWindow");
+                }
+                else if (host.back)
+                {
+                    Invoke(host.back, L"HideWindow");
+                    host.back = nullptr;
+                }
+            }
+        }
+        host.panel = panel; host.title = title; host.area = listArea; host.list = list; host.help = std::move(help);
+        host.itemHeight = itemHeight; host.firstOffset = float(firstOffset); host.slots = slots;
+        cleanup.committed = true;
         return true;
     }
     struct JoinedControls
@@ -1259,8 +1392,14 @@ export namespace SCMenu
             JoinVideo(graphics);
         }
         if (active && active != &host) Close(*active);
-        model.OpenPlugins(hostModule, Language(), 4096, JoinedSettings(host));
-        active = &host; host.details = false; host.helpRow.reset(); host.detailsLines.clear(); host.page = SIZE_MAX; host.rootStart = host.rowStart = host.selected = 0;
+        model.OpenMenu(hostModule, Language(), host.slots, JoinedSettings(host));
+        active = &host;
+        host.page = RWGTAMenu::Model::RootPage;
+        host.rows.clear();
+        host.padSeen = false;
+        wheel.Clear();
+        wheelDelta = 0;
+        bPluginsMenuOpen = true;
         host.savedTab = Object(host.parent, L"m_Controls");
         for (auto name : { L"m_Controls", L"m_Graphics", L"m_Sounds" })
             if (auto tab = Object(host.parent, name); tab && Bool(tab, L"m_bSelected")) host.savedTab = tab;
@@ -1271,7 +1410,7 @@ export namespace SCMenu
             Invoke(Object(host.parent, name), L"HideWindow");
         if (auto reset = Object(host.parent, L"m_ResetToDefault")) Invoke(reset, L"HideWindow");
         host.open = true; Populate(host);
-        Invoke(host.panel, L"ShowWindow"); Invoke(host.panel, L"BringToFront"); Focus(host);
+        Invoke(host.panel, L"ShowWindow"); Invoke(host.panel, L"BringToFront"); ActivateWindow(host.panel);
     }
     inline bool Prepare(void* parent, bool pause)
     {
@@ -1344,35 +1483,22 @@ export namespace SCMenu
             internalHook.thiscall<void>(object, frame, result);
             return;
         }
-        if (active && active->open && leaf == L"KeyEvent" && Type(object, L"EPCConsole") && result)
+        if (active && active->open && leaf == L"KeyEvent" && Type(object, L"EPCConsole") && result && !PopupShown(*active))
         {
             uint8_t key = 0, action = 0;
             auto returned = Field(function, L"ReturnValue", L"BoolProperty");
+            static const std::set<uint8_t> PageKeys{ VK_UP, VK_DOWN, VK_LEFT, VK_RIGHT, VK_PRIOR, VK_NEXT, VK_HOME, VK_END,
+                VK_RETURN, VK_ESCAPE, VK_BACK, VK_F1 };
             if (returned && Read<uint16_t>(returned, 58) == 4 &&
-                Locals(frame, L"Key", L"ByteProperty", 1, &key) && (key == VK_ESCAPE || key == VK_F1) &&
+                Locals(frame, L"Key", L"ByteProperty", 1, &key) && PageKeys.contains(key) &&
                 Locals(frame, L"Action", L"ByteProperty", 1, &action))
             {
-                // Consume the console event before its native close and key
-                // routes can both handle the same Escape press.
+                // The page takes its keys from the console, before the windows' own key routes and the console's
+                // native close can handle them; their releases are kept from the windows too
                 if (action == 1)
                 {
-                    auto& host = *active;
                     busy = true;
-                    if (key == VK_F1)
-                    {
-                        if (host.details) EndDetails(host); else BeginDetails(host);
-                    }
-                    else if (host.details)
-                        EndDetails(host);
-                    else if (host.page == SIZE_MAX)
-                        Close(host);
-                    else
-                    {
-                        model.PageShown(host.page);
-                        host.page = SIZE_MAX;
-                        host.rowStart = host.selected = 0;
-                        Populate(host);
-                    }
+                    Key(*active, key);
                     busy = false;
                 }
                 *static_cast<uint32_t*>(result) = 1;
@@ -1439,19 +1565,18 @@ export namespace SCMenu
             auto& host = it->second;
             if (host.open && leaf == L"EscapeMenu")
             {
-                busy = true;
-                if (host.details) EndDetails(host);
-                else if (host.page == SIZE_MAX) Close(host);
-                else { host.page = SIZE_MAX; host.selected = 0; Populate(host); }
-                busy = false; return;
+                busy = true; Back(host); busy = false; return;
             }
             if (leaf == L"Notify")
             {
                 void* control = nullptr; uint8_t event = 0;
                 if (Locals(frame, L"C", L"ObjectProperty", 4, &control) && Locals(frame, L"E", L"ByteProperty", 1, &event) && event == 2)
                 {
+                    // The Plugins tab, as the other tabs, does nothing while its page is shown
                     if (control == host.entry)
-                    { busy = true; if (host.open) Close(host); else Open(host); busy = false; return; }
+                    { busy = true; if (!host.open) Open(host); busy = false; return; }
+                    if (host.open && host.back && control == host.back)
+                    { busy = true; Back(host); busy = false; return; }
                     if (host.open) Close(host, false); // vanilla tabs/main-menu keep their own Notify/confirmation
                 }
             }
@@ -1460,85 +1585,90 @@ export namespace SCMenu
         if (active && active->open)
         {
             auto& host = *active;
-            auto row = std::find(host.buttons.begin(), host.buttons.end(), object);
-            auto valueRow = std::find(host.values.begin(), host.values.end(), object);
-            auto index = row != host.buttons.end() ? size_t(row - host.buttons.begin()) :
-                valueRow != host.values.end() ? size_t(valueRow - host.values.begin()) : SIZE_MAX;
+            auto value = std::find(host.values.begin(), host.values.end(), object);
+            const size_t valueIndex = value != host.values.end() ? size_t(value - host.values.begin()) : SIZE_MAX;
+            const bool onList = object == host.list || valueIndex != SIZE_MAX;
             if (object == host.panel && leaf == L"EscClose")
             {
-                busy = true;
-                if (host.details) EndDetails(host);
-                else if (host.page == SIZE_MAX) Close(host);
-                else { host.page = SIZE_MAX; host.selected = 0; Populate(host); }
-                busy = false; return;
+                busy = true; Back(host); busy = false; return;
             }
             if (object == host.panel && (leaf == L"Close" || leaf == L"HideWindow" || leaf == L"WindowHidden"))
             {
                 // Parent/level teardown still executes the engine operation.
                 // Only the private model state is discarded here.
-                host.open = false; active = nullptr; model.Close();
+                host.open = false; active = nullptr; bPluginsMenuOpen = false; model.Close();
             }
-            if (object == host.panel && leaf == L"Notify")
+            if (object == host.panel && leaf == L"Tick")
             {
-                void* control = nullptr; uint8_t event = 0;
-                if (Locals(frame, L"C", L"ObjectProperty", 4, &control) && Locals(frame, L"E", L"ByteProperty", 1, &event) && event == 2)
+                busy = true;
+                if (RWGTAMenu::Model::Changed().exchange(false)) Populate(host);
+                Frame(host);
+                busy = false;
+            }
+            // The mouse: the row under it while it moves, a click accepts it; the wheel comes raw (MenuWheel)
+            if (onList && (leaf == L"MouseMove" || leaf == L"LMouseDown" || leaf == L"LMouseUp" || leaf == L"Click" ||
+                leaf == L"DoubleClick" || leaf == L"MouseWheelDown" || leaf == L"MouseWheelUp" || leaf == L"KeyDown" || leaf == L"KeyUp"))
+            {
+                if (leaf == L"MouseMove" || leaf == L"LMouseDown")
                 {
-                    if (host.details)
+                    float y = 0;
+                    auto& window = model.Window(host.page);
+                    size_t slot = SIZE_MAX;
+                    if (valueIndex != SIZE_MAX)
+                        slot = valueIndex >= window.First() ? valueIndex - window.First() : SIZE_MAX;
+                    else if (Locals(frame, L"Y", L"FloatProperty", 4, &y))
+                        slot = SlotAt(host, y);
+                    if (slot != SIZE_MAX && !PopupShown(host))
                     {
                         busy = true;
-                        if (control == host.buttons[PageRows]) EndDetails(host);
-                        else if (control == host.values[PageRows]) DetailsStep(host, 1);
+                        const bool changed = window.Point(slot);
+                        if (leaf == L"LMouseDown" && window.Selected() == window.First() + slot)
+                            Accept(host, 0);
+                        else if (changed)
+                            Show(host);
                         busy = false;
-                        return;
                     }
-                    auto at = std::find(host.buttons.begin(), host.buttons.end(), control);
-                    auto valueAt = std::find(host.values.begin(), host.values.end(), control);
-                    auto selected = at != host.buttons.end() ? size_t(at - host.buttons.begin()) :
-                        valueAt != host.values.end() ? size_t(valueAt - host.values.begin()) : SIZE_MAX;
-                    if (selected != SIZE_MAX) { host.selected = selected; busy = true; Activate(host, 0); busy = false; return; }
                 }
+                return;
             }
-            if (index != SIZE_MAX && leaf == L"MouseEnter")
-            {
-                if (host.details)
-                {
-                    if (index == PageRows) SelectDetailsNavigation(host, valueRow != host.values.end());
-                }
-                else { host.selected = index; Focus(host); }
-            }
-            if ((index != SIZE_MAX || object == host.panel) && leaf == L"KeyDown")
-            {
-                int key = 0;
-                if (Locals(frame, L"Key", L"IntProperty", 4, &key))
-                {
-                    auto count = host.items.size();
-                    if (!count) { internalHook.thiscall<void>(object, frame, result); return; }
-                    busy = true;
-                    if (host.details)
-                    {
-                        const bool handled = DetailsKey(host, key);
-                        busy = false;
-                        if (!handled) internalHook.thiscall<void>(object, frame, result);
-                        return;
-                    }
-                    if (key == VK_F1) BeginDetails(host);
-                    else if (key == VK_UP) host.selected = (host.selected + count - 1) % count;
-                    else if (key == VK_DOWN) host.selected = (host.selected + 1) % count;
-                    else if (key == VK_LEFT) Activate(host, -1);
-                    else if (key == VK_RIGHT) Activate(host, 1);
-                    else if (key == VK_RETURN) Activate(host, 0);
-                    else if (key == VK_ESCAPE) { if (host.page == SIZE_MAX) Close(host); else { host.page = SIZE_MAX; host.selected = 0; Populate(host); } }
-                    else { busy = false; internalHook.thiscall<void>(object, frame, result); return; }
-                    if (host.open) Focus(host); busy = false; return;
-                }
-            }
-            if (leaf == L"Tick" && RWGTAMenu::Model::Changed().exchange(false)) { busy = true; Populate(host); busy = false; }
         }
         internalHook.thiscall<void>(object, frame, result);
         if (leaf == L"BeforePaint" && captions.contains(object))
         {
             void* canvas = nullptr;
             if (Locals(frame, L"C", L"ObjectProperty", 4, &canvas)) FitLabel(object, canvas);
+        }
+        if (leaf == L"BeforePaint" && active && active->open && !active->help.empty() && object == active->help[0])
+        {
+            void* canvas = nullptr;
+            if (Locals(frame, L"C", L"ObjectProperty", 4, &canvas)) WrapHelp(*active, canvas);
+        }
+        // A wide row's button spans the row the list just drew
+        if (leaf == L"DrawItem" && active && object == active->list)
+        {
+            void* item = nullptr;
+            float x = 0, w = 0;
+            if (Locals(frame, L"Item", L"ObjectProperty", 4, &item) && Locals(frame, L"X", L"FloatProperty", 4, &x) &&
+                Locals(frame, L"W", L"FloatProperty", 4, &w))
+            {
+                auto at = std::find(active->items.begin(), active->items.end(), item);
+                const size_t index = size_t(at - active->items.begin());
+                if (at != active->items.end() && index < active->wide.size() && active->wide[index])
+                {
+                    int padding = 0; Get(active->list, L"m_IRightPadding", L"IntProperty", padding);
+                    busy = true;
+                    Set(active->values[index], L"WinLeft", L"FloatProperty", x);
+                    Set(active->values[index], L"WinWidth", L"FloatProperty", std::max(40.0f, w - x - float(padding)));
+                    busy = false;
+                }
+            }
+        }
+        // The list shows the value buttons of the rows it draws; the others stay hidden
+        if (leaf == L"HideControls" && active && object == active->list)
+        {
+            busy = true;
+            for (auto button : active->values) Invoke(button, L"HideWindow");
+            busy = false;
         }
         if (leaf == L"HideControls")
         {
@@ -1632,18 +1762,21 @@ export namespace SCMenu
             auto& host = it->second;
             if (object == host.parent || object == host.entry)
             {
-                if (active == &host) { active = nullptr; model.Close(); }
+                if (active == &host) { active = nullptr; bPluginsMenuOpen = false; model.Close(); }
                 it = hosts.erase(it);
             }
-            else if (object == host.panel || object == host.title || object == host.help || std::find(host.buttons.begin(), host.buttons.end(), object) != host.buttons.end() ||
-                std::find(host.values.begin(), host.values.end(), object) != host.values.end())
+            else if (object == host.panel || object == host.title || object == host.area || object == host.list || object == host.back ||
+                std::find(host.help.begin(), host.help.end(), object) != host.help.end() ||
+                std::find(host.values.begin(), host.values.end(), object) != host.values.end() ||
+                std::find(host.items.begin(), host.items.end(), object) != host.items.end())
             {
                 // HideWindow removes the panel from the parent's GC-visible
                 // child list. Its entry remains native-owned; reconstruct the
                 // panel on a later click if the hidden panel was collected.
-                if (active == &host) { active = nullptr; model.Close(); }
-                host.open = false; host.details = false; host.helpRow.reset(); host.detailsLines.clear(); host.detailsText.clear();
-                host.panel = host.title = host.help = nullptr; host.buttons.clear(); host.values.clear();
+                if (active == &host) { active = nullptr; bPluginsMenuOpen = false; model.Close(); }
+                host.open = false;
+                host.panel = host.title = host.area = host.list = host.back = nullptr;
+                host.help.clear(); host.values.clear(); host.items.clear(); host.rows.clear();
                 ++it;
             }
             else ++it;
@@ -1697,5 +1830,6 @@ export namespace SCMenu
         }
         UWindowsViewport::WindowsMenuMouseActive = WindowsMenuMouseActive;
         UWindowsViewport::FocusPause = FocusPause;
+        UWindowsViewport::MenuWheel = MenuWheel;
     }
 }

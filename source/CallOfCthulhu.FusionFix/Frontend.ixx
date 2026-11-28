@@ -14,6 +14,8 @@ module;
 #include <string>
 #include <vector>
 #include "Shared/RWGTA/FixMenu.hpp"
+#include "Shared/RainDroplets.hpp"
+#include "Shared/PadInput.hpp"
 #include <functional>
 #include <deque>
 #include <memory>
@@ -611,7 +613,9 @@ export namespace CthulhuMenu
 {
     inline std::string notice; // an update notice, shown in the help line while the first row is selected
 
-    enum class Kind { Link, Row, Previous, Next, Back };
+    enum class Kind { Link, Row, Back };
+    // The menu input events of the game's Up and Down
+    constexpr uint16_t UpEvent = 0x241, DownEvent = 0x242;
 
     struct Item
     {
@@ -625,17 +629,36 @@ export namespace CthulhuMenu
 
     struct View
     {
-        static constexpr size_t ContentRows = 3;
-        int page = -1;
-        size_t physical = 0;
-        std::string title, help, restart, update;
+        // Rows a page shows at once, Back included; every page is one list that scrolls through them
+        static constexpr size_t Slots = 6;
+        size_t page = RWGTAMenu::Model::RootPage;
+        bool above = false, below = false;      // rows hidden above or below the window
+        // The help text's lines below the list (the first on the last row of the game's list)
+        static constexpr size_t HelpRows = 4;
+        std::string title, restart, update;
+        std::array<std::string, HelpRows> help;
         std::vector<Item> items;
 
-        bool Footer(size_t selected, const FontMetrics& font, float width, std::string& output) const
+        // The selected row's whole help text
+        bool Footer(size_t selected, const FontMetrics&, float, std::string& output) const
         {
-            const auto text = !restart.empty() ? restart : selected == 0 && !update.empty() ? update :
+            output = !restart.empty() ? restart : selected == 0 && !update.empty() ? update :
                 selected < items.size() ? items[selected].help : std::string{};
-            return font.Fit(text, width, output);
+            return true;
+        }
+
+        // The help text on the lines below the list, from its first shown line; false: no line fits
+        static bool HelpLines(const std::string& text, const FontMetrics& font, float width, size_t& first,
+                              std::array<std::string, HelpRows>& shown, size_t* count = nullptr)
+        {
+            std::vector<std::string> lines;
+            if (!font.Split(text, width, lines) || lines.empty())
+                return false;
+            if (count) *count = lines.size();
+            if (first + HelpRows > lines.size()) first = lines.size() > HelpRows ? lines.size() - HelpRows : 0;
+            for (size_t i = 0; i < HelpRows; ++i)
+                shown[i] = first + i < lines.size() ? lines[first + i] : std::string{};
+            return true;
         }
 
         bool Prepare(RWGTAMenu::Model& model, const FontMetrics& font, bool pause,
@@ -658,54 +681,55 @@ export namespace CthulhuMenu
                 content.push_back(std::move(item));
                 return true;
             };
-            if (page < 0)
+            if (page >= model.Pages().size())
+                return false;
+            title = native(model.Pages()[page].title);
+            auto visible = model.Shown(page, true);
+            if (!current())
+                return false;
+            std::vector<std::optional<RWGTAMenu::Row>> copied;
+            for (auto row : visible)
+                copied.push_back(row ? std::optional<RWGTAMenu::Row>(*row) : std::nullopt);
+            const auto& window = model.Window(page);
+            above = window.Above();
+            below = window.Below();
+            for (const auto& entry : copied)
             {
-                title = native(model.Text("menu.plugins"));
-                const auto pages = model.Pages();
-                for (size_t i = 0; i < pages.size(); ++i)
-                    if (!append(Item{Kind::Link, {}, {}, i, true}, native(pages[i].title)))
+                if (!entry)
+                {
+                    if (!append(Item{Kind::Back, {}, {}, 0, true}, native(model.Text("menu.back"))))
                         return false;
-            }
-            else
-            {
-                if (size_t(page) >= model.Pages().size())
-                    return false;
-                title = native(model.Pages()[size_t(page)].title);
-                auto visible = model.VisibleRows(size_t(page));
+                    continue;
+                }
+                const auto row = *entry;
+                auto label = native(model.Label(row));
                 if (!current())
                     return false;
-                std::vector<RWGTAMenu::Row> copied;
-                for (auto row : visible)
-                    copied.push_back(*row);
-                for (auto row : copied)
+                if (RWGTAMenu::Model::Opens(row))
                 {
-                    auto label = native(model.Label(row));
-                    if (!current())
+                    if (!append(Item{Kind::Link, {}, row, row.target, true}, label))
                         return false;
-                    // Presets belong to their plugin; the page already names it.
-                    if (!row.plugin && (row.kind == RWGTAMenu::RowKind::Preset ||
-                        row.kind == RWGTAMenu::RowKind::ApplyPreset))
-                        continue;
-                    auto value = native(model.Value(row));
-                    if (!current())
-                        return false;
-                    auto enabled = model.Enabled(row, pause);
-                    if (!current())
-                        return false;
-                    std::string suffix = value.empty() ? std::string{} : ": " + value;
-                    if (!enabled)
-                        suffix += " " + native(model.Text("menu.unavailable"));
-                    std::string fitted;
-                    float suffixWidth = 0.0f;
-                    if (!font.Fit(suffix, width, suffix) || !font.Width(suffix, suffixWidth) ||
-                        !font.Fit(label, std::max(0.0f, width - suffixWidth), fitted))
-                        return false;
-                    label = fitted + suffix;
-                    auto description = native(model.Help(row));
-                    if (!current()) return false;
-                    if (!append(Item{Kind::Row, {}, row, 0, enabled, std::move(description)}, label))
-                        return false;
+                    continue;
                 }
+                auto value = native(model.Value(row));
+                if (!current())
+                    return false;
+                auto enabled = model.Enabled(row, pause);
+                if (!current())
+                    return false;
+                std::string suffix = value.empty() ? std::string{} : ": " + value;
+                if (!enabled)
+                    suffix += " " + native(model.Text("menu.unavailable"));
+                std::string fitted;
+                float suffixWidth = 0.0f;
+                if (!font.Fit(suffix, width, suffix) || !font.Width(suffix, suffixWidth) ||
+                    !font.Fit(label, std::max(0.0f, width - suffixWidth), fitted))
+                    return false;
+                label = fitted + suffix;
+                auto description = native(model.Help(row));
+                if (!current()) return false;
+                if (!append(Item{Kind::Row, {}, row, 0, enabled, std::move(description)}, label))
+                    return false;
             }
             if (!current())
                 return false;
@@ -714,23 +738,14 @@ export namespace CthulhuMenu
                 update.clear();
             if (!font.Fit(title, width, title))
                 return false;
-            const auto count = std::max(size_t(1), (content.size() + ContentRows - 1) / ContentRows);
-            physical = std::min(physical, count - 1);
-            items.clear();
-            for (size_t i = physical * ContentRows; i < content.size() && i < (physical + 1) * ContentRows; ++i)
-                items.push_back(std::move(content[i]));
-            if (physical)
-                items.push_back(Item{Kind::Previous, native(model.Text("menu.previous")), {}, 0, true});
-            if (physical + 1 < count)
-                items.push_back(Item{Kind::Next, native(model.Text("menu.next")), {}, 0, true});
-            items.push_back(Item{Kind::Back, native(model.Text("menu.back")), {}, 0, true});
+            items = std::move(content);
             for (const auto& item : items)
             {
                 float measured = 0.0f;
                 if (!font.Width(item.text, measured) || measured >= width)
                     return false;
             }
-            return encodingValid && current() && !items.empty() && items.size() <= 6;
+            return encodingValid && current() && !items.empty() && items.size() <= Slots;
         }
     };
 }
@@ -784,6 +799,7 @@ export namespace CthulhuMenu
         int extra = 0;
         uint32_t flags = 0;
         uint8_t selectable = 0;
+        uint8_t colored = 0;
         bool installed = false;
 
         bool SameSource(const Context& context) const
@@ -857,6 +873,17 @@ export namespace CthulhuMenu
             if (!current())
                 return false;
             Write<uint8_t>(row, 273, 1);
+            // The stock spacer is drawn in the dim colours: the entry takes the normal ones of the rows above it
+            colored = Read<uint8_t>(row, 340);
+            Write<uint8_t>(row, 340, Read<uint8_t>(context.rows[0], 340));
+            if (!Read<uint8_t>(row, 272))
+            {
+                // Its caption already has the dim colour; the normal one, as the game sets on leaving a row
+                using SetColor = void (__thiscall*)(void*, uint32_t);
+                reinterpret_cast<SetColor>(Read<uintptr_t*>(renderer, 0)[3])(renderer, Read<uint32_t>(row, 348));
+                if (!current())
+                    return false;
+            }
             installed = true;
             return Matches(context);
         }
@@ -889,6 +916,12 @@ export namespace CthulhuMenu
             Write<int>(row, 4, extra);
             Write<uint32_t>(row, 308, flags);
             Write<uint8_t>(row, 273, selectable);
+            Write<uint8_t>(row, 340, colored);
+            if (renderer && !Read<uint8_t>(row, 272))
+            {
+                using SetColor = void (__thiscall*)(void*, uint32_t);
+                reinterpret_cast<SetColor>(Read<uintptr_t*>(renderer, 0)[3])(renderer, Read<uint32_t>(row, colored ? 348 : 352));
+            }
             installed = false;
             if (Read<void*>(context.manager, 48) == context.options && Read<int>(context.options, 540) == 4 &&
                 !Read<void*>(context.manager, 44) && !Read<void*>(context.manager, 52))
@@ -1037,19 +1070,29 @@ export namespace CthulhuMenu
     // record is only an identity snapshot, cleared before native row retirement.
     struct Surface
     {
-        static constexpr size_t Count = 8;
+        // The game's seven list positions (the last one the first help line), a help line below them, two more
+        static constexpr size_t Count = 7 + View::HelpRows;
         static constexpr int ActionID = 0x7F01;
         std::array<void*, Count> rows{};
         void** begin = nullptr;
         void* page = nullptr;
-        char* helpBuffer = nullptr;
+        std::array<char*, View::HelpRows> helpBuffers{};
+
+        // The row of a help line: the last list position, then the rows below the list
+        static size_t HelpRow(size_t line) { return line == 0 ? 7 : line == 1 ? 0 : 7 + line - 1; }
+        static std::optional<size_t> HelpLineOf(size_t row)
+        {
+            for (size_t line = 0; line < View::HelpRows; ++line)
+                if (HelpRow(line) == row) return line;
+            return std::nullopt;
+        }
 
         void Forgotten()
         {
             rows.fill(nullptr);
             begin = nullptr;
             page = nullptr;
-            helpBuffer = nullptr;
+            helpBuffers.fill(nullptr);
         }
 
         bool Alive() const
@@ -1069,29 +1112,36 @@ export namespace CthulhuMenu
 
         bool Selected(size_t item) const
         {
-            return item < Count - 1 && Alive() && Read<int>(page, 540) == int(item + 1) &&
+            return item < View::Slots && Alive() && Read<int>(page, 540) == int(item + 1) &&
                 Read<uint8_t>(rows[item + 1], 273) && Read<int>(rows[item + 1], 264) == ActionID;
         }
 
         static bool PlanRows(const std::array<std::array<float, 4>, 7>& source,
                              std::array<std::array<float, 4>, Count>& rectangles)
         {
+            // The rows take the stock rows' places, the help's first line the last one, its other lines below it
+            // at the list's spacing
             for (size_t i = 0; i < source.size(); ++i)
             {
                 const auto& rect = source[i];
                 for (auto value : rect) if (!std::isfinite(value) || value < 0 || value > 1) return false;
                 if (rect[2] - rect[0] <= 0.05f || rect[3] - rect[1] < 0.012f || (i && rect[1] < source[i - 1][3])) return false;
-                rectangles[i] = rect;
+                rectangles[i + 1] = rect;
             }
             const auto& last = source.back();
-            rectangles.back() = { last[0], last[3] + 0.005f, last[2], last[3] + 0.005f + last[3] - last[1] };
-            return rectangles.back()[3] <= 0.90f;
+            const float pitch = last[1] - source[source.size() - 2][1];
+            for (size_t line = 1; line < View::HelpRows; ++line)
+            {
+                const float top = last[1] + pitch * float(line);
+                rectangles[HelpRow(line)] = { last[0], top, last[2], top + last[3] - last[1] };
+            }
+            return rectangles[HelpRow(View::HelpRows - 1)][3] <= 0.95f;
         }
 
         bool Build(void* destination, const Context& source, const View& view, float fontHeight,
                    const std::function<bool()>& current)
         {
-            if (page || view.items.empty() || view.items.size() >= Count || !current() ||
+            if (page || view.items.empty() || view.items.size() > View::Slots || !current() ||
                 !destination || Read<uintptr_t>(destination, 0) != Native::Address().pageTable ||
                 Read<void**>(destination, 8) != Read<void**>(destination, 12))
                 return false;
@@ -1109,7 +1159,8 @@ export namespace CthulhuMenu
             // The active page's renderer was checked before ClearRows. Stock
             // Options renderers are released while the private page is shown.
             if (!PlanRows(borrowed, rectangles) || !std::isfinite(fontHeight) || fontHeight <= 0.0f ||
-                fontHeight > rectangles.back()[3] - rectangles.back()[1]) return false;
+                fontHeight > rectangles.front()[3] - rectangles.front()[1]) return false;
+            const auto lastHelp = rectangles[HelpRow(View::HelpRows - 1)];
             page = destination;
             // The constructor does not initialize these rectangles. Native
             // AddRow reads page588/596/currentY before assigning row geometry,
@@ -1126,7 +1177,8 @@ export namespace CthulhuMenu
             if (bounds[2] <= bounds[0] || bounds[3] <= bounds[1] ||
                 heading[2] <= heading[0] || heading[3] <= heading[1] || !current())
                 return false;
-            bounds[3] = std::max(bounds[3], rectangles.back()[3]);
+            // The panel holds the help lines with the margin the game leaves below its last row
+            bounds[3] = std::max(bounds[3], lastHelp[3] + std::max(0.0f, bounds[3] - rectangles[HelpRow(0)][3]));
             Native::Bounds(page, bounds.data());
             if (!current())
                 return false;
@@ -1137,6 +1189,17 @@ export namespace CthulhuMenu
             if (style > 1)
                 return false;
             Write<uint8_t>(page, 620, style);
+            // The stock heading (its framed title bar); its text becomes the page title once its renderer exists
+            const auto headingText = Read<int>(source.options, 604);
+            if (headingText < 0)
+                return false;
+            Write<int>(page, 604, headingText);
+            // The stock picture of the heading's bar and the panel behind the rows, loaded when the page is shown
+            Write<int>(page, 564, Read<int>(source.options, 564));
+            // and its full-screen picture and tint per control layout (none on Options, which would cover the panel)
+            for (size_t configuration = 0; configuration < 2; ++configuration)
+                for (size_t offset : {size_t(640), size_t(644)})
+                    Write<uint32_t>(page, offset + 796 * configuration, Read<uint32_t>(source.options, offset + 796 * configuration));
             for (int configuration = 0; configuration < 2; ++configuration)
             {
                 Native::HeaderBack(page, configuration, 1, "OPTIONS");
@@ -1147,8 +1210,6 @@ export namespace CthulhuMenu
                 if (!current())
                     return false;
             }
-            // Constructor leaves native localized heading disabled (-1). Own
-            // heading row preserves the complete shared page title instead.
             for (size_t i = 0; i < Count; ++i)
             {
                 if (!current())
@@ -1165,24 +1226,26 @@ export namespace CthulhuMenu
                     Write<uint32_t>(row, offset, Read<uint32_t>(source.rows[0], offset));
                 for (size_t offset : {size_t(276), size_t(277), size_t(340), size_t(341)})
                     Write<uint8_t>(row, offset, Read<uint8_t>(source.rows[0], offset));
-                const auto footer = i == Count - 1;
-                const auto active = i > 0 && !footer && i - 1 < view.items.size();
-                const auto text = i == 0 ? view.title : footer ? view.help : active ? view.items[i - 1].text : std::string{};
+                const auto helpLine = HelpLineOf(i);
+                const auto footer = helpLine.has_value();
+                const auto active = !footer && i - 1 < view.items.size();
+                const auto text = footer ? view.help[*helpLine] : active ? view.items[i - 1].text : std::string{};
                 Native::Label(row, -1);
                 if (!current())
                     return false;
                 char* previous = nullptr;
                 if (footer)
                 {
+                    auto& buffer = helpBuffers[*helpLine];
                     if (text.size() >= 4096 || Read<void*>(row, 328)) return false;
-                    helpBuffer = static_cast<char*>(Native::AllocateBuffer(4096, 7, ".\\CoCControlTextOption.cpp", 83, 1));
-                    if (!helpBuffer || !current())
+                    buffer = static_cast<char*>(Native::AllocateBuffer(4096, 7, ".\\CoCControlTextOption.cpp", 83, 1));
+                    if (!buffer || !current())
                     {
-                        if (helpBuffer) Native::FreeBuffer(helpBuffer);
-                        helpBuffer = nullptr; return false;
+                        if (buffer) Native::FreeBuffer(buffer);
+                        buffer = nullptr; return false;
                     }
-                    std::memcpy(helpBuffer, text.c_str(), text.size() + 1);
-                    Write<char*>(row, 328, helpBuffer);
+                    std::memcpy(buffer, text.c_str(), text.size() + 1);
+                    Write<char*>(row, 328, buffer);
                 }
                 else if (!ReplaceLiteral(row, text, current, previous)) return false;
                 // Newly constructed TEXTOPTION must not carry an old allocation.
@@ -1207,28 +1270,51 @@ export namespace CthulhuMenu
             return current() && Alive();
         }
 
-        bool Help(const std::string& text, const std::function<bool()>& current) const
+        bool HelpLine(size_t index, const std::string& text, const std::function<bool()>& current) const
         {
-            if (!current() || !Alive() || text.size() >= 4096 || !helpBuffer || Read<char*>(rows.back(), 328) != helpBuffer) return false;
-            auto renderer = Read<void*>(rows.back(), 320);
+            const auto row = rows[HelpRow(index)];
+            const auto buffer = helpBuffers[index];
+            if (!current() || !Alive() || text.size() >= 4096 || !buffer || Read<char*>(row, 328) != buffer) return false;
+            auto renderer = Read<void*>(row, 320);
             if (!renderer || Read<uintptr_t>(renderer, 0) != Native::Address().rendererTable) return false;
-            std::memcpy(helpBuffer, text.c_str(), text.size() + 1);
-            Native::CopyText(renderer, helpBuffer);
+            std::memcpy(buffer, text.c_str(), text.size() + 1);
+            Native::CopyText(renderer, buffer);
             if (!current() || !Alive()) return false;
             auto stored = Read<const char*>(renderer, 300);
             if (!stored || std::memcmp(stored, text.c_str(), text.size() + 1)) return false;
             if (text.empty()) return true;
             Native::LayoutText(renderer);
             FontProbe probe; float width = 0.0f;
-            return current() && Alive() && probe.Capture(rows.back()) && probe.Width(text, width) &&
-                width < Read<float>(rows.back(), 288) - Read<float>(rows.back(), 280);
+            return current() && Alive() && probe.Capture(row) && probe.Width(text, width) &&
+                width < Read<float>(row, 288) - Read<float>(row, 280);
+        }
+
+        bool Help(const std::array<std::string, View::HelpRows>& lines, const std::function<bool()>& current) const
+        {
+            for (size_t i = 0; i < lines.size(); ++i)
+                if (!HelpLine(i, lines[i], current)) return false;
+            return true;
+        }
+
+        // The page title in the stock heading's renderer, made by the native renderer build
+        bool Heading(const std::string& title, const std::function<bool()>& current) const
+        {
+            if (!current() || !Alive() || title.size() >= 4096) return false;
+            auto renderer = Read<void*>(page, 568);
+            if (!renderer || Read<uintptr_t>(renderer, 0) != Native::Address().rendererTable) return false;
+            Native::CopyText(renderer, title.c_str());
+            if (!current() || !Alive()) return false;
+            auto stored = Read<const char*>(renderer, 300);
+            if (!stored || std::memcmp(stored, title.c_str(), title.size() + 1)) return false;
+            Native::LayoutText(renderer);
+            return current() && Alive();
         }
 
         bool Rendered(const View& view, const std::function<bool()>& current) const
         {
-            if (!Alive())
+            if (!Alive() || !Heading(view.title, current))
                 return false;
-            for (size_t i = 0; i < view.items.size() + 1; ++i)
+            for (size_t i = 1; i < view.items.size() + 1; ++i)
             {
                 if (!current())
                     return false;
@@ -1244,7 +1330,7 @@ export namespace CthulhuMenu
                 if (!current() || !Alive())
                     return false;
                 FontProbe probe;
-                const auto& text = i ? view.items[i - 1].text : view.title;
+                const auto& text = view.items[i - 1].text;
                 float width = 0.0f;
                 if (!probe.Capture(rows[i]) || !probe.Width(text, width) ||
                     width >= Read<float>(rows[i], 288) - Read<float>(rows[i], 280))
@@ -1273,6 +1359,10 @@ export namespace CthulhuMenu
         bool invalid = false, open = false, ready = false, busy = false, opening = false;
         bool expectedRows = false, restore = false, retiring = false;
         size_t selected = 0;
+        // The whole help text of the selected row, its first shown line and when it moved
+        std::string helpText;
+        size_t helpFirst = 0, helpCount = 0;
+        ULONGLONG helpTick = 0;
         std::array<std::array<uint32_t, 4>, 7> geometry{};
         std::array<uint32_t, 6> style{};
 
@@ -1293,8 +1383,9 @@ export namespace CthulhuMenu
         struct Pending
         {
             uint64_t generation, serial;
-            int logical;
-            size_t physical, selected;
+            size_t logical;
+            int scroll;         // a list movement: Up/Down at an edge (-1/+1), Page (+-1000), Home/End (+-2000)
+            size_t selected;
             void* row;
             Item item;
             int direction;
@@ -1414,9 +1505,15 @@ export namespace CthulhuMenu
                 return false;
             {
                 Foreign foreign(*this);
+                std::string description;
+                size_t first = 0;
                 if (!candidate.Prepare(model, font, context.Pause(), current, Width()) ||
-                    !current() || !probe.Current() || !candidate.Footer(focus, font, Width(), candidate.help))
+                    !current() || !probe.Current() || !candidate.Footer(focus, font, Width(), description) ||
+                    !View::HelpLines(description, font, Width(), first, candidate.help, &helpCount))
                     return false;
+                helpText = std::move(description);
+                helpFirst = 0;
+                helpTick = GetTickCount64();
             }
             // Stop old-row replay before native invalidation. Failure closes the
             // entire private view; old widgets are never paired with new mappings.
@@ -1468,7 +1565,7 @@ export namespace CthulhuMenu
             auto current = Snapshot(false, true);
             {
                 Foreign foreign(*this);
-                model.OpenPlugins(module, language, 4096);
+                model.OpenMenu(module, language, View::Slots);
             }
             if (!current() || !context.SelectedEntry() || !model.IsOpen() || model.Pages().empty())
             {
@@ -1496,7 +1593,12 @@ export namespace CthulhuMenu
             return true;
         }
 
-        bool Queue(int direction, bool back = false)
+        MenuList::Repeat pageRepeat, padRepeat, padPageRepeat;
+        MenuList::StickAxis padStick;
+        WORD padButtons = 0;
+        std::vector<uint16_t> padEvents;    // the game's menu events of the pad, sent once the frame's work is done
+        bool homeDown = false, endDown = false;
+        bool Queue(int direction, bool back = false, int scroll = 0)
         {
             auto lease = shared_from_this();
             if (!open || invalid || pending.size() >= 32)
@@ -1525,16 +1627,41 @@ export namespace CthulhuMenu
             }
             if (!ready)
                 return false;
-            pending.push_back(Pending{generation, serial, view.page, view.physical, selected,
+            // The game's own Up/Down inside the shown rows stay native; at the first and last row the list moves
+            if (scroll == -1 && selected != 0) return false;
+            if (scroll == 1 && selected + 1 != view.items.size()) return false;
+            pending.push_back(Pending{generation, serial, view.page, scroll, selected,
                 surface.rows[selected + 1], view.items[selected], direction, back});
             return true;
+        }
+        // Up/Down: the next selectable row, wrapping at the ends like the game's own lists
+        bool Step(int direction)
+        {
+            std::vector<std::optional<RWGTAMenu::Row>> rows;
+            {
+                Foreign foreign(*this);
+                for (auto* row : model.ListRows(view.page, true))
+                    rows.push_back(row ? std::optional<RWGTAMenu::Row>(*row) : std::nullopt);
+            }
+            auto& window = model.Window(view.page);
+            bool moved = false;
+            for (size_t tries = 0; tries < rows.size(); ++tries)
+            {
+                if (!window.Move(direction)) break;
+                moved = true;
+                const auto& row = rows[std::min(window.Selected(), rows.size() - 1)];
+                if (!row || RWGTAMenu::Model::Opens(*row)) break;
+                Foreign foreign(*this);
+                if (model.Enabled(*row, context.Pause())) break;
+            }
+            return moved;
         }
 
         bool Activate(const Pending& event)
         {
             auto lease = shared_from_this();
             if (!open || !ready || event.generation != generation || event.serial != serial ||
-                event.logical != view.page || event.physical != view.physical ||
+                event.logical != view.page ||
                 !Current(true) || !surface.Selected(event.selected) ||
                 surface.rows[event.selected + 1] != event.row)
                 return true; // stale events are discarded, never retargeted
@@ -1542,30 +1669,38 @@ export namespace CthulhuMenu
             auto current = Snapshot(true, true);
             auto candidate = view;
             const auto item = event.back ? Item{Kind::Back, {}, {}, 0, true} : event.item;
+            auto& window = model.Window(view.page);
+            // The game's own list moved the selection: the window follows it
+            window.Point(selected);
+            if (event.scroll)
+            {
+                const int amount = event.scroll;
+                bool moved = false;
+                if (std::abs(amount) == 1) moved = Step(amount);
+                else if (std::abs(amount) == 1000) moved = window.Page(amount < 0 ? -1 : 1);
+                else if (std::abs(amount) == 2000) moved = window.Edge(amount < 0 ? -1 : 1);
+                if (!moved) return true;
+                if (!current()) return false;
+                return Populate(std::move(candidate), window.Slot(), true);
+            }
             switch (item.kind)
             {
                 case Kind::Link:
+                {
                     if (event.direction) return true;
-                    if (item.target >= model.Pages().size()) return false;
-                    candidate.page = int(item.target);
-                    candidate.physical = 0;
-                    model.PageShown(item.target);
+                    const auto target = model.Enter(item.row);
+                    if (target == SIZE_MAX) return true;
+                    candidate.page = target;
                     break;
-                case Kind::Previous:
-                    if (event.direction || !candidate.physical) return true;
-                    --candidate.physical;
-                    break;
-                case Kind::Next:
-                    if (event.direction) return true;
-                    ++candidate.physical;
-                    break;
+                }
                 case Kind::Back:
+                {
                     if (event.direction) return true;
-                    if (candidate.page < 0) { Cancel(); return true; }
-                    model.PageShown(size_t(candidate.page));
-                    candidate.page = -1;
-                    candidate.physical = 0;
+                    const auto parent = model.Back(candidate.page);
+                    if (parent == SIZE_MAX) { Cancel(); return true; }
+                    candidate.page = parent;
                     break;
+                }
                 case Kind::Row:
                 {
                     Foreign foreign(*this);
@@ -1577,8 +1712,7 @@ export namespace CthulhuMenu
                     break;
                 }
             }
-            const bool samePage = candidate.page == view.page && candidate.physical == view.physical;
-            return current() && Populate(std::move(candidate), samePage ? selected : 0, true);
+            return current() && Populate(std::move(candidate), model.Window(candidate.page).Slot(), true);
         }
 
         bool Restore()
@@ -1622,6 +1756,37 @@ export namespace CthulhuMenu
                 Cancel();
                 return;
             }
+            // The game's own lists only step through their rows: Page Up/Down and Home/End move a page or to an end.
+            // The wheel stays the game's own: it steps a value, as on the game's pages.
+            DWORD foreground = 0;
+            GetWindowThreadProcessId(GetForegroundWindow(), &foreground);
+            if (ready && Current(true) && foreground == GetCurrentProcessId())
+            {
+                auto key = [](int code) { return (GetAsyncKeyState(code) & 0x8000) != 0; };
+                const int pageKey = key(VK_PRIOR) ? -1 : key(VK_NEXT) ? 1 : 0;
+                if (pageRepeat.Step(pageKey != 0, GetTickCount64()) && pageKey) Queue(0, false, 1000 * pageKey);
+                const bool home = key(VK_HOME), end = key(VK_END);
+                if (home && !homeDown) Queue(0, false, -2000);
+                if (end && !endDown) Queue(0, false, 2000);
+                homeDown = home; endDown = end;
+                // The pad: the game reads it through Xidi as its play keys, which its menus don't use; on these pages
+                // A accepts, B goes back, the d-pad and left stick move and change, the shoulders move a page
+                XINPUT_STATE state{};
+                DWORD slot = 0;
+                const WORD buttons = PadInput::Read(state, slot) ? state.Gamepad.wButtons : 0;
+                const WORD pressed = buttons & ~padButtons;
+                padButtons = buttons;
+                const int stick = padStick.Direction(state.Gamepad.sThumbLY);
+                const int vertical = (buttons & XINPUT_GAMEPAD_DPAD_UP) || stick > 0 ? -1 :
+                    (buttons & XINPUT_GAMEPAD_DPAD_DOWN) || stick < 0 ? 1 : 0;
+                const int horizontal = (pressed & XINPUT_GAMEPAD_DPAD_LEFT) ? -1 : (pressed & XINPUT_GAMEPAD_DPAD_RIGHT) ? 1 : 0;
+                const int shoulder = (buttons & XINPUT_GAMEPAD_LEFT_SHOULDER) ? -1 : (buttons & XINPUT_GAMEPAD_RIGHT_SHOULDER) ? 1 : 0;
+                if (pressed & XINPUT_GAMEPAD_B) padEvents.push_back(0x246);
+                else if (pressed & XINPUT_GAMEPAD_A) padEvents.push_back(0x245);
+                else if (horizontal) padEvents.push_back(horizontal < 0 ? 0x243 : 0x244);
+                if (padRepeat.Step(vertical != 0, GetTickCount64()) && vertical) padEvents.push_back(vertical < 0 ? UpEvent : DownEvent);
+                if (padPageRepeat.Step(shoulder != 0, GetTickCount64()) && shoulder) Queue(0, false, 1000 * shoulder);
+            }
             while (!pending.empty() && Current(true) && open)
             {
                 auto event = std::move(pending.front());
@@ -1644,12 +1809,32 @@ export namespace CthulhuMenu
                 const auto index = Read<int>(page.object, 540);
                 std::string description;
                 if (index > 0 && size_t(index - 1) < view.items.size() &&
-                    view.Footer(size_t(index - 1), font, Width(), description) && description != view.help)
+                    view.Footer(size_t(index - 1), font, Width(), description))
                 {
-                    auto current = Snapshot(true, true);
-                    Foreign foreign(*this);
-                    if (!surface.Help(description, current)) { Cancel(); return; }
-                    if (current()) view.help = std::move(description);
+                    // A new text from its start; a text longer than the help lines moves on by a line after a while
+                    const auto now = GetTickCount64();
+                    constexpr size_t rows = View::HelpRows;
+                    bool show = description != helpText;
+                    if (show)
+                        helpFirst = 0;
+                    else if (helpCount > rows && now - helpTick >= (helpFirst == 0 || helpFirst + rows >= helpCount ? 4000u : 2500u))
+                    {
+                        helpFirst = helpFirst + rows >= helpCount ? 0 : helpFirst + 1;
+                        show = true;
+                    }
+                    std::array<std::string, View::HelpRows> lines;
+                    if (show && View::HelpLines(description, font, Width(), helpFirst, lines, &helpCount))
+                    {
+                        auto current = Snapshot(true, true);
+                        Foreign foreign(*this);
+                        if (!surface.Help(lines, current)) { Cancel(); return; }
+                        if (current())
+                        {
+                            view.help = std::move(lines);
+                            helpText = std::move(description);
+                            helpTick = now;
+                        }
+                    }
                 }
             }
         }
@@ -1882,7 +2067,7 @@ export namespace CthulhuMenu
                     // run while manager/bus/mapper native continuations are live.
                     lease->restore = false;
                     lease->pending.clear();
-                    lease->pending.push_back(Host::Pending{lease->generation, lease->serial, -2, 0, 0,
+                    lease->pending.push_back(Host::Pending{lease->generation, lease->serial, SIZE_MAX, 0, 0,
                         lease->entry.row, {}, 0, false});
                     return true;
                 }
@@ -1894,7 +2079,9 @@ export namespace CthulhuMenu
                 return lease->Queue(0);
             if (event == 0x243 || event == 0x244)
                 return lease->Queue(event == 0x243 ? -1 : 1);
-            return false; // stock up/down/forced-close/quit always remain native
+            if (event == UpEvent || event == DownEvent)
+                return lease->Queue(0, false, event == UpEvent ? -1 : 1);
+            return false; // stock up/down inside the rows, forced close and quit remain native
         }
         catch (...) { CancelFailure(); return false; }
     }
@@ -1908,7 +2095,7 @@ export namespace CthulhuMenu
                 return;
             auto request = std::move(lease->pending.front());
             lease->pending.pop_front();
-            if (request.logical != -2 || request.generation != lease->generation || request.serial != lease->serial ||
+            if (request.logical != SIZE_MAX || request.generation != lease->generation || request.serial != lease->serial ||
                 request.row != lease->entry.row || !lease->Current(false) || !lease->context.SelectedEntry())
                 return;
             // The native renderer uses western byte glyphs. Explicit supported
@@ -1921,12 +2108,28 @@ export namespace CthulhuMenu
         catch (...) { CancelFailure(); }
     }
 
+    inline uint8_t __fastcall Message(void* self, void*, void* event);
     inline void Completed() noexcept
     {
         if (!OutsideNative() || servicing)
             return;
         // Both operations have their own reentrancy guard and retained Host.
         Service();
+        // Fusion Rain Droplets keeps its drops off the game's menus
+        RainDroplets::MenuOpen(MenuHistoryCount.get() > 0);
+        // The pad's menu events go the way the keyboard's do
+        if (auto lease = host; lease && !lease->padEvents.empty() && OutsideNative() && !servicing)
+        {
+            const auto events = std::exchange(lease->padEvents, {});
+            for (const auto id : events)
+            {
+                if (!lease->open || !lease->Current(true)) break;
+                alignas(4) uint8_t event[32]{};
+                *reinterpret_cast<uint16_t*>(event) = id;
+                *reinterpret_cast<int*>(event + 4) = -1;
+                Message(lease->context.manager, nullptr, event);
+            }
+        }
         if (installed && nativeResources && OutsideNative() && !servicing)
         {
             Host::Flag guard(servicing);

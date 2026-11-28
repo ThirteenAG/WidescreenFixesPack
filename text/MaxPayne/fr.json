@@ -19,6 +19,8 @@
   "WFP_PRESET_APPLY": "Appliquer le préréglage",
   "WFP_PRESET_APPLY_DESCRIPTION": "Applique les valeurs du préréglage choisi ci-dessus",
   "WFP_RESTOREDEFAULTS_DESCRIPTION": "Remet les réglages de cette page à leurs valeurs par défaut",
+  "WFP_SETTINGS": "Réglages",
+  "WFP_SETTINGS_DESCRIPTION": "Les réglages de ce plugin",
   "page.widescreen": "Écran large",
   "page.graphics": "Graphismes",
   "page.controls": "Commandes",

@@ -5,16 +5,19 @@ module;
 #include "common.h"
 #include "FixSettings.hpp"
 #include "Shared/RWGTA/FixMenu.hpp"
-#include "Shared/RWGTA/RootPages.hpp"
+#include "Shared/PadInput.hpp"
 
 export module Options;
 
 import Skeleton;
 
 // The fix's settings in the game's frontend: "Plugins" at the end of the Options screen shows the list of plugins (the
-// fix first, then the other plugins with ASI Settings, see Shared/RWGTA/FixMenu.hpp), and each page its settings with
-// their values like Display Setup. In the main menu and in the pause menu, which share the frontend. Display Setup
-// already has the twelve rows a screen can hold, so all the fix's settings are on its page.
+// fix first, then the other plugins with ASI Settings, see Shared/RWGTA/FixMenu.hpp). A plugin opens its settings with
+// their values like Display Setup, or, when its settings come in several categories, the list of them, each opening
+// its settings. In the main menu and in the pause menu, which share the frontend. A screen holds twelve rows, so
+// every list scrolls through a window of rows (Back scrolls with them): Up/Down move and scroll by one row and wrap at
+// the ends like the game's lists, Page Up/Page Down move by a window, Home/End go to the ends, the mouse wheel and the
+// arrows in the right margin scroll, the mouse selects the row under it while it moves.
 //
 // Vice City's screen table (aScreens) has no screen the PC game leaves unused, so the Options screen shows the fix's
 // rows while they are open: its rows and title are saved, replaced, and put back when the fix's pages are left (Back,
@@ -22,8 +25,8 @@ import Skeleton;
 // Options screen, before its Back row; when another mod changed that row, the fix leaves the menu alone and the
 // settings stay in the .cfg and FusionFixHub.
 //
-// A changed setting that applies at the next start puts the game's own label line above the page's rows, and the
-// selected row's description is the game's helper text at the bottom of the screen.
+// A changed setting that applies at the next start puts the game's own label line above the page's rows. Vice City's
+// helper text is for short notices only, so the rows have no description line, like the game's own settings.
 //
 // The rows are answered through call sites, each calling the previous target (another mod's hook or the game): the
 // text of the fix's keys (CText::Get, asked in several places of CMenuManager::Draw), CMenuManager::UserInput (to fill the rows), CMenuManager::ProcessUserInput
@@ -57,8 +60,8 @@ namespace
     static_assert(sizeof(CMenuEntry) == 18 && sizeof(CMenuScreen) == 226);
 
     constexpr int RowCount = 12;
-    constexpr int PageRows = 10;            // settings visible at once; one more slot includes Back
-    constexpr int RootRows = 9;             // links of the list; Back follows
+    constexpr int PageRows = 11;            // rows of a settings list shown at once, Back included
+    constexpr int ListRows = 10;            // rows of a list of plugins or categories shown at once, Back included
     constexpr int ScreenOptions = 27;
     constexpr int16_t ActionLabel = 1;      // the line of text above the rows (the first entry only)
     constexpr int16_t ActionChangeMenu = 4;
@@ -76,12 +79,12 @@ namespace
     GameRef<int32_t> pLanguage;
     bool bReady = false;
 
-    enum class Mode { None, Root, Page };
+    enum class Mode { None, Page };
     Mode State = Mode::None;
     CMenuScreen SavedOptions{};
     int OpenRow = 0;                        // the "Plugins" row of the Options screen
-    int CurrentPage = 0;
-    int RootRowCount = 0;                   // links shown in the list
+    size_t CurrentPage = 0;
+    bool CenteredPage = false;              // a list of plugins or categories: centred like the Options screen
 
     RWGTAMenu::Model Model;
     RWGTAMenu::WheelInput Wheel;
@@ -89,15 +92,13 @@ namespace
     void* Audio = nullptr;
     void(__fastcall* NavigationSound)(void*, void*, uint16_t, uint32_t) = nullptr;
     void(__cdecl* DrawRect)(const float*, const uint8_t*) = nullptr;
+    void(__fastcall* DrawSprite)(void* sprite, void* edx, const float* rect, const uint8_t* colour) = nullptr;
     using ValuePrintFn = void(__cdecl*)(float, float, const wchar_t*);
     ValuePrintFn ValuePrintPrevious = nullptr;
     float(__cdecl* ValueStringWidth)(const wchar_t*, bool) = nullptr;
 
-    RWGTAMenu::RootPages Root;
     std::vector<const RWGTAMenu::Row*> ShownRows;
     bool LabelShown = false;                // the page starts with the restart line
-    const RWGTAMenu::Row* HelpRow = nullptr;    // the row whose description is in WFPHELP
-    GameRef<float> RightJustifyWrap;        // CFont::Details.rightJustifyWrap
     uint8_t* FontDetails = nullptr;         // CFont::Details: scaleX +4, scaleY +8, wrapX +0x2C
     ValuePrintFn LabelPrintPrevious = nullptr;
     std::map<std::string, std::u16string, std::less<>> Texts;   // the rows' and titles' text by key, in the game's font
@@ -143,46 +144,51 @@ namespace
         entry.align = align;
     }
 
-    // The list of pages: a link per page, then Back
-    void FillRoot()
-    {
-        auto& screen = aScreens[ScreenOptions];
-        for (auto& entry : screen.entries)
-            entry = {};
-        strncpy_s(screen.name, "WFPT0", _TRUNCATE);
-        auto& pages = Model.Pages();
-        RootRowCount = int(Root.Rows());
-        uint16_t y = 132;
-        for (int i = 0; i < RootRowCount; ++i, y += 29)
-        {
-            char key[8];
-            sprintf_s(key, "WFPL%02d", i);
-            int page = Root.Page(size_t(i));
-            SetText(key, page >= 0 ? pages[page].title : Model.Text(page == RWGTAMenu::RootPages::Previous ? "menu.previous" : "menu.next"));
-            SetEntry(screen.entries[i], ActionBase + i, key, 320, y, AlignCenter);
-        }
-        SetEntry(screen.entries[RootRowCount], ActionBase + RootRowCount, "FEDS_TB", 320, y, AlignCenter);
-    }
-
     // The entry of the page's first row: after the restart line when it is shown
     int FirstRowEntry()
     {
         return LabelShown ? 1 : 0;
     }
 
-    // A page: its rows with their values, then Back
+    // A list of plugins or categories (no values): centred like the Options screen; a list of settings like Display
+    // Setup, names at the left and values at the right
+    bool Centered(size_t page)
+    {
+        auto& rows = Model.Pages()[page].rows;
+        return std::none_of(rows.begin(), rows.end(), [](const RWGTAMenu::Row& row)
+        {
+            return row.kind == RWGTAMenu::RowKind::Setting || row.kind == RWGTAMenu::RowKind::Preset ||
+                row.kind == RWGTAMenu::RowKind::Action;
+        });
+    }
+
+    int IndicatorUnderMouse(uint8_t* manager);
+
+    // The mouse moved over a row of the window (the game selects the entry under the mouse only while it moves)
+    void FollowHover(uint8_t* manager)
+    {
+        if (State != Mode::Page || Screen(manager) != ScreenOptions || IndicatorUnderMouse(manager))
+            return;
+        int slot = Option(manager) - FirstRowEntry();
+        auto& window = Model.Window(CurrentPage);
+        if (slot >= 0 && size_t(slot) < window.Shown() && size_t(slot) != window.Slot())
+            window.Point(size_t(slot));
+    }
+
+    // The page shown: the rows in its window with their values, Back among them
     void FillPage(uint8_t* manager)
     {
         auto& screen = aScreens[ScreenOptions];
         for (auto& entry : screen.entries)
             entry = {};
         strncpy_s(screen.name, "WFPT1", _TRUNCATE);
-        ShownRows = Model.WindowRows(size_t(CurrentPage));
+        CenteredPage = Centered(CurrentPage);
+        ShownRows = Model.Shown(CurrentPage, true);
+        auto& window = Model.Window(CurrentPage);
         // A changed setting that applies at the next start: the game's own label line above the rows says so
-        bool label = Model.RestartRequired();
+        bool label = !CenteredPage && Model.RestartRequired();
         if (label != LabelShown)
         {
-            Option(manager) += label ? 1 : -1;
             LabelShown = label;
             // The highlight moves with its row (m_nOptionHighlightTransitionBlend)
             *reinterpret_cast<int32_t*>(manager + 0x10C) = 0;
@@ -195,38 +201,48 @@ namespace
         }
         int count = int(ShownRows.size());
         // Below the label the rows are a little closer, so that Back stays on the menu's card
-        uint16_t y = label ? 125 : 78;
-        uint16_t step = label ? 24 : 25;
+        uint16_t y = CenteredPage ? 132 : label ? 125 : 78;
+        uint16_t step = CenteredPage ? 29 : label ? 24 : 25;
         for (int i = 0; i < count; ++i, y += step)
         {
             char key[8];
             sprintf_s(key, "WFPR%02d", i);
             if (!ShownRows[i])
             {
-                SetEntry(screen.entries[first + i], ActionBase + i, "FEDS_TB", 320, y + 10, AlignCenter);
+                SetEntry(screen.entries[first + i], ActionBase + i, "FEDS_TB", 320, CenteredPage ? y : y + 10, AlignCenter);
                 continue;
             }
             SetText(key, Model.Label(*ShownRows[i]));
             SetText(std::string(key) + "V", Model.Value(*ShownRows[i]));
-            SetEntry(screen.entries[first + i], ActionBase + i, key, 40, y, AlignLeft);
+            // Rows without a value (categories, Restore defaults) are centred like the game's own on Display Setup
+            auto kind = ShownRows[i]->kind;
+            if (CenteredPage || (kind != RWGTAMenu::RowKind::Setting && kind != RWGTAMenu::RowKind::Preset))
+                SetEntry(screen.entries[first + i], ActionBase + i, key, 320, y, AlignCenter);
+            else
+                SetEntry(screen.entries[first + i], ActionBase + i, key, 40, y, AlignLeft);
         }
-        Option(manager) = std::clamp(Option(manager), first, std::max(first, first + count - 1));
-        if (size_t(CurrentPage) < Model.Pages().size())
+        Option(manager) = count ? first + int(window.Slot()) : first;
+        if (CurrentPage < Model.Pages().size())
             SetText("WFPT1", Model.Pages()[CurrentPage].title);
+    }
+
+    void ShowPage(uint8_t* manager, size_t page)
+    {
+        CurrentPage = page;
+        State = Mode::Page;
+        Model.Window(page).SetSlots(Centered(page) ? ListRows : PageRows);
+        FillPage(manager);
+        FadeIn(manager);
     }
 
     void Open(uint8_t* manager)
     {
         HMODULE self = nullptr;
         GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, reinterpret_cast<LPCWSTR>(&Open), &self);
-        Model.OpenPlugins(self, LanguageTag(), PageRows, {}, true);
-        SetText("WFPT0", Model.Text("menu.plugins"));
-        Root.Reset(Model.Pages().size(), RootRows);
+        Model.OpenMenu(self, LanguageTag(), PageRows);
         SavedOptions = aScreens[ScreenOptions];
-        State = Mode::Root;
-        FillRoot();
-        Option(manager) = 0;
-        FadeIn(manager);
+        LabelShown = false;
+        ShowPage(manager, RWGTAMenu::Model::RootPage);
     }
 
     // The Options screen as it was
@@ -238,42 +254,37 @@ namespace
         State = Mode::None;
         Model.Close();
         ShownRows.clear();
-        HelpRow = nullptr;
         LabelShown = false;
     }
 
-    void ShowPage(uint8_t* manager, int page)
-    {
-        CurrentPage = page;
-        Model.PageShown(size_t(page));
-        State = Mode::Page;
-        LabelShown = false;
-        HelpRow = nullptr;
-        Option(manager) = 0;
-        FillPage(manager);
-        FadeIn(manager);
-    }
-
-    void ShowRoot(uint8_t* manager)
-    {
-        State = Mode::Root;
-        FillRoot();
-        Option(manager) = int(Root.Selection(size_t(CurrentPage)));
-        FadeIn(manager);
-    }
-
+    // Back from a page: to the list it was opened from, with that row selected, or from the plugins list to the
+    // Options screen
     void Back(uint8_t* manager)
     {
-        if (State == Mode::Page)
-        {
-            ShowRoot(manager);
-        }
-        else if (State == Mode::Root)
+        if (State != Mode::Page)
+            return;
+        size_t parent = Model.Back(CurrentPage);
+        if (parent == SIZE_MAX)
         {
             Close();
             Option(manager) = OpenRow;
             FadeIn(manager);
+            return;
         }
+        ShowPage(manager, parent);
+    }
+
+    // Up/Down, Page Up/Page Down, Home/End, the wheel and the arrows: the window moves; true when it changed
+    bool MoveSelection(uint8_t* manager, int direction, bool page, bool edge)
+    {
+        auto& window = Model.Window(CurrentPage);
+        bool moved = edge ? window.Edge(direction) : page ? window.Page(direction) : window.Move(direction, true);
+        if (!moved)
+            return false;
+        NavigationSound(Audio, nullptr, 0xC3, 0);
+        *reinterpret_cast<int32_t*>(manager + 0x10C) = 0;
+        FillPage(manager);
+        return true;
     }
 
     // Before and after the game's input: the rows of the page shown, from the settings in effect. Any other way off
@@ -293,15 +304,8 @@ namespace
         }
         // The menu's language changed while the pages are open (an editor): their texts follow at once
         if (Model.SelectLanguage(LanguageTag()))
-        {
             ShownRows.clear();
-            HelpRow = nullptr;
-            SetText("WFPT0", Model.Text("menu.plugins"));
-            if (State == Mode::Root)
-                FillRoot();
-        }
-        if (State == Mode::Page)
-            FillPage(manager);
+        FillPage(manager);
     }
 
     POINT ResolutionCursor{};
@@ -327,24 +331,117 @@ namespace
         field(0x130) = field(0x138) = y;
     }
 
+    // The scroll bar of the lists, like the one of the game's skin list on Player Setup: its arrows (the frontend's
+    // sprites) above and below a bar on a dark track, in the right margin. In the menu's 640x480 units: x from the right
+    // edge, the top and bottom lines.
+    constexpr float BarRight = 33.0f;       // the arrows' left edge from the right, as the skin list's
+    constexpr float BarWidth = 16.0f;
+    constexpr float ArrowHeight = 17.0f;
+    constexpr size_t MenuSprites = 0x84;    // m_aFrontEndSprites: a CSprite2d (its texture) each
+    constexpr size_t MousePos = 0x12C;      // m_nMousePosX, m_nMousePosY
+    enum MenuSprite { SpriteDownOff = 22, SpriteDownOn, SpriteUpOff, SpriteUpOn };
+    float IndicatorTop() { return CenteredPage ? 122.0f : LabelShown ? 115.0f : 68.0f; }
+    float IndicatorBottom() { return CenteredPage ? 418.0f : LabelShown ? 407.0f : 370.0f; }
+
+    // Where the mouse was on the scroll bar when the menu was last drawn (the mouse and the bar in the same units as
+    // the game's own hit tests there): -1 / +1 the up / down arrow, 2 the bar between them, 0 off it
+    int BarHit = 0;
+    int ArrowHeld = 0;                      // the arrow clicked and held (drawn pressed)
+
+    // -1 / +1 when the mouse is on the up / down arrow, 2 on the bar between them, 0 otherwise
+    int IndicatorUnderMouse(uint8_t* manager)
+    {
+        if (State != Mode::Page || Screen(manager) != ScreenOptions)
+            return 0;
+        return BarHit;
+    }
+
+    // Keys the game's menu doesn't read: Page Up/Page Down move by a window, Home/End to the ends; a held click on an
+    // arrow scrolls. Each repeats while held.
+    int32_t WheelDelta = 0;                 // the mouse wheel's movement read by the game since the last frame
+    MenuList::WheelNotches WheelNotches;
+    MenuList::Repeat PageUpKey, PageDownKey, ArrowClick, UpHeld, DownHeld;
+    MenuList::StickAxis StickY;
+    bool HomeDown = false, EndDown = false;
+
+    bool GameInFront()
+    {
+        DWORD pid = 0;
+        GetWindowThreadProcessId(GetForegroundWindow(), &pid);
+        return pid == GetCurrentProcessId();
+    }
+
+    void ExtraInput(uint8_t* manager)
+    {
+        bool active = State == Mode::Page && Screen(manager) == ScreenOptions && GameInFront();
+        auto held = [&](int key) { return active && (GetAsyncKeyState(key) & 0x8000) != 0; };
+        const uint64_t now = GetTickCount64();
+        // The game moves once per press (key, d-pad or stick); held, the selection repeats
+        XINPUT_STATE pad{};
+        DWORD slot = 0;
+        bool padRead = active && PadInput::Read(pad, slot);
+        int stick = padRead ? StickY.Direction(pad.Gamepad.sThumbLY) : 0;
+        WORD buttons = padRead ? pad.Gamepad.wButtons : 0;
+        if (DownHeld.Step(held(VK_DOWN) || (buttons & XINPUT_GAMEPAD_DPAD_DOWN) || stick < 0, now, false))
+            MoveSelection(manager, 1, false, false);
+        if (UpHeld.Step(held(VK_UP) || (buttons & XINPUT_GAMEPAD_DPAD_UP) || stick > 0, now, false))
+            MoveSelection(manager, -1, false, false);
+        if (PageUpKey.Step(held(VK_PRIOR), now))
+            MoveSelection(manager, -1, true, false);
+        if (PageDownKey.Step(held(VK_NEXT), now))
+            MoveSelection(manager, 1, true, false);
+        bool home = held(VK_HOME), end = held(VK_END);
+        if (home && !HomeDown)
+            MoveSelection(manager, -1, false, true);
+        if (end && !EndDown)
+            MoveSelection(manager, 1, false, true);
+        HomeDown = home;
+        EndDown = end;
+        int arrow = held(VK_LBUTTON) ? IndicatorUnderMouse(manager) : 0;
+        arrow = arrow == 2 ? 0 : arrow;
+        if (arrow != ArrowHeld)
+            ArrowClick.Step(false, now);
+        ArrowHeld = arrow;
+        if (ArrowClick.Step(arrow != 0, now) && Model.Window(CurrentPage).Scroll(arrow))
+        {
+            NavigationSound(Audio, nullptr, 0xC3, 0);
+            *reinterpret_cast<int32_t*>(manager + 0x10C) = 0;
+            FillPage(manager);
+        }
+    }
+
     void* UserInputPrevious = nullptr;
     void __fastcall UserInput(uint8_t* manager, void* edx)
     {
         SyncResolutionCursor(manager);
         if (bReady)
+        {
             Update(manager);
+            ExtraInput(manager);
+        }
         bool overValue = ValueAreas.Contains(
             float(*reinterpret_cast<int32_t*>(manager + 0x64)), float(*reinterpret_cast<int32_t*>(manager + 0x68)));
-        int wheel{ Wheel.Begin(bReady && State == Mode::Page && Screen(manager) == ScreenOptions && !overValue) };
-        if (wheel)
+        bool listWheel = bReady && State == Mode::Page && Screen(manager) == ScreenOptions && !overValue;
+        Wheel.Begin(listWheel);
+        // Every notch the mouse reported since the last frame scrolls one row (the game's flag would show one per frame)
+        int notches = listWheel ? WheelNotches.Take(std::exchange(WheelDelta, 0)) : (WheelNotches.Clear(), WheelDelta = 0);
+        bool scrolled = false;
+        for (; notches; notches += notches > 0 ? -1 : 1)
+            scrolled |= Model.Window(CurrentPage).Scroll(notches > 0 ? -1 : 1);
+        if (scrolled)
         {
-            Model.Scroll(size_t(CurrentPage), wheel);
+            // Like the game's lists: the highlight sound, the highlight starts on its row again
+            NavigationSound(Audio, nullptr, 0xC3, 0);
+            *reinterpret_cast<int32_t*>(manager + 0x10C) = 0;
             FillPage(manager);
         }
         reinterpret_cast<void(__fastcall*)(uint8_t*, void*)>(UserInputPrevious)(manager, edx);
         Wheel.End();
         if (bReady)
+        {
+            FollowHover(manager);
             Update(manager);
+        }
     }
 
     // Escape (and the game's other ways back) on the fix's pages: back to their list, or to the Options screen
@@ -357,14 +454,16 @@ namespace
             Back(manager);
             back = 0;
         }
-        if (bReady && State == Mode::Page && Screen(manager) == ScreenOptions && (uint8_t(down) || uint8_t(up)))
+        if (bReady && State == Mode::Page && Screen(manager) == ScreenOptions)
         {
-            NavigationSound(Audio, nullptr, 0xC3, 0);
-            *reinterpret_cast<int32_t*>(manager + 0x10C) = 0;
-            int first = FirstRowEntry();
-            Option(manager) = first + Model.Move(size_t(CurrentPage), Option(manager) - first, uint8_t(down) ? 1 : -1);
-            FillPage(manager);
-            down = up = 0;
+            if (uint8_t(down) || uint8_t(up))
+            {
+                MoveSelection(manager, uint8_t(down) ? 1 : -1, false, false);
+                down = up = 0;
+            }
+            // A click on the scroll bar scrolls (ExtraInput) and doesn't choose the row at its height
+            if (uint8_t(accept) && IndicatorUnderMouse(manager))
+                accept = 0;
         }
         const auto previousDirection = std::exchange(OnOffDirection, change);
         reinterpret_cast<void(__fastcall*)(uint8_t*, void*, int32_t, int32_t, int32_t, int32_t, int32_t)>(ProcessUserInputPrevious)(manager, edx, down, up, accept, back, change);
@@ -392,33 +491,16 @@ namespace
         int row = action - ActionBase;
         if (row < 0 || row >= RowCount)
             return false;
-        if (State == Mode::Root)
-        {
-            if (dir != 0)
-                return true;
-            if (row < RootRowCount)
-            {
-                int page = Root.Page(size_t(row));
-                if (Root.Move(page))
-                {
-                    FillRoot();
-                    Option(manager) = 0;
-                }
-                else if (page >= 0)
-                {
-                    ShowPage(manager, page);
-                }
-            }
-            else
-            {
-                Back(manager);
-            }
-            return true;
-        }
         if (row >= int(ShownRows.size()) || !ShownRows[row])
         {
             if (dir == 0)
                 Back(manager);
+            return true;
+        }
+        if (RWGTAMenu::Model::Opens(*ShownRows[row]))
+        {
+            if (size_t page = dir == 0 ? Model.Enter(*ShownRows[row]) : SIZE_MAX; page != SIZE_MAX)
+                ShowPage(manager, page);
             return true;
         }
         Model.Change(*ShownRows[row], dir > 0 ? 1 : dir < 0 ? -1 : 0, InGame(manager));
@@ -486,48 +568,6 @@ namespace
                 continue;
             TextPrevious[reinterpret_cast<uintptr_t>(p + 5)] = injector::MakeCALL(p, Text, true).get();
         }
-    }
-
-    // The page's selected setting
-    const RWGTAMenu::Row* SelectedRow(uint8_t* manager)
-    {
-        if (State != Mode::Page || Screen(manager) != ScreenOptions)
-            return nullptr;
-        int option = Option(manager);
-        if (option < 0 || option >= RowCount)
-            return nullptr;
-        int row = aScreens[ScreenOptions].entries[option].action - ActionBase;
-        return row >= 0 && row < int(ShownRows.size()) ? ShownRows[row] : nullptr;
-    }
-
-    // CMenuManager::DisplayHelperText on the Options screen: the selected row's description in place of the game's
-    // general notice, right-aligned at the bottom and wrapped inside the menu
-    void* HelperTextPrevious = nullptr;
-    void __fastcall HelperText(uint8_t* manager, void* edx, const char* key)
-    {
-        using HelperFn = void(__fastcall*)(uint8_t*, void*, const char*);
-        if (bReady && !key && Model.IsOpen())
-        {
-            if (auto row = SelectedRow(manager))
-            {
-                if (row != HelpRow)
-                {
-                    HelpRow = row;
-                    SetText("WFPHELP", Model.Help(*row));
-                }
-                if (auto answer = Answer("WFPHELP"); answer && *answer)
-                {
-                    float wrap = RightJustifyWrap.is_initialized() ? *RightJustifyWrap : 0.0f;
-                    if (RightJustifyWrap.is_initialized())
-                        *RightJustifyWrap = SCREEN_WIDTH * 40.0f / 640.0f;
-                    reinterpret_cast<HelperFn>(HelperTextPrevious)(manager, edx, "WFPHELP");
-                    if (RightJustifyWrap.is_initialized())
-                        *RightJustifyWrap = wrap;
-                    return;
-                }
-            }
-        }
-        reinterpret_cast<HelperFn>(HelperTextPrevious)(manager, edx, key);
     }
 
     // CFont::PrintString of the label line in CMenuManager::Draw: the game wraps it at its right margin, and a second
@@ -631,14 +671,48 @@ export namespace FixOptions
         ValueAreas.bounds.clear();
     }
 
-    void DrawScrollIndicators()
+    // The scroll bar of a list longer than its window, drawn like the skin list's: the arrows (pressed while held), the
+    // track, and the bar for the rows shown with its shadow, fading in with the menu
+    void DrawScrollIndicators(uint8_t* manager)
     {
-        if (!bReady || State != Mode::Page)
+        BarHit = 0;
+        if (!bReady || State != Mode::Page || !DrawSprite || !manager)
             return;
-        const uint8_t colour[] = { 235, 175, 225, 255 };
-        float top = LabelShown ? 115.0f : 68.0f, bottom = LabelShown ? 407.0f : 370.0f;
-        RWGTAMenu::DrawIndicators(Model.HiddenAbove(size_t(CurrentPage)), Model.HiddenBelow(size_t(CurrentPage)),
-            12.0f, top, bottom, SCREEN_WIDTH, SCREEN_HEIGHT / 480.0f, colour, DrawRect);
+        auto& window = Model.Window(CurrentPage);
+        if (!window.Above() && !window.Below())
+            return;
+        const float scale = SCREEN_HEIGHT / 480.0f;
+        const uint8_t alpha = uint8_t(std::clamp(*reinterpret_cast<int32_t*>(manager + FadeAlpha), 0, 255));
+        // x from the right edge, y from the top
+        auto rect = [&](float right, float top, float left, float bottom, const uint8_t* colour)
+        {
+            const float r[] = { SCREEN_WIDTH - right * scale, bottom * scale, SCREEN_WIDTH - left * scale, top * scale };
+            DrawRect(r, colour);
+        };
+        auto sprite = [&](int index, float right, float top)
+        {
+            const float r[] = { SCREEN_WIDTH - right * scale, (top + 64.0f) * scale, SCREEN_WIDTH - (right - 64.0f) * scale, top * scale };
+            const uint8_t white[] = { 255, 255, 255, alpha };
+            DrawSprite(manager + MenuSprites + index * 4, nullptr, r, white);
+        };
+        const float top = IndicatorTop(), bottom = IndicatorBottom();
+        // The mouse over the bar, in the units the menu is drawn in now
+        const float mouseX = (SCREEN_WIDTH - float(*reinterpret_cast<int32_t*>(manager + MousePos))) / scale;
+        const float mouseY = float(*reinterpret_cast<int32_t*>(manager + MousePos + 4)) / scale;
+        if (mouseX <= BarRight + 2.0f && mouseX >= BarRight - BarWidth - 2.0f && mouseY >= top - 2.0f && mouseY <= bottom + 2.0f)
+            BarHit = mouseY <= top + ArrowHeight ? -1 : mouseY >= bottom - ArrowHeight ? 1 : 2;
+        const uint8_t track[] = { 100, 100, 66, uint8_t(alpha * 205 / 255) };
+        const uint8_t shadow[] = { 50, 50, 50, alpha };
+        const uint8_t bar[] = { 255, 150, 225, alpha };
+        rect(BarRight + 1.0f, top, BarRight + 1.0f - BarWidth, bottom, track);
+        const float bodyTop = top + ArrowHeight, bodyBottom = bottom - ArrowHeight;
+        const float count = float(std::max<size_t>(1, window.Count()));
+        const float barTop = bodyTop + (bodyBottom - bodyTop) * float(window.First()) / count;
+        const float barBottom = bodyTop + (bodyBottom - bodyTop) * float(window.First() + window.Shown()) / count;
+        rect(BarRight, barTop, BarRight - BarWidth + 3.0f, barBottom + 1.0f, shadow);
+        rect(BarRight, barTop, BarRight - BarWidth + 4.0f, barBottom, bar);
+        sprite(ArrowHeld < 0 ? SpriteUpOn : SpriteUpOff, BarRight, top);
+        sprite(ArrowHeld > 0 ? SpriteDownOn : SpriteDownOff, BarRight, bottom - ArrowHeight);
     }
 }
 
@@ -688,35 +762,11 @@ public:
                 if (*match.get<uint8_t*>(19) == up + 1)
                     Wheel.buttons = up;
             }
+            // CSprite2d::Draw(const CRect&, const CRGBA&), for the scroll bar's arrows
+            DrawSprite = reinterpret_cast<decltype(DrawSprite)>(injector::GetBranchDestination(hook::pattern("E8 ? ? ? ? 83 BB ? ? ? ? ? 0F 85 ? ? ? ? 8B 83").get_first()).as_int());
             DrawRect = reinterpret_cast<decltype(DrawRect)>(find_pattern("8B 44 24 04 53 8B 5C 24 0C 53 53 53 53 50 E8", "E9 ? ? ? ? 8B 5C 24 0C 53 53 53 53 50 E8").get_first());
 
-            // The helper text of the Options screen (CMenuManager::Draw: push 0; jmp; ... mov ecx, ebp; call
-            // DisplayHelperText) and its CText::Get of the key
-            auto helper = hook::pattern("6A 00 EB ? 80 7D 26 FD 75");
-            auto helperText = hook::pattern("B9 ? ? ? ? 55 E8 ? ? ? ? 8D 4C 24 ? 89 C6 68 FF 00 00 00");
             auto details = hook::pattern("80 3D ? ? ? ? ? 75 ? 80 3D ? ? ? ? ? 75 ? 80 3D ? ? ? ? ? 0F 84");
-            {
-                auto jump = helper.get_first<uint8_t>(2);
-                auto call = jump + 2 + int8_t(jump[1]) + 2;
-                if (call[-2] == 0x89 && call[-1] == 0xE9 && call[0] == 0xE8)
-                {
-                    HelperTextPrevious = injector::MakeCALL(call, HelperText, true).get();
-                    // The Options screen has no helper text of its own: the fix's pages get theirs after the game's
-                    // (mov eax, [ebp+0F8h] after the call)
-                    if (call[5] == 0x8B && call[6] == 0x85)
-                    {
-                        static auto PageHelpHook = safetyhook::create_mid(call + 5, [](SafetyHookContext& regs)
-                        {
-                            auto manager = reinterpret_cast<uint8_t*>(regs.ebp);
-                            if (bReady && State == Mode::Page && Screen(manager) == ScreenOptions && SelectedRow(manager))
-                                HelperText(manager, nullptr, nullptr);
-                        });
-                    }
-                    auto get = helperText.get_first<uint8_t>(6);
-                    TextPrevious[reinterpret_cast<uintptr_t>(get + 5)] = injector::MakeCALL(get, Text, true).get();
-                    RightJustifyWrap.SetAddress(reinterpret_cast<float*>(*details.get_first<uint8_t*>(2) + 0x34));
-                }
-            }
 
             // The label line's print (CMenuManager::Draw: ... call CFont::PrintString; mov eax, RsGlobal.width;
             // add esp, 0Ch; add eax, -10 for the next SetWrapx)
@@ -727,6 +777,13 @@ public:
             auto navigationSound = hook::pattern("B9 ? ? ? ? 6A 00 68 C3 00 00 00 E8 ? ? ? ? FF 45 30");
             Audio = *navigationSound.get_first<void*>(1);
             NavigationSound = reinterpret_cast<decltype(NavigationSound)>(injector::GetBranchDestination(navigationSound.get_first(12)).as_int());
+
+            // CPad::UpdateMouse: the DirectInput state's wheel movement (eax), before it becomes a flag
+            static auto WheelRead = safetyhook::create_mid(hook::pattern("8B 44 24 ? 85 C0 7E ? C6 05 ? ? ? ? 01").get_first(4), [](SafetyHookContext& regs)
+            {
+                if (State == Mode::Page)
+                    WheelDelta += int32_t(regs.eax);
+            });
 
             auto oldWheelButtons = hook::pattern("80 3D ? ? ? ? 00 59 75 01 40 84 C0 74 0B 80 3D ? ? ? ? 00");
             for (size_t i = 0; i < oldWheelButtons.size(); ++i)

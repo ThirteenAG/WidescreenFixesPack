@@ -11,6 +11,7 @@ export module Window;
 import ComVars;
 import Camera;
 import DeveloperOverlay;
+import NativeMenu;
 
 export
 {
@@ -154,6 +155,7 @@ LRESULT CALLBACK WindowProcedure(HWND window, UINT message, WPARAM wParam, LPARA
     LRESULT result = 0;
     if (SufferingOverlay::Message(window, message, wParam, lParam, result))
         return result;
+    SufferingMenu::Message(message, wParam);
     if (message == WM_DESTROY)
         RWGTA::UpdateCheck::OnExit();
     if (message == WM_SIZE && wParam == SIZE_MINIMIZED && RunState.is_initialized())

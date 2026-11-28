@@ -3,14 +3,16 @@ module;
 #include <stdafx.h>
 #include "FixSettings.hpp"
 #include "Shared/RWGTA/FixMenu.hpp"
+#include "Shared/PadInput.hpp"
 #include <array>
 #include <deque>
 #include <map>
 #include <set>
 
-// Options > Plugins: one more button in the game's Options menu (OptionsState). It opens the plugin list and each
-// plugin's page in the same menu, built from the game's own buttons and selector rows; the help line and the restart
-// notice are drawn under the menu in the menu's font.
+// Options > Plugins: one more button in the game's Options menu (OptionsState). It opens the plugin list, each
+// plugin's page and its categories in the same menu, built from the game's own buttons and selector rows. Every list
+// shows a window of rows that scrolls by one row; like the game's own lists it doesn't wrap and Esc goes back. The
+// help line, the restart notice and the scroll marks are drawn in the menu's font.
 
 export module OptionsMenu;
 
@@ -42,18 +44,8 @@ export namespace SRSMenu
         void* (__thiscall* drawText)(void*, void*, const NativeString*, const int*, int){};
     };
     inline Bindings api;
-    enum class Kind
-    {
-        Plugin,
-        Setting,
-        Back,
-        Previous,
-        Next
-    };
     struct Item
     {
-        Kind kind{};
-        size_t index{};
         RWGTAMenu::Row row{};
         std::string label, help;
         void* widget{};
@@ -70,11 +62,20 @@ export namespace SRSMenu
         HMODULE module{};
         void* root{};
         void* building{};
-        bool open{}, rebuilding{};
+        bool open{}, rebuilding{}, rebuild{};
         uint64_t generation{};
-        int page{ -1 }, pending{ -1 }, direction{};
-        size_t start{}, selected{};
+        size_t page{ RWGTAMenu::Model::RootPage };
+        int pending{ -1 }, direction{};
         int pluginsId{ -1 };
+        // From the window procedure (the game's thread): wheel notches, page keys, clicks; the menu's last mouse point
+        int wheel{}, pageKeys{}, edgeKeys{};
+        int marked{};        // a scroll mark under the mouse when its button went down: -1 up, +1 down
+        bool button{};
+        int mouseX{ -1 }, mouseY{ -1 };
+        MenuList::WheelNotches notches;
+        MenuList::Repeat shoulderRepeat[2], markRepeat;
+        // The scroll marks in menu space (left, top, right, bottom), empty when not shown
+        std::array<int, 4> upMark{}, downMark{};
         std::string language;
         std::wstring heading;
         std::wstring notice;
@@ -87,13 +88,16 @@ export namespace SRSMenu
         std::vector<RestartSetting> restartSettings;
         bool restartPending{};
         RWGTAMenu::Model model;
-        SafetyHookInline buildHook, updateHook, showHook, eventHook, sliderHook, lookupHook, captionHook, destroyHook;
+        SafetyHookInline buildHook, updateHook, showHook, eventHook, sliderHook, lookupHook, captionHook, destroyHook, moveHook, pointHook, pollHook;
+        uint8_t* moved{};       // the focus manager's first byte: the selection moved, the menu plays its move sound
     };
     State state;
     inline std::map<RestartKey, std::string> runningValues;
     constexpr int TitleId{ 0x7F000001 };
-    constexpr size_t PageRows{ 6 };
+    constexpr size_t Slots{ 6 };     // the rows the Options frame holds above the prompts
     constexpr size_t MenuOffset{ 2092 };
+    constexpr int MarkHeight{ 12 };
+    constexpr uint32_t MarkColor{ 0xFFA0A0A0 };
 
     template<class T> T Read(const void* base, size_t offset = 0)
     {
@@ -210,7 +214,7 @@ export namespace SRSMenu
     inline void OpenModel()
     {
         state.language = Language();
-        state.model.OpenPlugins(state.module, state.language, PageRows);
+        state.model.OpenMenu(state.module, state.language, Slots);
         RememberRestartSettings();
     }
     inline void Clear()
@@ -258,89 +262,203 @@ export namespace SRSMenu
             AddPlugins();
         state.showHook.thiscall<void>(menu);
     }
-    inline void Build()
+    inline std::wstring Upper(const std::string& text)
     {
+        auto wide = Wide(text);
+        CharUpperBuffW(wide.data(), static_cast<DWORD>(wide.size()));
+        return wide;
+    }
+    // A new list comes in with the menu's own animation; the same list after a scroll or a change only gets new rows
+    inline void Build(bool animate = true)
+    {
+        state.rebuild = false;
         RWGTAMenu::Model::Changed().exchange(false);
         if (!UpdateRestartState())
             return;
         Clear();
-        api.initialize(Menu());
+        if (animate)
+            api.initialize(Menu());
         const auto& pages = state.model.Pages();
-        if (state.page < 0)
+        if (state.page >= pages.size())
+            state.page = RWGTAMenu::Model::RootPage;
+        for (auto row : state.model.Shown(state.page, false))
         {
-            for (size_t i = state.start; i < std::min(state.start + 5, pages.size()); ++i)
-                state.items.push_back({ Kind::Plugin, i, {}, pages[i].title, {} });
-            if (state.start)
-                state.items.push_back({ Kind::Previous, state.start >= 5 ? state.start - 5 : 0, {}, state.model.Text("menu.previous"), {} });
-            if (state.start + 5 < pages.size())
-                state.items.push_back({ Kind::Next, state.start + 5, {}, state.model.Text("menu.next"), {} });
+            // Plugins and categories open lists, like the game's own Options entries (in capitals)
+            auto label = RWGTAMenu::Model::Opens(*row) ? asi_settings::text::Narrow(Upper(state.model.Label(*row))) : state.model.Label(*row);
+            state.items.push_back({ *row, std::move(label), state.model.Help(*row) });
         }
-        else if (static_cast<size_t>(state.page) < pages.size())
-        {
-            for (auto row : state.model.VisibleRows(state.page))
-                state.items.push_back({ Kind::Setting, 0, *row, state.model.Label(*row), state.model.Help(*row) });
-        }
-        state.items.push_back({ Kind::Back, 0, {}, state.model.Text("menu.back"), {} });
-        state.selected = std::min(state.selected, state.items.size() - 1);
-        state.heading = Wide(state.page < 0 ? state.model.Text("menu.plugins") : pages[state.page].title);
+        auto& window = state.model.Window(state.page);
+        state.heading = Upper(pages[state.page].title);
         state.title = { state.heading.c_str() };
         Write<int>(Menu(), 212, TitleId);
         for (auto& item : state.items)
         {
-            const bool selector = item.kind == Kind::Setting &&
-                (item.row.kind == RWGTAMenu::RowKind::Setting || item.row.kind == RWGTAMenu::RowKind::Preset);
+            const bool selector = (item.row.kind == RWGTAMenu::RowKind::Setting || item.row.kind == RWGTAMenu::RowKind::Preset ||
+                !state.model.Value(item.row).empty()) && !RWGTAMenu::Model::Opens(item.row);
             item.widget = selector ? Slider(item) : Button(item.label);
             if (item.widget)
                 item.id = api.add(Menu(), item.widget);
         }
         api.finish(Menu());
         state.showHook.thiscall<void>(Menu());
-        Write<int>(Menu(), 896, static_cast<int>(state.selected));
+        Write<int>(Menu(), 896, state.items.empty() ? 0 : static_cast<int>(window.Slot()));
     }
     inline void Stock()
     {
         Clear();
         state.open = false;
-        state.page = -1;
-        state.start = state.selected = 0;
+        state.page = RWGTAMenu::Model::RootPage;
         state.pluginsId = -1;
         Write<int>(Menu(), 212, 443);
         state.building = state.root;
         state.buildHook.thiscall<int>(state.root);
         state.building = nullptr;
+        // Back on the Plugins entry (the last one)
+        if (const int count = Read<int>(Menu(), 456); count > 0)
+            Write<int>(Menu(), 896, count - 1);
     }
-    inline void Activate(size_t index, int direction)
+    // Esc: the list it came from, at the row it came from; the game's Options from the plugins list
+    inline void Back()
     {
-        if (index >= state.items.size())
+        const auto parent = state.model.Back(state.page);
+        if (parent == SIZE_MAX)
+        {
+            Stock();
             return;
-        const auto item = state.items[index];
+        }
+        state.page = parent;
+        Build();
+    }
+    inline void Activate(size_t slot, int direction)
+    {
+        if (slot >= state.items.size())
+            return;
+        const auto item = state.items[slot];
         const auto generation = state.generation;
-        state.selected = index;
-        if (item.kind == Kind::Back)
+        state.model.Window(state.page).Point(slot);
+        const bool opened = RWGTAMenu::Model::Opens(item.row);
+        if (opened)
         {
-            if (state.page < 0)
-            {
-                Stock();
+            if (direction)
                 return;
-            }
-            state.page = -1;
-            state.selected = 0;
-        }
-        else if (item.kind == Kind::Plugin)
-        {
-            state.page = static_cast<int>(item.index);
-            state.selected = 0;
-            state.model.PageShown(item.index);
-        }
-        else if (item.kind == Kind::Previous || item.kind == Kind::Next)
-        {
-            state.start = item.index;
-            state.selected = 0;
+            const auto target = state.model.Enter(item.row);
+            if (target == SIZE_MAX)
+                return;
+            state.page = target;
         }
         else if (state.model.Enabled(item.row, false))
             state.model.Change(item.row, direction, false);
         if (state.root && state.open && generation == state.generation)
-            Build();
+            Build(opened);
+    }
+    // The window moved (wheel, page keys, scroll marks): new rows and the move sound
+    inline void Scrolled(bool changed)
+    {
+        if (!changed)
+            return;
+        Build(false);
+        if (state.moved)
+            *state.moved = 1;
+    }
+    // Up/Down from the keys, the pad and the stick (the game's focus manager, with its own repeat): one row; at the
+    // window's edge the window scrolls by one row
+    inline void __fastcall Move(void* focus, void*, float dx, float dy)
+    {
+        state.moved = static_cast<uint8_t*>(focus);
+        if (state.open && state.root && dy != 0.0f && dx == 0.0f && !state.items.empty())
+        {
+            auto& window = state.model.Window(state.page);
+            const auto first = window.First();
+            if (!window.Move(dy > 0.0f ? 1 : -1, false))
+                return;
+            if (window.First() != first)
+            {
+                state.rebuild = true;
+                if (state.moved)
+                    *state.moved = 1;
+                return;
+            }
+        }
+        state.moveHook.thiscall<void>(focus, dx, dy);
+    }
+    inline bool Inside(const std::array<int, 4>& mark);
+    // The game's DirectInput poll: while a list of the fix is open the wheel (the mouse's raw lZ, notches kept whole)
+    // scrolls it and doesn't also step the selected row's value; the left button on a scroll mark scrolls (held: with
+    // the game's repeat) and doesn't also press the selected row, as the game takes any click for it
+    inline int __fastcall Poll(void* adapter, void*)
+    {
+        const auto result = state.pollHook.thiscall<int>(adapter);
+        if (state.open)
+        {
+            state.wheel += state.notches.Take(Read<LONG>(adapter, 408));
+            Write<LONG>(adapter, 408, 0);
+            const bool down = Read<uint8_t>(adapter, 412) & 0x80;
+            if (down && (!state.button || state.marked))
+            {
+                const int mark = Inside(state.upMark) ? -1 : Inside(state.downMark) ? 1 : 0;
+                if (!state.button)
+                    state.marked = mark;
+                if (state.marked)
+                    Write<uint8_t>(adapter, 412, 0);
+            }
+            if (!down)
+                state.marked = 0;
+            state.button = down;
+        }
+        return result;
+    }
+    // The mouse over the menu, in its own coordinates
+    inline void __fastcall Point(void* focus, void*, int x, int y)
+    {
+        state.mouseX = x;
+        state.mouseY = y;
+        state.pointHook.thiscall<void>(focus, x, y);
+    }
+    inline bool Inside(const std::array<int, 4>& mark)
+    {
+        return mark[2] > mark[0] && state.mouseX >= mark[0] && state.mouseX < mark[2] && state.mouseY >= mark[1] && state.mouseY < mark[3];
+    }
+    // Window messages: Page Up/Down, Home/End
+    inline void Message(UINT message, WPARAM wParam, LPARAM)
+    {
+        if (!state.open)
+            return;
+        if (message == WM_KEYDOWN && (wParam == VK_PRIOR || wParam == VK_NEXT))
+            state.pageKeys += wParam == VK_NEXT ? 1 : -1;
+        else if (message == WM_KEYDOWN && (wParam == VK_HOME || wParam == VK_END))
+            state.edgeKeys = wParam == VK_END ? 1 : -1;
+    }
+    // The input the game's menu has no use for: wheel, page keys, shoulder buttons, the scroll marks
+    inline void Input()
+    {
+        auto& window = state.model.Window(state.page);
+        // The selection follows the row the mouse put the focus on
+        if (!Read<uint8_t>(Menu(), 900))
+        {
+            for (size_t i = 0; i < state.items.size(); ++i)
+                if (state.items[i].widget && Read<uint8_t>(state.items[i].widget, 268) && i != window.Slot())
+                    window.Point(i);
+        }
+        const auto wheel = std::exchange(state.wheel, 0);
+        for (int i = 0; i < std::abs(wheel); ++i)
+            Scrolled(window.Scroll(wheel > 0 ? -1 : 1));
+        const auto pages = std::exchange(state.pageKeys, 0);
+        for (int i = 0; i < std::abs(pages); ++i)
+            Scrolled(window.Page(pages > 0 ? 1 : -1));
+        if (const auto edge = std::exchange(state.edgeKeys, 0))
+            Scrolled(window.Edge(edge));
+        if (state.markRepeat.Step(state.marked != 0, GetTickCount64()))
+            Scrolled(window.Scroll(state.marked));
+        XINPUT_STATE pad{};
+        DWORD slot{};
+        const bool read = PadInput::Read(pad, slot);
+        const auto now = GetTickCount64();
+        for (int i = 0; i < 2; ++i)
+        {
+            const WORD button = i ? XINPUT_GAMEPAD_RIGHT_SHOULDER : XINPUT_GAMEPAD_LEFT_SHOULDER;
+            if (state.shoulderRepeat[i].Step(read && (pad.Gamepad.wButtons & button), now))
+                Scrolled(window.Page(i ? 1 : -1));
+        }
     }
     inline int __fastcall BuildStock(void* root, void*)
     {
@@ -349,9 +467,8 @@ export namespace SRSMenu
             ++state.generation;
             state.root = root;
             state.open = false;
-            state.page = -1;
+            state.page = RWGTAMenu::Model::RootPage;
             state.pending = -1;
-            state.start = state.selected = 0;
             state.items.clear();
             state.texts.clear();
             state.choices.clear();
@@ -401,6 +518,10 @@ export namespace SRSMenu
             const auto command = std::exchange(state.pending, -1);
             Activate(command, state.direction);
         }
+        if (state.open && state.rebuild)
+            Build(false);
+        if (state.open)
+            Input();
         // +3660: an item was chosen, +3656: its id (1 = Back)
         if (Read<uint8_t>(root, 3660))
         {
@@ -415,15 +536,16 @@ export namespace SRSMenu
                     state.language = language;
                 }
                 state.open = true;
-                state.page = -1;
-                state.selected = 0;
+                state.notches.Clear();
+                state.page = RWGTAMenu::Model::RootPage;
+                state.model.Window(state.page).Reset();
                 Build();
             }
             else if (state.open)
             {
                 Write<uint8_t>(root, 3660, 0);
                 if (id == 1)
-                    Activate(state.items.size() - 1, 0);
+                    Back();
                 else
                     for (size_t i = 0; i < state.items.size(); ++i)
                         if (state.items[i].id == id)
@@ -434,7 +556,7 @@ export namespace SRSMenu
             }
         }
         if (state.open && RWGTAMenu::Model::Changed())
-            Build();
+            Build(false);
         return state.updateHook.thiscall<int>(root);
     }
     inline void* __cdecl Lookup(int id)
@@ -468,26 +590,50 @@ export namespace SRSMenu
         if (!state.notice.empty() && (state.lastCaption >= state.noticeUntil || FixSettings().Get("MAIN.CheckForUpdates") == "0"))
             state.notice.clear();
         auto help = state.notice;
+        const bool list = options && state.open && !state.items.empty();
         if (help.empty())
         {
-            if (!options || !state.open || state.items.empty())
+            if (!list)
                 return result;
-            for (size_t i = 0; i < state.items.size(); ++i)
-                if (Read<uint8_t>(state.items[i].widget, 268))
-                    state.selected = i;
-            help = Wide(state.restartPending ? state.model.Text("menu.restartwarning") : state.items[state.selected].help);
+            const auto slot = std::min(state.model.Window(state.page).Slot(), state.items.size() - 1);
+            help = Wide(state.restartPending ? state.model.Text("menu.restartwarning") : state.items[slot].help);
         }
         const auto flags = Read<int>(attributes, 12);
         const auto color = Read<uint32_t>(attributes, 16);
         auto align = reinterpret_cast<void(__thiscall*)(void*, int)>(table[3]);
         auto tint = reinterpret_cast<void(__thiscall*)(void*, uint32_t)>(table[4]);
+        const int depth = Read<int>(menu, 48) + 3;
         align(font, 0);
         tint(font, 0xFFFFFFFF);
         // Leave room for the Main Menu's sign-in status above the notice.
         const NativeString string{ help.c_str() };
         const int rectangle[]{ 25, main ? 28 : 4, 590, 0 };
         int extent[2]{};
-        api.drawText(font, extent, &string, rectangle, Read<int>(menu, 48) + 3);
+        api.drawText(font, extent, &string, rectangle, depth);
+        state.upMark = state.downMark = {};
+        if (list)
+        {
+            // The font has no arrows: an ellipsis above the first and below the last row, centred on the rows (where
+            // labels and values meet), in their grey, says there are more rows that way
+            const auto& window = state.model.Window(state.page);
+            const auto top = state.items.front().widget, bottom = state.items.back().widget;
+            // Widgets: centre x +8, centre y +12, height +32, width +40
+            const int centre = static_cast<int>(Read<float>(top, 8));
+            tint(font, MarkColor);
+            auto mark = [&](int y, std::array<int, 4>& area)
+            {
+                const NativeString text{ L"..." };
+                const int w = Width(font, text.text);
+                const int place[]{ centre - w / 2, y, centre + w / 2 + 2, 0 };
+                int size[2]{};
+                api.drawText(font, size, &text, place, depth);
+                area = { centre - w / 2 - 12, y - 4, centre + w / 2 + 12, y + MarkHeight + 4 };
+            };
+            if (window.Above())
+                mark(static_cast<int>(Read<float>(top, 12) - Read<float>(top, 32) / 2) - MarkHeight - 4, state.upMark);
+            if (window.Below())
+                mark(static_cast<int>(Read<float>(bottom, 12) + Read<float>(bottom, 32) / 2) - 4, state.downMark);
+        }
         tint(font, color);
         align(font, flags);
         return result;
@@ -551,5 +697,13 @@ export namespace SRSMenu
         state.lookupHook = safetyhook::create_inline(lookup, Lookup);
         state.captionHook = safetyhook::create_inline(caption, Caption);
         state.destroyHook = safetyhook::create_inline(destroy, Destroy);
+        // The focus manager: a step in a direction, and the focus under the mouse
+        auto move = hook::pattern("56 8B 71 04 85 F6 74 3A 8B 86 88 00 00 00 85 C0 74 30 8B 44 24 0C 8B 4C 24 08 50 51 8B CE E8").get_first();
+        auto point = hook::pattern("51 53 8B D9 8B 83 88 00 00 00 57 33 FF 85 C0 89 44 24 08 74 04 C6 40 0C 00 56 8B B3 8C 00 00 00").get_first();
+        state.moveHook = safetyhook::create_inline(move, Move);
+        state.pointHook = safetyhook::create_inline(point, Point);
+        // The DirectInput adapter's poll; the mouse state (DIMOUSESTATE) is at +400
+        auto poll = hook::pattern("51 53 56 8B F1 8B 46 08 8B 08 57 50 FF 51 1C 8B 46 1C 8B 10 50 FF 52 1C 8B 46 08 8B 08 50 FF 51 64").get_first();
+        state.pollHook = safetyhook::create_inline(poll, Poll);
     }
 }

@@ -28,9 +28,12 @@ import StaticText;
 //   the frame rate limit and the display mode under Graphics > Advanced, the shadow resolution and motion blur under
 //   Graphics > World, the HUD width under Interface.
 // - One "Plugins" entry lists the fix first and then every other loaded plugin with settings in menus (ASI Settings
-//   menu hosts). Each opens its page: the Preset row, its settings by the description's pages, Restore Defaults last.
-//   A screen shows nine entries at most (its front end package has the rows ITEM_GROUP_1 to ITEM_GROUP_9), so a
-//   page with more is split into screens, one for each of the description's pages.
+//   menu hosts). Each opens its page: the Preset row, its settings or, when they come in several categories (the
+//   description's pages), an entry per category that opens its settings like the game's sub menus, Restore Defaults
+//   last. A screen shows nine entries at most (its front end package has the rows ITEM_GROUP_1 to ITEM_GROUP_9) and
+//   its lists don't scroll; the game puts more options into sub menus (Graphics: Resolution, Advanced, World, Cars),
+//   and so does the fix: a page of sub menus holds no option rows, so there Preset and Restore Defaults are in a
+//   "Preset" sub menu of their own, first.
 //
 // The options menu already has nine entries (audio, autosave, gameplay, online options, controls, interface,
 // graphics, EA Trax jukebox and credits), so Plugins takes the place of the credits. That options menu (entry 30) is
@@ -94,9 +97,9 @@ namespace
         std::string setting;        // the setting's id
         std::string title;          // a menu's title (UTF-8)
         std::string titleKey;
-        std::string titleSuffix;
         HMODULE module = nullptr;
         int32_t root = 0;           // the Plugins entry it's under, 0 for the settings on the game's screens
+        size_t category = 0;        // a category's index among the plugin's categories
     };
     std::deque<MenuEntry> Entries;  // node based: the game keeps pointers to the tree entries
 
@@ -567,103 +570,39 @@ namespace
         return id;
     }
 
-    void ArrangeMenus(int32_t parent, int32_t root, size_t plugin, const std::vector<int32_t>& menus, size_t first = 0, bool hostFirst = false)
-    {
-        if (menus.size() <= ScreenRows)
-        {
-            for (auto id : menus)
-                FindById(id)->entry.parent = parent;
-            return;
-        }
-        size_t begin = hostFirst ? 1 : 0;
-        if (hostFirst)
-            FindById(menus.front())->entry.parent = parent;
-        size_t capacity = ScreenRows - begin;
-        size_t groupSize = (menus.size() - begin + capacity - 1) / capacity;
-        for (size_t i = begin; i < menus.size(); i += groupSize)
-        {
-            size_t end = std::min(menus.size(), i + groupSize);
-            auto title = WFPText::Get("WFP_NEXT") + " (" + std::to_string(first + i + 1) + "-" + std::to_string(first + end) + ")";
-            int32_t group = AddMenu(parent, root, plugin, title);
-            FindById(group)->titleKey = "@next";
-            FindById(group)->titleSuffix = title.substr(WFPText::Get("WFP_NEXT").size());
-            std::vector<int32_t> children(menus.begin() + i, menus.begin() + end);
-            ArrangeMenus(group, root, plugin, children, first + i);
-        }
-    }
-
+    // The plugins' entries under a Plugins entry: a plugin's page holds its Preset, its settings or an entry per
+    // category (a sub menu with the category's settings), and Restore Defaults
     void AddPages(int32_t root)
     {
-        std::vector<int32_t> pluginMenus;
         for (size_t i = 0; i < Plugins->plugins.size(); ++i)
         {
             auto& plugin = Plugins->plugins[i];
-            auto sections = WFPPlugins::Sections(plugin);
-            struct Screen
-            {
-                std::string title;
-                std::string key;
-                std::string suffix;
-                std::vector<WFPPlugins::Row> rows;
-            };
-            std::vector<Screen> screens;
-            for (auto& section : sections)
-            {
-                std::erase_if(section.rows, [](const WFPPlugins::Row& row)
-                {
-                    return row.kind == WFPPlugins::Row::Kind::RestoreDefaults;
-                });
-                std::string key = "@plugin";
-                for (auto& row : section.rows)
-                {
-                    if (!row.setting)
-                        continue;
-                    auto page = std::find_if(plugin.file.description.pages.begin(), plugin.file.description.pages.end(), [&](const asi_settings::Page& page)
-                    {
-                        return asi_settings::text::IEquals(page.id, row.setting->page);
-                    });
-                    if (page != plugin.file.description.pages.end())
-                        key = page->title;
-                    break;
-                }
-                size_t count = (section.rows.size() + ScreenRows - 2) / (ScreenRows - 1);
-                for (size_t k = 0; k < count; ++k)
-                {
-                    auto title = section.title;
-                    std::string suffix;
-                    if (count > 1)
-                        suffix = " (" + std::to_string(k + 1) + "/" + std::to_string(count) + ")";
-                    title += suffix;
-                    auto begin = section.rows.begin() + k * (ScreenRows - 1);
-                    std::vector<WFPPlugins::Row> rows(begin, begin + std::min(ScreenRows - 1, section.rows.size() - k * (ScreenRows - 1)));
-                    if (std::any_of(rows.begin(), rows.end(), [](const WFPPlugins::Row& row)
-                    {
-                        return row.kind == WFPPlugins::Row::Kind::Setting;
-                    }))
-                        rows.push_back({ WFPPlugins::Row::Kind::RestoreDefaults, &plugin });
-                    screens.push_back({ std::move(title), key, std::move(suffix), std::move(rows) });
-                }
-            }
             int32_t page = AddMenu(root, root, i, WFPPlugins::Name(plugin));
             FindById(page)->titleKey = "@plugin";
-            pluginMenus.push_back(page);
-            std::vector<int32_t> sectionMenus;
-            for (size_t j = 0; j < screens.size(); ++j)
+            auto rows = WFPPlugins::TopRows(plugin);
+            // A page of sub menus can't hold option rows (the game's lists are either), so with categories the Preset
+            // and Restore Defaults rows go into a sub menu of their own first, like Graphics > Resolution
+            bool categories = std::any_of(rows.begin(), rows.end(), [](const WFPPlugins::Row& row) { return row.kind == WFPPlugins::Row::Kind::Category; });
+            int32_t general = page;
+            if (categories && std::any_of(rows.begin(), rows.end(), [](const WFPPlugins::Row& row) { return row.kind != WFPPlugins::Row::Kind::Category; }))
             {
-                auto& [title, key, suffix, rows] = screens[j];
-                int32_t parent = screens.size() > 1 ? AddMenu(page, root, i, title) : page;
-                if (parent != page)
-                {
-                    FindById(parent)->titleKey = key;
-                    FindById(parent)->titleSuffix = suffix;
-                    sectionMenus.push_back(parent);
-                }
-                for (auto& row : rows)
-                    AddRow(parent, root, i, row);
+                general = AddMenu(page, root, i, WFPText::Get("WFP_PRESET"));
+                FindById(general)->titleKey = "@preset";
             }
-            ArrangeMenus(page, root, i, sectionMenus);
+            for (auto& row : rows)
+            {
+                if (row.kind != WFPPlugins::Row::Kind::Category)
+                {
+                    AddRow(general, root, i, row);
+                    continue;
+                }
+                int32_t category = AddMenu(page, root, i, row.title);
+                FindById(category)->titleKey = "@category";
+                FindById(category)->category = row.category;
+                for (auto& setting : WFPPlugins::CategoryRows(plugin, row.category))
+                    AddRow(category, root, i, setting);
+            }
         }
-        ArrangeMenus(root, root, 0, pluginMenus, 0, true);
     }
 
 
@@ -727,16 +666,20 @@ namespace
         std::string title = entry.title;
         if (entry.entry.id == PluginsMenu || entry.entry.id == PausePluginsMenu)
             title = WFPText::Get("WFP_PLUGINS");
-        else if (entry.titleKey == "@next")
-            title = WFPText::Get("WFP_NEXT");
         else if (auto plugin = PluginOf(entry))
         {
             if (entry.titleKey == "@plugin")
                 title = WFPPlugins::Name(*plugin);
-            else if (!entry.titleKey.empty())
-                title = OtherPlugins::Text(*plugin, entry.titleKey);
+            else if (entry.titleKey == "@preset")
+                title = WFPText::Get("WFP_PRESET");
+            else if (entry.titleKey == "@category")
+            {
+                auto categories = WFPPlugins::Categories(*plugin);
+                if (entry.category < categories.size())
+                    title = categories[entry.category].title;
+            }
         }
-        return title + entry.titleSuffix;
+        return title;
     }
 
     void UpdateTexts(bool found = false)
@@ -827,6 +770,8 @@ namespace
         node->next = list;
     }
 
+    void* (__cdecl* CrtMalloc)(size_t) = nullptr;
+
     // A node of the menu, made from an entry
     void* MakeNode(TreeEntry* entry)
     {
@@ -835,6 +780,19 @@ namespace
             case TypeList: return ListNode(entry);
             case TypeSlider: return SliderNode(entry);
             default: return StandardNode(entry);
+        }
+    }
+
+    // An option page draws every row's value text: the fix's rows without one (a sub menu among settings, a list
+    // before its value is known) get an empty one
+    void EnsureValueText(uint8_t* node)
+    {
+        if (!node || !FindById(*reinterpret_cast<int32_t*>(node + 0x0C)) || *reinterpret_cast<char**>(node + 0x1C))
+            return;
+        if (auto empty = static_cast<char*>(CrtMalloc(1)))
+        {
+            *empty = 0;
+            *reinterpret_cast<char**>(node + 0x1C) = empty;
         }
     }
 
@@ -858,20 +816,41 @@ namespace
             !WFPPlugins::Excluded(*row.setting, Excluded(entry.root));
     }
 
-    // The entries of the plugins' pages that are shown: rows the plugin hides (visibleIf, its state) are left out
-    void AppendEntries(ListLink* list, int32_t parent)
+    // An entry of the plugins' pages is shown unless the plugin hides it (visibleIf, its state); a category and
+    // Restore Defaults while one of their settings is shown
+    bool EntryVisible(const MenuEntry& entry)
     {
+        if (entry.kind == Kind::Setting || entry.kind == Kind::Action)
+            return Shown(entry);
+        if (entry.kind == Kind::RestoreDefaults || (entry.kind == Kind::Menu && entry.titleKey == "@category"))
+        {
+            bool category = entry.kind == Kind::Menu;
+            return std::any_of(Entries.begin(), Entries.end(), [&](const MenuEntry& other)
+            {
+                return other.kind == Kind::Setting && other.root == entry.root && other.module == entry.module &&
+                    (!category || other.entry.parent == entry.entry.id) && Shown(other);
+            });
+        }
+        return true;
+    }
+
+    // The shown entries of a list of the plugins' pages
+    std::vector<int32_t> ListIds(int32_t parent)
+    {
+        std::vector<int32_t> ids;
         for (auto& entry : Entries)
         {
-            if (entry.entry.parent != parent || entry.root == 0)
-                continue;
-            if ((entry.kind == Kind::Setting || entry.kind == Kind::Action) && !Shown(entry))
-                continue;
-            if (entry.kind == Kind::RestoreDefaults && std::none_of(Entries.begin(), Entries.end(), [&](const MenuEntry& other)
-            {
-                return other.entry.parent == parent && other.kind == Kind::Setting && Shown(other);
-            }))
-                continue;
+            if (entry.entry.parent == parent && entry.root != 0 && EntryVisible(entry))
+                ids.push_back(entry.entry.id);
+        }
+        return ids;
+    }
+
+    void AppendEntries(ListLink* list, int32_t parent)
+    {
+        for (auto id : ListIds(parent))
+        {
+            auto& entry = *FindById(id);
             if (entry.kind == Kind::Preset)
             {
                 PresetRow.plugin = PluginOf(entry);
@@ -2180,6 +2159,27 @@ namespace
         return result;
     }
 
+    // A category row opens its settings like the game's sub menu entries: its name only, no value box. The rows'
+    // objects are shared by every option page, so every other row shows its box.
+    void ShowValueBox(uint8_t* page, int index, uint8_t* node)
+    {
+        auto screen = *reinterpret_cast<uint8_t**>(page + 0x14);
+        auto name = screen ? *reinterpret_cast<const char**>(screen + 0x0C) : nullptr;
+        auto context = name ? LoadedPackage(name) : nullptr;
+        if (!context || !node)
+            return;
+        char objectName[96]{};
+        snprintf(objectName, sizeof(objectName), "OPTION_DATA_BASE_%d", index);
+        auto box = FindObject(context, bStringHash(objectName));
+        if (!box)
+            return;
+        auto entry = FindById(*reinterpret_cast<int32_t*>(node + 0x0C));
+        bool hide = entry && entry->kind == Kind::Menu;
+        auto& flags = *reinterpret_cast<uint32_t*>(box + 0x1C);
+        if (hide != ((flags & 1) != 0))
+            flags = (hide ? flags | 1 : flags & ~1u) | 0x2400000;
+    }
+
     int __fastcall Show(uint8_t* page, void* edx, int index, const char* format, uint8_t* node)
     {
         NativeScope native;
@@ -2192,16 +2192,18 @@ namespace
         }
         LiteralScope literal(node && FindByDalId(*reinterpret_cast<int32_t*>(node + NodeDalId)) ? node : nullptr);
         auto owner = PageOwner.Capture();
+        EnsureValueText(node);
         // Popup close also redraws hidden base rows on this derived page.
         constexpr auto rowFormat = "OPTION_HEADER_%d";
         PageFormats[page] = rowFormat;
         auto result = OriginalShow(page, edx, index, format, node);
         if (PageOwner.Matches(owner))
+            ShowValueBox(page, index, node);
+        if (PageOwner.Matches(owner))
             FitRow(page, index, rowFormat, node, true, owner);
         return result;
     }
 
-    void* (__cdecl* CrtMalloc)(size_t) = nullptr;
     void (__cdecl* CrtFree)(void*) = nullptr;
 
     SafetyHookInline shConstructDialog, shDialogNotify;
@@ -2528,27 +2530,8 @@ namespace
             previous.push_back(reinterpret_cast<uint8_t*>(link) - 4);
         }
         std::vector<int32_t> desired;
-        auto visible = [&](const MenuEntry& entry)
-        {
-            if (entry.kind == Kind::Setting || entry.kind == Kind::Action)
-                return Shown(entry);
-            if (entry.kind == Kind::RestoreDefaults)
-            {
-                return std::any_of(Entries.begin(), Entries.end(), [&](const MenuEntry& other)
-                {
-                    return other.entry.parent == origin.parent && other.kind == Kind::Setting && Shown(other);
-                });
-            }
-            return true;
-        };
         if (ownPage)
-        {
-            for (auto& entry : Entries)
-            {
-                if (entry.entry.parent == origin.parent && entry.root && visible(entry))
-                    desired.push_back(entry.entry.id);
-            }
-        }
+            desired = ListIds(origin.parent);
         else
         {
             for (auto node : previous)
@@ -3068,7 +3051,7 @@ namespace
                 PresetRow.Accept(active);
             }
             else if (entry->kind == Kind::RestoreDefaults)
-                RestoreRow.Accept(*row.plugin, PageExclusions(*entry), active);
+                RestoreRow.Accept(*row.plugin, Excluded(entry->root), active);
             else if (entry->kind == Kind::Action && row.setting && WFPPlugins::Visible(row) && active() && WFPPlugins::Enabled(row) && active())
                 OtherPlugins::Invoke(*row.plugin, *row.setting);
             if (!active())

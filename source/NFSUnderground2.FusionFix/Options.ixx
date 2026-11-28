@@ -7,21 +7,22 @@ module;
 #include "Shared/NFS/PluginsMenu.hpp"
 #include "Shared/NFS/MenuLayout.hpp"
 #include "Shared/NFS/Text.hpp"
+#include "Shared/MenuList.hpp"
 
 export module Options;
 
 import ComVars;
-import StaticText;
+import Input;
 import UpdateNotice;
 
 
 // The fix adds one category to the options menu and to the pause menu's options: "Plugins". It opens the game's options
 // screen (UI_Options.fng, in the pause menu UI_PauseOptions.fng) with the list of plugins with settings, the fix first;
-// accepting one shows its page on the same screen, back returns to the list, including when the fix is the only plugin.
-// A page starts with a row that names the plugin and the part of its page shown; left and right on it go through the
-// parts. The game's screens have twelve rows with arrows (the pause screen eleven) and scroll eight of them, so every
-// part of a page fits into the rows below the first. The parts are the description's pages (settings.json), the
-// Preset row first, Restore Defaults last (see Shared/NFS/PluginsMenu.hpp).
+// accepting one shows its page on the same screen: its Preset row, its settings or, when they come in several categories
+// (the description's pages), a row per category that opens its settings, Restore Defaults last. Back returns one
+// level, to the row it came from. Every list is one list: the rows the screen shows at once are a window of it that
+// moves a row when the selection goes past its first or last row (keys, pad, the scroll bar's arrows) or per wheel
+// notch, and stops at its ends like the game's lists; the scroll bar's knob shows the row in the whole list.
 // Every option of the game is an object of its own class, so the fix's rows are objects of the game's toggle class with
 // a class of their own: left, right and accept change the row's setting, and the row shows its name and value. The
 // rows of a screen are made once; showing other rows relinks them into the screen's list of options.
@@ -41,6 +42,9 @@ namespace
     constexpr uint32_t MessageRight = 0xB5971BF1;
     constexpr uint32_t MessageAccept = 0x0C407210;
     constexpr uint32_t MessageBack = 0x911AB364;
+    constexpr uint32_t MessageUp = 0x72619778;
+    constexpr uint32_t MessageDown = 0x911C0A4B;
+    constexpr uint32_t MessageTransitionDone = 0xE1FDE1D1;  // the screen's transition script ended
     constexpr uint32_t MessageDialogYes = 0xD05FC3A3;      // "Default Settings" confirmed
 
     // Text: every text lookup by hash ends in the game's search, the fix's texts are answered by their hashes
@@ -111,6 +115,7 @@ namespace
     void (__fastcall* SelectOption)(void* screen, void* edx, int index) = nullptr;     // index from 1, 0: the first
     void (__cdecl* SetLanguageHash)(void* object, uint32_t hash) = nullptr;
     void* (__cdecl* FindString)(const char* package, uint32_t hash) = nullptr;     // an FEString of a package
+    void (__cdecl* SwitchPackages)(const char* from, const char* to, int unknown) = nullptr;
     void (__cdecl* HideObject)(void* object) = nullptr;
     void (__cdecl* ShowObject)(void* object) = nullptr;
 
@@ -122,17 +127,19 @@ namespace
         constexpr uintptr_t ListTail = 0x50;
         constexpr uintptr_t Current = 0x54;         // the highlighted option
         constexpr uintptr_t FirstShown = 0x58;      // the first option of the rows shown
+        constexpr uintptr_t ScrollBar = 0x6C;       // the list's scroll bar: its arrows and its knob
         constexpr uintptr_t Count = 0x12C;          // options + 1
+        constexpr uintptr_t Visible = 0x134;        // the rows the list shows at once
         constexpr uintptr_t Selected = 0x145;       // an option was picked
 
         template<typename T> T& At(void* screen, uintptr_t offset) { return *reinterpret_cast<T*>(reinterpret_cast<uintptr_t>(screen) + offset); }
         const char* PackageName(void* screen) { return At<const char*>(screen, Package); }
     }
 
-    // A row of the fix's: the list's plugin, the first row of a page, or a row of a plugin's page
+    // A row of the fix's: the list's plugin, or a row of a plugin's page or category
     struct Entry
     {
-        enum class Kind { Empty, RootPage, Plugin, Title, Row } kind = Kind::Empty;
+        enum class Kind { Empty, Plugin, Row } kind = Kind::Empty;
         size_t plugin = 0;
         WFPPlugins::Row row;
         uint32_t labelHash = 0;
@@ -214,36 +221,34 @@ namespace
         std::vector<Entry> entries;     // one per option
         bool video = false;             // the display options' rows
         bool pause = false;             // UI_PauseOptions.fng
-        bool leaving = false;           // the screen is closing: no help while it animates out
     };
     FixScreen Active;
 
-    struct HelpState
+    // The restart warning in the header, on timed pages when it is longer than the line
+    struct WarningState
     {
-        std::vector<uint32_t> ids;
-        float width{};
-        std::string text;
-        std::vector<std::string> lines;
-        uint64_t started{};
-        size_t page{ std::numeric_limits<size_t>::max() };
         std::string warning;
         std::vector<std::string> warningLines;
         uint64_t warningStarted{};
     };
-    HelpState MainHelp, PauseHelp;
-    HelpState& CurrentHelp()
+    WarningState MainWarning, PauseWarning;
+    WarningState& CurrentWarning()
     {
-        return Active.pause ? PauseHelp : MainHelp;
+        return Active.pause ? PauseWarning : MainWarning;
     }
     uint8_t* (__cdecl* FindPackage)(const char* name) = nullptr;
     uint8_t* (__thiscall* FindPackageObject)(void* package, uint32_t hash) = nullptr;
 
     // The plugins and the page shown
     std::shared_ptr<WFPPlugins::Snapshot> Plugins;
-    enum class Level { List, Page } CurrentLevel = Level::List;
+    enum class Level { List, Page, Category } CurrentLevel = Level::List;
     size_t CurrentPlugin = 0;
-    size_t RootPage = 0;
-    size_t CurrentPart = 0;
+    size_t CurrentCategory = 0;
+    MenuList::Window Window;            // the open list's selection and the first row in the screen's rows
+    bool ReturnToParent = false;        // back from a page or a category: the screen comes in again a level up
+    bool KeepLevel = false;
+    MenuList::Key SelectAfter = 0;      // the row to select once the list it's in is shown
+    int ReselectFrames = 0;             // the screen came in again: its row is highlighted once the game set it up
     WFPPlugins::PresetRow PresetRow;
     WFPPlugins::RestoreRow RestoreRow;
 
@@ -270,33 +275,6 @@ namespace
         return IsFix(plugin) ? (Active.pause ? PauseJoinedSettings : MainJoinedSettings) : std::vector<std::string>{};
     }
 
-    // A part of a plugin's page: a description page, split when it has more rows than fit below the first row
-    struct Part
-    {
-        std::string title;      // UTF-8
-        std::vector<WFPPlugins::Row> rows;
-    };
-
-    std::vector<Part> Parts(const WFPPlugins::LoadedPlugin& plugin, size_t pageRows)
-    {
-        std::vector<Part> parts;
-        for (auto& section : WFPPlugins::Sections(plugin, Exclude(plugin)))
-        {
-            size_t count = std::max<size_t>(1, (section.rows.size() + pageRows - 1) / pageRows);
-            for (size_t i = 0; i < count; ++i)
-            {
-                Part part{ section.title, {} };
-                if (count > 1)
-                    part.title += " (" + std::to_string(i + 1) + "/" + std::to_string(count) + ")";
-                auto begin = section.rows.begin() + std::min(section.rows.size(), i * pageRows);
-                auto end = section.rows.begin() + std::min(section.rows.size(), (i + 1) * pageRows);
-                part.rows.assign(begin, end);
-                parts.push_back(std::move(part));
-            }
-        }
-        return parts;
-    }
-
     const WFPPlugins::LoadedPlugin* PluginOf(const Entry& entry)
     {
         if (entry.kind == Entry::Kind::Row)
@@ -311,10 +289,7 @@ namespace
     {
         switch (entry.kind)
         {
-            case Entry::Kind::RootPage:
-                return WFPText::Get("WFP_PLUGINS");
             case Entry::Kind::Plugin:
-            case Entry::Kind::Title:
                 return PluginOf(entry) ? WFPPlugins::Name(*PluginOf(entry)) : std::string();
             case Entry::Kind::Row:
                 return WFPPlugins::Label(entry.row);
@@ -327,11 +302,6 @@ namespace
     {
         switch (entry.kind)
         {
-            case Entry::Kind::RootPage:
-            {
-                auto slice = WFPMenuLayout::Root(Plugins ? Plugins->plugins.size() : 0, Active.options.size(), RootPage);
-                return std::to_string(slice.page + 1) + "/" + std::to_string(slice.pages);
-            }
             case Entry::Kind::Plugin:
             {
                 // The preset in use, for plugins with presets
@@ -341,12 +311,6 @@ namespace
                 int preset = OtherPlugins::CurrentPreset(*plugin);
                 return WFPText::Get(preset < 0 ? "WFP_PRESET_CUSTOM" : WFPPlugins::PresetRow::Names[preset]);
             }
-            case Entry::Kind::Title:
-            {
-                auto plugin = PluginOf(entry);
-                auto parts = plugin ? Parts(*plugin, Active.rowsWithArrows - 1) : std::vector<Part>{};
-                return CurrentPart < parts.size() ? parts[CurrentPart].title : std::string();
-            }
             case Entry::Kind::Row:
                 switch (entry.row.kind)
                 {
@@ -354,6 +318,8 @@ namespace
                         return PresetRow.ValueText();
                     case WFPPlugins::Row::Kind::RestoreDefaults:
                         return RestoreRow.ValueText();
+                    case WFPPlugins::Row::Kind::Category:
+                        return {};
                     default:
                         return WFPPlugins::ValueText(entry.row);
                 }
@@ -365,8 +331,6 @@ namespace
     // Left and right change the row: plugins in the list, actions and Restore Defaults have no arrows
     bool HasArrows(const Entry& entry)
     {
-        if (entry.kind == Entry::Kind::Title || entry.kind == Entry::Kind::RootPage)
-            return true;
         if (entry.kind != Entry::Kind::Row)
             return false;
         return entry.row.kind == WFPPlugins::Row::Kind::Preset || entry.row.kind == WFPPlugins::Row::Kind::Setting;
@@ -389,9 +353,40 @@ namespace
     float MeasureText(void* object, const std::string& text);
     std::string SupportedText(void* object, std::string text);
 
-    // The restart warning in the native header
+    // The restart warning in the native header; in the pause screen that line names the list, like the game's
+    // category there
     constexpr uint32_t InfoLine = 0x7326E44C;      // "PLAYER"
     constexpr uint32_t PauseInfoLine = 0x98643DFE;  // "Header_text2"
+
+    // The open list's title: "Plugins", the plugin's name or the category's
+    std::string PageTitle()
+    {
+        auto title = WFPText::Get("WFP_PLUGINS");
+        if (Plugins && CurrentLevel != Level::List && CurrentPlugin < Plugins->plugins.size())
+        {
+            auto& plugin = Plugins->plugins[CurrentPlugin];
+            title = WFPPlugins::Name(plugin);
+            auto categories = WFPPlugins::Categories(plugin, Exclude(plugin));
+            if (CurrentLevel == Level::Category && CurrentCategory < categories.size())
+                title = categories[CurrentCategory].title;
+        }
+        return title;
+    }
+
+    // In capitals, like the pause screen's category line
+    std::string Capitals(const std::string& text)
+    {
+        auto size = MultiByteToWideChar(CP_UTF8, 0, text.data(), int(text.size()), nullptr, 0);
+        if (size <= 0)
+            return text;
+        std::wstring wide(size, L'\0');
+        MultiByteToWideChar(CP_UTF8, 0, text.data(), int(text.size()), wide.data(), size);
+        if (!LCMapStringEx(LOCALE_NAME_INVARIANT, LCMAP_UPPERCASE, wide.data(), size, wide.data(), size, nullptr, nullptr, 0))
+            return text;
+        std::string result(WideCharToMultiByte(CP_UTF8, 0, wide.data(), size, nullptr, 0, nullptr, nullptr), '\0');
+        WideCharToMultiByte(CP_UTF8, 0, wide.data(), size, result.data(), int(result.size()), nullptr, nullptr);
+        return result;
+    }
 
     void ShowInfo()
     {
@@ -404,8 +399,8 @@ namespace
             return;
         if (auto line = FindString(Screen::PackageName(Active.screen), pause ? PauseInfoLine : InfoLine))
         {
-            auto text = SupportedText(line, FontText(warning.empty() && pause ? WFPText::Get("WFP_PLUGINS") : warning));
-            auto& state = CurrentHelp();
+            auto text = SupportedText(line, FontText(warning.empty() && pause ? Capitals(PageTitle()) : warning));
+            auto& state = CurrentWarning();
             auto now = GetTickCount64();
             if (!warning.empty() && std::isfinite(MeasureText(line, text)))
             {
@@ -518,75 +513,6 @@ namespace
         return float(StringWidth(font, wide.data(), *reinterpret_cast<uint32_t*>(bytes + 0x1C), 0, nullptr)) * std::abs(data[14]);
     }
 
-    // The position keys of an object's scripts (track type 4 at offset 7): a base key the animation is relative to
-    template<typename Function>
-    void PositionTracks(uint8_t* object, Function&& function)
-    {
-        auto script = *reinterpret_cast<uint8_t**>(object + 0x4C);
-        for (size_t depth = 0; script && depth < 64; ++depth, script = *reinterpret_cast<uint8_t**>(script + 4))
-        {
-            auto count = *reinterpret_cast<uint32_t*>(script + 0x1C);
-            auto tracks = *reinterpret_cast<uint8_t**>(script + 0x20);
-            if (!tracks || count > 512)
-                continue;
-            for (size_t i = 0; i < count; ++i)
-            {
-                auto track = tracks + i * 0x38;
-                if (track[0] == 4 && track[7] == 7)
-                    function(*reinterpret_cast<float*>(track + 0x18));
-            }
-        }
-    }
-
-    // Where an object is placed: its scripts' base position, else its own
-    std::pair<float, float> BasePosition(uint8_t* object, const float* data)
-    {
-        std::pair<float, float> position{ data[7], data[8] };
-        bool found{};
-        PositionTracks(object, [&](float& base)
-        {
-            if (!found)
-            {
-                position = { base, (&base)[1] };
-                found = true;
-            }
-        });
-        return position;
-    }
-
-    bool GlyphBounds(void* object, float& top, float& bottom)
-    {
-        if (!object)
-            return false;
-        auto bytes = static_cast<uint8_t*>(object);
-        auto data = *reinterpret_cast<float**>(bytes + 0x2C);
-        auto font = static_cast<uint8_t*>(FindFont(*reinterpret_cast<uint32_t*>(bytes + 0x24)));
-        if (!data || *reinterpret_cast<uint32_t*>(bytes + 0x30) < 68 || !font ||
-            !std::isfinite(data[15]) || data[15] <= 0.0f)
-            return false;
-        auto header = *reinterpret_cast<uint8_t**>(font + 12);
-        if (!header || *reinterpret_cast<uint32_t*>(header) != 0x46544E46)
-            return false;
-        auto count = *reinterpret_cast<uint16_t*>(header + 10);
-        auto offset = *reinterpret_cast<uint32_t*>(header + 20);
-        if (!count || count > 4096 || offset > 0x100000)
-            return false;
-        auto stride = *reinterpret_cast<uint32_t*>(header + 12) & 0x40000 ? 16 : 12;
-        float minimum = std::numeric_limits<float>::max();
-        float maximum = std::numeric_limits<float>::lowest();
-        for (size_t i = 0; i < count; ++i)
-        {
-            auto glyph = header + offset + i * stride;
-            float y = *reinterpret_cast<int8_t*>(glyph + 10);
-            minimum = std::min(minimum, y);
-            maximum = std::max(maximum, y + glyph[3]);
-        }
-        auto origin = *reinterpret_cast<float*>(font + 40);
-        top = (minimum + origin) * data[15];
-        bottom = (maximum + origin) * data[15];
-        return std::isfinite(top) && std::isfinite(bottom) && bottom > top;
-    }
-
     std::string SingleLine(std::string text)
     {
         for (auto& c : text)
@@ -667,40 +593,81 @@ namespace
 
     bool SameRow(const Entry& a, const Entry& b)
     {
-        return a.kind == b.kind && a.plugin == b.plugin && a.row.kind == b.row.kind && a.row.plugin == b.row.plugin && a.row.setting == b.row.setting;
+        return a.kind == b.kind && a.plugin == b.plugin && a.row.kind == b.row.kind && a.row.plugin == b.row.plugin &&
+            a.row.setting == b.row.setting && a.row.category == b.row.category;
     }
 
-    // The rows of the list or of the page's part shown, in the screen's options; select: the row to highlight, from 1.
-    // Without force, rows that stay the same are only drawn again.
-    void ShowRows(int select, bool force = true)
+    // The screen's title: "Plugins", the plugin's name or the category's, like the game's category titles. The pause
+    // screen's title stays the game's ("Pause Options").
+    constexpr uint32_t ScreenTitle = 0x42ADB44C;    // "Header_text"
+
+    void ShowTitle()
     {
-        if (!Active.screen || Active.video || !Plugins || Plugins->plugins.empty() || Active.options.empty())
+        if (Active.pause || !Active.screen)
             return;
+        if (auto object = FindString(Screen::PackageName(Active.screen), ScreenTitle))
+            SetText(object, TextHash("WFP_SCREEN_TITLE"), FontText(PageTitle()));
+    }
+
+    // The open list's shown rows
+    std::vector<Entry> ListEntries()
+    {
         std::vector<Entry> entries;
         if (CurrentLevel == Level::List)
         {
-            auto slice = WFPMenuLayout::Root(Plugins->plugins.size(), Active.options.size(), RootPage);
-            RootPage = slice.page;
-            if (slice.selector)
-                entries.push_back({ Entry::Kind::RootPage });
-            for (size_t i = 0; i < slice.count; ++i)
-                entries.push_back({ Entry::Kind::Plugin, slice.start + i });
+            for (size_t i = 0; i < Plugins->plugins.size(); ++i)
+                entries.push_back({ Entry::Kind::Plugin, i });
+            return entries;
         }
-        else
+        auto& plugin = Plugins->plugins[CurrentPlugin];
+        auto rows = CurrentLevel == Level::Category ? WFPPlugins::CategoryRows(plugin, CurrentCategory, Exclude(plugin)) :
+            WFPPlugins::TopRows(plugin, Exclude(plugin));
+        for (auto& row : rows)
         {
-            auto& plugin = Plugins->plugins[CurrentPlugin];
-            auto parts = Parts(plugin, Active.rowsWithArrows - 1);
-            CurrentPart = std::min(CurrentPart, parts.empty() ? 0 : parts.size() - 1);
-            entries.push_back({ Entry::Kind::Title, CurrentPlugin });
-            if (CurrentPart < parts.size())
-            {
-                for (auto& row : parts[CurrentPart].rows)
-                {
-                    if (WFPPlugins::Visible(row) && entries.size() < Active.options.size())
-                        entries.push_back({ Entry::Kind::Row, CurrentPlugin, row });
-                }
-            }
+            bool shown = row.kind == WFPPlugins::Row::Kind::Category ? WFPPlugins::AnyVisible(plugin, row.category, Exclude(plugin)) :
+                WFPPlugins::Visible(row);
+            if (shown)
+                entries.push_back({ Entry::Kind::Row, CurrentPlugin, row });
         }
+        return entries;
+    }
+
+    // A row's key while it exists: its plugin, its setting, or its kind and category
+    MenuList::Key EntryKey(const Entry& entry)
+    {
+        if (entry.kind == Entry::Kind::Plugin)
+            return MenuList::Key(entry.plugin * 2 + 1);
+        if (entry.row.setting)
+            return reinterpret_cast<MenuList::Key>(entry.row.setting);
+        return MenuList::Key(0x10000 + entry.row.category * 16 + size_t(entry.row.kind) * 2);
+    }
+
+    // The scroll bar's knob at the selected row of the whole list, like the game's at its selected option
+    void (__thiscall* SetScrollBar)(void* bar, int first, int last, int position) = nullptr;
+    void ShowKnob()
+    {
+        if (Active.screen && !Active.video && Window.Count())
+            SetScrollBar(reinterpret_cast<uint8_t*>(Active.screen) + Screen::ScrollBar, 1, int(Window.Count()), int(Window.Selected()) + 1);
+    }
+
+    // The window of the open list in the screen's options, its selected row highlighted. Without force, rows that stay
+    // the same are only drawn again.
+    void ShowRows(bool force = true)
+    {
+        if (!Active.screen || Active.video || !Plugins || Plugins->plugins.empty() || Active.options.empty())
+            return;
+        auto all = ListEntries();
+        std::vector<MenuList::Key> keys;
+        for (auto& entry : all)
+            keys.push_back(EntryKey(entry));
+        auto visible = Screen::At<uint32_t>(Active.screen, Screen::Visible);
+        Window.SetSlots(visible ? std::min<size_t>(visible, Active.options.size()) : Active.options.size());
+        Window.Update(keys);
+        if (auto key = std::exchange(SelectAfter, 0))
+            Window.SelectKey(key);
+        std::vector<Entry> entries;
+        for (size_t slot = 0; slot < Window.Shown(); ++slot)
+            entries.push_back(all[Window.RowAt(slot)]);
 
         if (!force)
         {
@@ -732,7 +699,9 @@ namespace
         Relink(Active.screen, shown, hidden);
         DrawAll();
         Screen::At<uint8_t>(Active.screen, Screen::Selected) = 0;
-        SelectOption(Active.screen, nullptr, std::clamp(select, 1, int(std::max<size_t>(1, shown.size()))));
+        SelectOption(Active.screen, nullptr, std::clamp(int(Window.Slot()) + 1, 1, int(std::max<size_t>(1, shown.size()))));
+        ShowKnob();
+        ShowTitle();
     }
 
     int CurrentRow()
@@ -747,34 +716,45 @@ namespace
     {
         CurrentLevel = Level::Page;
         CurrentPlugin = index;
-        CurrentPart = 0;
         PresetRow.Reset(Plugins->plugins[index]);
         RestoreRow.Cancel();
-        ShowRows(1);
+        Window.Reset();
+        ShowRows();
     }
 
-    int RootSelection()
+    void OpenCategory(size_t category)
     {
-        auto count = Plugins ? Plugins->plugins.size() : 0;
-        if (!count || Active.options.empty())
-        {
-            RootPage = 0;
-            return 1;
-        }
-        CurrentPlugin = std::min(CurrentPlugin, count - 1);
-        auto first = WFPMenuLayout::Root(count, Active.options.size(), 0);
-        auto rows = first.selector ? Active.options.size() - 1 : Active.options.size();
-        RootPage = CurrentPlugin / rows;
-        auto slice = WFPMenuLayout::Root(count, Active.options.size(), RootPage);
-        return int(CurrentPlugin - slice.start + 1 + size_t(slice.selector));
-    }
-
-    void OpenList()
-    {
-        CurrentLevel = Level::List;
+        CurrentLevel = Level::Category;
+        CurrentCategory = category;
         PresetRow.Cancel();
         RestoreRow.Cancel();
-        ShowRows(RootSelection());
+        Window.Reset();
+        ShowRows();
+    }
+
+    // Back one level, to the row it came from
+    void ParentLevel()
+    {
+        PresetRow.Cancel();
+        RestoreRow.Cancel();
+        Window.Reset();
+        if (CurrentLevel == Level::Category)
+        {
+            CurrentLevel = Level::Page;
+            PresetRow.Reset(Plugins->plugins[CurrentPlugin]);
+            SelectAfter = EntryKey({ Entry::Kind::Row, CurrentPlugin, { WFPPlugins::Row::Kind::Category, nullptr, nullptr, CurrentCategory } });
+        }
+        else
+        {
+            CurrentLevel = Level::List;
+            SelectAfter = EntryKey({ Entry::Kind::Plugin, CurrentPlugin });
+        }
+    }
+
+    // The selection follows the screen's: the highlighted option's row
+    void FollowSelection()
+    {
+        Window.Select(Window.First() + size_t(CurrentRow() - 1));
     }
 
     // After a change: the rows again (a setting can show or hide others), the selection stays on its row
@@ -783,7 +763,33 @@ namespace
         if (Active.video)
             DrawAll();
         else
-            ShowRows(CurrentRow(), false);
+        {
+            FollowSelection();
+            ShowRows(false);
+        }
+    }
+
+    // Rows that open or act, which a click accepts like the game's buttons (Default Settings)
+    bool ClickAccepts(const Entry& entry)
+    {
+        if (entry.kind == Entry::Kind::Plugin)
+            return true;
+        return entry.kind == Entry::Kind::Row && (entry.row.kind == WFPPlugins::Row::Kind::Category ||
+            entry.row.kind == WFPPlugins::Row::Kind::RestoreDefaults || entry.row.kind == WFPPlugins::Row::Kind::Action);
+    }
+
+    // A click on the highlighted row: the game's toggle steps its value (its arrows, its value to the right); a row
+    // that opens or acts takes a click anywhere on it as accept, through the screen like the accept key
+    Option* (__thiscall* OptionAt)(void* screen, float x, float y) = nullptr;
+    void* BaseClickOption = nullptr;
+    char __fastcall ClickOption(Option* option, void* edx, const char* package, float x, float y)
+    {
+        if (option->entry && ClickAccepts(*option->entry) && Active.screen && OptionAt(Active.screen, x, y) == option)
+        {
+            CallMethod(Active.screen, 2, MessageAccept, 0, 0, 0);
+            return 1;
+        }
+        return reinterpret_cast<char(__fastcall*)(Option*, void*, const char*, float, float)>(BaseClickOption)(option, edx, package, x, y);
     }
 
     // The screen sends left, right and accept to the highlighted option, and "back" before it leaves
@@ -804,32 +810,17 @@ namespace
 
         switch (entry->kind)
         {
-            case Entry::Kind::RootPage:
-                if (message != MessageAccept)
-                {
-                    auto slice = WFPMenuLayout::Root(Plugins->plugins.size(), Active.options.size(), RootPage);
-                    RootPage = message == MessageLeft ? (slice.page ? slice.page - 1 : slice.pages - 1) :
-                        (slice.page + 1) % slice.pages;
-                    ShowRows(1);
-                }
-                return;
             case Entry::Kind::Plugin:
                 if (message == MessageAccept)
                     OpenPlugin(entry->plugin);
                 return;
-            case Entry::Kind::Title:
-                if (message != MessageAccept)
-                {
-                    auto parts = Parts(Plugins->plugins[CurrentPlugin], Active.rowsWithArrows - 1);
-                    int count = int(std::max<size_t>(1, parts.size()));
-                    CurrentPart = size_t(((int(CurrentPart) + direction) % count + count) % count);
-                    ShowRows(1);
-                    return;
-                }
-                break;
             case Entry::Kind::Row:
                 switch (entry->row.kind)
                 {
+                    case WFPPlugins::Row::Kind::Category:
+                        if (message == MessageAccept)
+                            OpenCategory(entry->row.category);
+                        return;
                     case WFPPlugins::Row::Kind::Preset:
                         if (message == MessageAccept)
                         {
@@ -891,6 +882,7 @@ namespace
             // The toggle class with the methods of the fix's rows (and its type information before the table)
             std::copy_n(option->vtable - 1, std::size(OptionVTableStorage), OptionVTableStorage);
             OptionVTable[1] = reinterpret_cast<void*>(&ActOption);
+            BaseClickOption = std::exchange(OptionVTable[2], reinterpret_cast<void*>(&ClickOption));
             OptionVTable[3] = reinterpret_cast<void*>(&DrawOption);
             BaseShowOption = std::exchange(OptionVTable[5], reinterpret_cast<void*>(&ShowOption));
         }
@@ -918,7 +910,6 @@ namespace
     }
 
     // The options screen always opens the host-first list of plugins.
-    constexpr uint32_t ScreenTitle = 0x42ADB44C;    // "Header_text"
 
     void BuildFixScreen(void* screen, size_t rows)
     {
@@ -940,8 +931,15 @@ namespace
 
         // The list after the pages of the same menu were shown stays on the plugin shown last
         CurrentPlugin = std::min(CurrentPlugin, Plugins->plugins.size() - 1);
-        CurrentLevel = Level::List;
-        CurrentPart = 0;
+        ReturnToParent = false;
+        if (std::exchange(KeepLevel, false))
+            ReselectFrames = 2;
+        else
+        {
+            CurrentLevel = Level::List;
+            Window.Reset();
+            SelectAfter = EntryKey({ Entry::Kind::Plugin, CurrentPlugin });
+        }
         PresetRow.Reset(Plugins->plugins[CurrentPlugin]);
         RestoreRow.Cancel();
 
@@ -951,7 +949,7 @@ namespace
     void ShowFixScreen()
     {
         if (Active.screen && !Active.video && Plugins && !Plugins->plugins.empty())
-            ShowRows(CurrentLevel == Level::List ? RootSelection() : 1);
+            ShowRows();
     }
 
     void SetTitles(void* screen, bool pause)
@@ -1021,15 +1019,73 @@ namespace
     {
         if (screen != Active.screen)
             return false;
-        if (!Active.video && *OptionsType == FixOptionsType && message == MessageBack && CurrentLevel == Level::Page &&
-            Plugins && !Plugins->plugins.empty())
+        bool fix = !Active.video && *OptionsType == FixOptionsType && Plugins && !Plugins->plugins.empty();
+        // Back from a plugin's page or a category leaves the screen like the game's back (its transition out), and
+        // when that ends the screen comes in again with the level above, like going between the game's screens
+        if (fix && message == MessageBack && CurrentLevel != Level::List)
+            ReturnToParent = true;
+        if (fix && message == MessageTransitionDone && ReturnToParent)
         {
-            OpenList();
+            ReturnToParent = false;
+            ParentLevel();
+            KeepLevel = true;
+            SwitchPackages(Screen::PackageName(screen), Screen::PackageName(screen), 0);
             return true;
         }
-        if (message == MessageBack)
-            Active.leaving = true;
         return false;
+    }
+
+    bool IsFixList(void* screen)
+    {
+        return screen == Active.screen && !Active.video && *OptionsType == FixOptionsType && Plugins && !Plugins->plugins.empty();
+    }
+
+    // The list's step up or down (Up, Down, the scroll bar's arrows): past the shown rows of a longer list its window
+    // moves a row. Like the game's lists it stops at the ends.
+    SafetyHookInline MoveHook = {};
+    void __fastcall MoveSelection(void* screen, void* edx, int direction)
+    {
+        if (IsFixList(screen) && Window.Count() > Window.Shown() && (direction == 1 || direction == -1))
+        {
+            FollowSelection();
+            int slot = int(Window.Slot());
+            if ((direction < 0 && slot == 0 && Window.First() > 0) ||
+                (direction > 0 && slot + 1 == int(Window.Shown()) && Window.Below()))
+            {
+                PresetRow.Cancel();
+                RestoreRow.Cancel();
+                Window.Move(direction, false);
+                ShowRows();
+                return;
+            }
+        }
+        MoveHook.unsafe_thiscall(screen, direction);
+        if (IsFixList(screen))
+        {
+            FollowSelection();
+            ShowKnob();
+        }
+    }
+
+    // The wheel: the window moves a row per notch, the selection stays on its row while it is shown
+    MenuList::WheelNotches Wheel;
+    void ScrollWheel()
+    {
+        auto delta = Input::MenuWheel.exchange(0);
+        if (!Active.screen || !IsFixList(Active.screen) || Window.Count() <= Window.Shown())
+        {
+            Wheel.Clear();
+            return;
+        }
+        auto notches = Wheel.Take(delta);
+        if (!notches)
+            return;
+        FollowSelection();
+        for (; notches; notches -= notches > 0 ? 1 : -1)
+            Window.Scroll(notches > 0 ? -1 : 1);
+        ShowRows(false);
+        SelectOption(Active.screen, nullptr, int(Window.Slot()) + 1);
+        ShowKnob();
     }
 
     void AfterNotify(void* screen, uint32_t message)
@@ -1090,211 +1146,23 @@ namespace
         reinterpret_cast<void(__fastcall*)(void*, void*, void*)>((*reinterpret_cast<void***>(menu))[6])(menu, nullptr, option);
     }
 
-    const std::array<std::string, 2> HelpNames{ "WFP_HELP_0", "WFP_HELP_1" };
-
-    uint8_t* FindHelpObject(size_t index)
-    {
-        if (!Active.screen || index >= HelpNames.size())
-            return nullptr;
-        auto package = FindPackage(Screen::PackageName(Active.screen));
-        return package ? FindPackageObject(package, bStringHash(HelpNames[index].c_str())) : nullptr;
-    }
-
-    uint8_t* HelpCaption(HelpState& state, size_t index)
-    {
-        if (index >= state.ids.size())
-            return nullptr;
-        auto object = FindHelpObject(index);
-        return object && *reinterpret_cast<uint32_t*>(object + 0x18) == 2 &&
-            *reinterpret_cast<uint32_t*>(object + 0x0C) == state.ids[index] ? object : nullptr;
-    }
-
-    void HideHelp(HelpState& state)
-    {
-        for (size_t i = 0; i < state.ids.size(); ++i)
-        {
-            if (auto object = HelpCaption(state, i))
-                HideObject(object);
-        }
-        state.text.clear();
-        state.page = std::numeric_limits<size_t>::max();
-    }
-
-    bool EnsureHelp(HelpState& state)
-    {
-        if (!Active.screen || Active.options.empty())
-            return false;
-        auto package = FindPackage(Screen::PackageName(Active.screen));
-        if (!package)
-            return false;
-        bool any{};
-        bool complete = !state.ids.empty();
-        for (size_t i = 0; i < HelpNames.size(); ++i)
-        {
-            auto object = FindHelpObject(i);
-            any |= object != nullptr;
-            if (i < state.ids.size() && !HelpCaption(state, i))
-                complete = false;
-            if (object && i >= state.ids.size())
-                complete = false;
-        }
-        if (complete)
-            return true;
-        if (any)
-            return false;
-        state.ids.clear();
-        auto original = static_cast<uint8_t*>(Active.options.front()->Value());
-        auto label = Active.options.front()->Title();
-        auto arrow = static_cast<uint8_t*>(Active.options.front()->RightArrow());
-        auto arrowData = arrow ? *reinterpret_cast<float**>(arrow + 0x2C) : nullptr;
-        float top{}, bottom{}, labelTop{}, labelBottom{};
-        if (!original || !arrowData || *reinterpret_cast<uint32_t*>(arrow + 0x30) < 68 ||
-            !GlyphBounds(original, top, bottom) || !GlyphBounds(label, labelTop, labelBottom))
-            return false;
-        auto visible = Screen::At<uint32_t>(Active.screen, 0x134);
-        auto firstY = Screen::At<float>(Active.screen, 0xF8);
-        auto rowHeight = Screen::At<float>(Active.screen, 0x108);
-        auto x = Screen::At<float>(Active.screen, 0xF4);
-        auto right = Screen::At<float>(Active.screen, 0x11C) + Screen::At<float>(Active.screen, 0x114);
-        if (!visible || visible > 32 || !std::isfinite(firstY) || !std::isfinite(rowHeight) || rowHeight <= 0.0f ||
-            !std::isfinite(x) || !std::isfinite(right) || !std::isfinite(arrowData[14]))
-            return false;
-        auto y = firstY + (visible - 1) * rowHeight + labelBottom + 2.0f - top;
-        auto pitch = bottom - top + 2.0f;
-        auto width = right + std::abs(arrowData[14]) - 8.0f - x;
-        size_t count{};
-        // Keep the full native viewport and leave the bottom input hints clear.
-        while (count < HelpNames.size() && y + count * pitch + bottom <= 190.0f)
-            ++count;
-        if (!count || !std::isfinite(width) || width <= 0.0f)
-            return false;
-        state.ids.reserve(count);
-        std::array<uint8_t*, 2> staged{};
-        for (size_t i = 0; i < count; ++i)
-        {
-            staged[i] = NFSU2StaticText::Clone(original);
-            auto data = staged[i] ? *reinterpret_cast<float**>(staged[i] + 0x2C) : nullptr;
-            if (!data)
-            {
-                for (auto object : staged)
-                    NFSU2StaticText::Destroy(object);
-                return false;
-            }
-            // The copy's scripts keep animating its position relative to their base keys, which move with it
-            auto [baseX, baseY] = BasePosition(staged[i], data);
-            auto dx = x - baseX;
-            auto dy = y + i * pitch - baseY;
-            PositionTracks(staged[i], [dx, dy](float& base)
-            {
-                base += dx;
-                (&base)[1] += dy;
-            });
-            data[7] = x;
-            data[8] = y + i * pitch;
-            std::fill_n(reinterpret_cast<uint32_t*>(data), 4, 255u);
-            *reinterpret_cast<uint32_t*>(staged[i] + 0x10) = bStringHash(HelpNames[i].c_str());
-            *reinterpret_cast<uint32_t*>(staged[i] + 0x6C) &= ~3u;
-            *reinterpret_cast<uint32_t*>(staged[i] + 0x1C) |= 0x4400001;
-        }
-        auto tail = *reinterpret_cast<uint8_t**>(package + 0x50);
-        for (size_t i = 0; i < count; ++i)
-        {
-            auto object = staged[i];
-            *reinterpret_cast<uint8_t**>(object + 4) = nullptr;
-            *reinterpret_cast<uint8_t**>(object + 8) = tail;
-            if (tail)
-                *reinterpret_cast<uint8_t**>(tail + 4) = object;
-            else
-                *reinterpret_cast<uint8_t**>(package + 0x4C) = object;
-            tail = object;
-            ++*reinterpret_cast<uint32_t*>(package + 0x48);
-            state.ids.push_back(*reinterpret_cast<uint32_t*>(object + 0x0C));
-        }
-        *reinterpret_cast<uint8_t**>(package + 0x50) = tail;
-        state.width = width;
-        state.text.clear();
-        state.page = std::numeric_limits<size_t>::max();
-        return true;
-    }
-
-    void RefreshHelp()
-    {
-        if (!Active.screen)
-            return;
-        auto& state = CurrentHelp();
-        auto selected = Screen::At<Option*>(Active.screen, Screen::Current);
-        if (Active.leaving)
-        {
-            HideHelp(state);
-            return;
-        }
-        if (std::find(Active.options.begin(), Active.options.end(), selected) == Active.options.end() ||
-            !selected || !selected->entry || selected->entry->kind == Entry::Kind::Empty)
-        {
-            HideHelp(state);
-            return;
-        }
-        if (!EnsureHelp(state))
-        {
-            if (Active.video)
-                (Active.pause ? PauseJoinedSettings : MainJoinedSettings).clear();
-            HideHelp(state);
-            return;
-        }
-        if (Active.video)
-        {
-            auto& joined = Active.pause ? PauseJoinedSettings : MainJoinedSettings;
-            joined.clear();
-            for (const auto& entry : Active.entries)
-            {
-                if (entry.kind == Entry::Kind::Row && entry.row.setting)
-                    joined.push_back(entry.row.setting->id);
-            }
-        }
-        auto& entry = *selected->entry;
-        auto text = LabelText(entry);
-        auto value = ValueText(entry);
-        if (!value.empty())
-            text += ": " + value;
-        if (entry.kind == Entry::Kind::Row)
-            text += "\n" + WFPPlugins::Help(entry.row);
-        if (WFPPlugins::RestartNeeded() && !FindString(Screen::PackageName(Active.screen), Active.pause ? PauseInfoLine : InfoLine))
-            text = WFPPlugins::RestartWarning() + "\n" + text;
-        text = SupportedText(HelpCaption(state, 0), FontText(text));
-        auto now = GetTickCount64();
-        bool changed = text != state.text;
-        if (changed)
-        {
-            state.text = text;
-            state.started = now;
-            state.lines = WFPMenuLayout::Wrap(text, state.width, [&](const std::string& candidate)
-            {
-                return MeasureText(HelpCaption(state, 0), candidate);
-            });
-        }
-        auto pages = std::max<size_t>(1, (state.lines.size() + state.ids.size() - 1) / state.ids.size());
-        auto page = size_t((now - state.started) / 12000) % pages;
-        state.page = page;
-        for (size_t i = 0; i < state.ids.size(); ++i)
-        {
-            auto line = page * state.ids.size() + i;
-            SetText(HelpCaption(state, i), TextHash(HelpNames[i]), line < state.lines.size() ? state.lines[line] : "");
-        }
-        for (size_t i = 0; i < state.ids.size(); ++i)
-        {
-            if (auto object = HelpCaption(state, i))
-                ShowObject(object);
-        }
-    }
-
     // The screen being shown, while settings change elsewhere (live link, presets of other plugins)
     void OnFrame()
     {
+        ScrollWheel();
         if (WFPPlugins::Changed().exchange(false) && Active.screen)
             DrawAll();
         if (Active.screen)
         {
-            RefreshHelp();
+            // The game highlights the first row when its screen comes in: the row the list came back to follows
+            if (ReselectFrames > 0 && --ReselectFrames == 0 && !Active.video && Plugins && !Plugins->plugins.empty())
+            {
+                if (auto current = Screen::At<Option*>(Active.screen, Screen::Current))
+                    CallMethod(current, 10);
+                Screen::At<Option*>(Active.screen, Screen::Current) = nullptr;
+                Screen::At<uint8_t>(Active.screen, Screen::Selected) = 0;
+                SelectOption(Active.screen, nullptr, int(Window.Slot()) + 1);
+            }
             ShowInfo();
         }
     }
@@ -1344,6 +1212,8 @@ public:
             ToggleOption = reinterpret_cast<decltype(ToggleOption)>(injector::GetBranchDestination(option.get_first(0x3E)).as_int());
             AddToggleOption = reinterpret_cast<decltype(AddToggleOption)>(injector::GetBranchDestination(option.get_first(0x59)).as_int());
             SelectOption = reinterpret_cast<decltype(SelectOption)>(select.get_first());
+            auto switchPackages = hook::pattern("6A 00 68 ? ? ? ? 50 E8 ? ? ? ? 83 C4 0C 5F 5E 5B C2 10 00 83 3D");
+            SwitchPackages = reinterpret_cast<decltype(SwitchPackages)>(injector::GetBranchDestination(switchPackages.get_first(8)).as_int());
             SetLanguageHash = reinterpret_cast<decltype(SetLanguageHash)>(injector::GetBranchDestination(setHash.get_first(9)).as_int());
             FindString = reinterpret_cast<decltype(FindString)>(injector::GetBranchDestination(title.get_first(0xE)).as_int());
             HideObject = reinterpret_cast<decltype(HideObject)>(hide.get_first());
@@ -1397,6 +1267,12 @@ public:
             // The screen's class: its messages and its destructor
             auto mainVTable = *screenClass.get_first<void**>(2);
             NotifyHooks[0] = safetyhook::create_inline(mainVTable[2], &Notify<0>);
+
+            // The lists' step up or down, and their scroll bar's knob
+            auto move = hook::pattern("56 8B F1 8B 4E 4C 8D 46 4C 3B C8 0F 84 ? ? ? ? 8A 8E 47 01 00 00 84 C9 74 0B 8B CE E8");
+            MoveHook = safetyhook::create_inline(move.get_first(), &MoveSelection);
+            OptionAt = hook::pattern("55 8B EC 83 E4 F8 83 EC 14 8B 41 4C 85 C0 53 56 8D 71 4C 57").get_first<std::remove_pointer_t<decltype(OptionAt)>>();
+            SetScrollBar = hook::pattern("53 8B 5C 24 08 56 8B 74 24 10 3B F3 57 8B D1 7E").get_first<std::remove_pointer_t<decltype(SetScrollBar)>>();
             DestructorHooks[0] = safetyhook::create_inline(mainVTable[0], &Destructor<0>);
 
             // The switch's cases: the display options' setup, then the first option picked (0); the default case
@@ -1442,6 +1318,8 @@ public:
                     if (FixSettings().GetDescription().Find(id))
                         VideoSettings.push_back(id);
                 }
+                // The display options show them from the start, so the fix's page never has them before that screen
+                MainJoinedSettings = PauseJoinedSettings = VideoSettings;
                 VideoHook = safetyhook::create_mid(videoCase + 7, [](SafetyHookContext& regs)
                 {
                     AddVideoRows(reinterpret_cast<void*>(regs.esi), 12);

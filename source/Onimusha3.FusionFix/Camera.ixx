@@ -1,5 +1,6 @@
 module;
 #include <stdafx.h>
+#include "Shared/RainDroplets.hpp"
 #include "FixSettings.hpp"
 
 export module Camera;
@@ -53,7 +54,8 @@ export namespace OnimushaCamera
         // This update runs only after the gameplay script dispatcher declines to take over the camera.
         // The loading update and the scripted camera builders remain outside the scope.
         auto updateCamera = hook::pattern("8D 8E D0 88 00 00 E8 ? ? ? ? F7 05 ? ? ? ? 00 00 00 10");
-        Begin = safetyhook::create_mid(updateCamera.get_first(6), [](SafetyHookContext&) { Gameplay = true; });
+        // The game's own camera runs only in play: no menu is on the screen
+        Begin = safetyhook::create_mid(updateCamera.get_first(6), [](SafetyHookContext&) { Gameplay = true; RainDroplets::MenuOpen(false); });
         End = safetyhook::create_mid(updateCamera.get_first(11), [](SafetyHookContext&) { Gameplay = false; });
 
         // Level-specific gameplay cameras also publish through this dispatcher. The scope above excludes the

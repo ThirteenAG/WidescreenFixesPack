@@ -154,6 +154,11 @@ public:
             bAppInactive.SetAddress(*inactive.get_first<uint32_t*>(2));
             pausePolicyMessage = RegisterWindowMessageW(L"KingKong.FusionFix.PauseOnFocusLoss");
             shWndProc = safetyhook::create_inline(procedure.get_first(), WndProc);
+            // The DirectInput mouse state's wheel movement (edi), before the game turns it into wheel keys
+            static auto WheelRead = safetyhook::create_mid(hook::get_pattern("C6 06 00 8B 7C 24 ? 85 FF 0F 9E C0 FE C8 56", 7), [](SafetyHookContext& regs)
+            {
+                nMenuWheel += int32_t(regs.edi);
+            });
             const auto updateConfinement = []()
             {
                 static std::mutex mutex;

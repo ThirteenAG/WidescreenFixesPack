@@ -86,9 +86,11 @@ namespace WFPPlugins
 
     struct Row
     {
-        enum class Kind { Preset, Setting, Action, RestoreDefaults } kind = Kind::Setting;
+        enum class Kind { Preset, Setting, Action, RestoreDefaults, Category } kind = Kind::Setting;
         const LoadedPlugin* plugin = nullptr;
         const Setting* setting = nullptr;
+        size_t category{};          // Category: the index CategoryRows opens
+        std::string title;          // Category: its name (UTF-8)
     };
 
     // A part of a plugin's page: a description page's title (UTF-8) and its rows
@@ -167,6 +169,69 @@ namespace WFPPlugins
         for (auto& section : Sections(plugin, exclude))
             rows.insert(rows.end(), section.rows.begin(), section.rows.end());
         return rows;
+    }
+
+    // Categories as submenus (scrolling hosts): a plugin's page is its Preset row, then its settings when they are one
+    // category, or a Category row per category (accept opens CategoryRows), and Restore Defaults last (the whole page).
+    // Back on a category returns to the plugin's page with its Category row selected.
+    inline std::vector<OtherPlugins::Category> Categories(const LoadedPlugin& plugin, const std::vector<std::string>& exclude = {})
+    {
+        return OtherPlugins::Categories(plugin, [&](const Setting& setting) { return !Excluded(setting, exclude); });
+    }
+
+    inline Row SettingRow(const LoadedPlugin& plugin, const Setting& setting)
+    {
+        return { setting.type == asi_settings::Type::Action ? Row::Kind::Action : Row::Kind::Setting, &plugin, &setting };
+    }
+
+    inline std::vector<Row> TopRows(const LoadedPlugin& plugin, const std::vector<std::string>& exclude = {})
+    {
+        auto categories = Categories(plugin, exclude);
+        std::vector<Row> rows;
+        if (OtherPlugins::HasPresets(plugin))
+            rows.push_back({ Row::Kind::Preset, &plugin });
+        bool resettable = false;
+        for (auto& category : categories)
+        {
+            for (auto setting : category.settings)
+                resettable |= setting->HasValue();
+        }
+        if (categories.size() == 1)
+        {
+            for (auto setting : categories.front().settings)
+                rows.push_back(SettingRow(plugin, *setting));
+        }
+        else
+        {
+            for (size_t i = 0; i < categories.size(); ++i)
+                rows.push_back({ Row::Kind::Category, &plugin, nullptr, i, categories[i].title });
+        }
+        if (resettable)
+            rows.push_back({ Row::Kind::RestoreDefaults, &plugin });
+        return rows;
+    }
+
+    inline std::vector<Row> CategoryRows(const LoadedPlugin& plugin, size_t category, const std::vector<std::string>& exclude = {})
+    {
+        auto categories = Categories(plugin, exclude);
+        std::vector<Row> rows;
+        if (category < categories.size())
+        {
+            for (auto setting : categories[category].settings)
+                rows.push_back(SettingRow(plugin, *setting));
+        }
+        return rows;
+    }
+
+    // A category is listed while one of its settings is shown
+    inline bool AnyVisible(const LoadedPlugin& plugin, size_t category, const std::vector<std::string>& exclude = {})
+    {
+        for (auto& row : CategoryRows(plugin, category, exclude))
+        {
+            if (OtherPlugins::Visible(*row.plugin, *row.setting))
+                return true;
+        }
+        return false;
     }
 
     // For menus with a fixed number of rows: the page split into screens of at most pageRows rows, each section on
@@ -308,6 +373,8 @@ namespace WFPPlugins
                 return WFPText::Get("WFP_PRESET");
             case Row::Kind::RestoreDefaults:
                 return WFPText::Get("WFP_RESTOREDEFAULTS");
+            case Row::Kind::Category:
+                return row.title;
             default:
                 return OtherPlugins::Text(*row.plugin, row.setting->label);
         }
@@ -332,6 +399,8 @@ namespace WFPPlugins
                 break;
             case Row::Kind::RestoreDefaults:
                 text = WFPText::Get("WFP_RESTOREDEFAULTS_HELP");
+                break;
+            case Row::Kind::Category:
                 break;
             default:
                 text = OtherPlugins::Text(*row.plugin, row.setting->description);

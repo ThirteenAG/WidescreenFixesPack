@@ -22,7 +22,7 @@ namespace ScarfaceMenu::Text
         return true;
     }
 
-    inline bool Lines(const std::string& text, std::vector<std::wstring>& lines)
+    inline bool Lines(const std::string& text, std::vector<std::wstring>& lines, size_t width = 30)
     {
         std::wstring wide;
         if (!Convert(text, wide))
@@ -36,7 +36,7 @@ namespace ScarfaceMenu::Text
                 ++position;
             if (position == wide.size())
                 break;
-            size_t count = std::min(size_t(30), wide.size() - position);
+            size_t count = std::min(width, wide.size() - position);
             const auto newline = wide.find(L'\n', position);
             if (newline < position + count)
                 count = newline - position;

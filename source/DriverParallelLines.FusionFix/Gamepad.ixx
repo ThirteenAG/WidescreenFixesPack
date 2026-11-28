@@ -167,6 +167,21 @@ export namespace DPLPad
         }
         return acceptInput && !BlockGameInput && pressed;
     }
+    // The shoulders as page keys of the Plugins menu: -1 left, +1 right
+    bool ShoulderHeld(int side)
+    {
+        const auto getState = PadInput::XInput().getState;
+        if (!getState || BlockGameInput)
+            return false;
+        const WORD mask = side < 0 ? XINPUT_GAMEPAD_LEFT_SHOULDER : XINPUT_GAMEPAD_RIGHT_SHOULDER;
+        for (DWORD slot = 0; slot < XUSER_MAX_COUNT; ++slot)
+        {
+            XINPUT_STATE state{};
+            if (getState(slot, &state) == ERROR_SUCCESS && (state.Gamepad.wButtons & mask))
+                return true;
+        }
+        return false;
+    }
     void Install()
     {
         BindLiveSetting("MAIN.GamepadDeadzone", deadzoneSetting);

@@ -167,6 +167,9 @@ namespace UWindowsViewport
             }
         }
 
+        if (Msg == WM_MOUSEWHEEL && MenuWheel && MenuWheel(GET_WHEEL_DELTA_WPARAM(wParam)))
+            return 0;
+
         // Messages can nest: each call restores the outer message's state
         const bool outerCalled = std::exchange(bCalledFromWndProc, true);
         auto ret = shViewportWndProc.unsafe_fastcall<int32_t>(UWindowsViewport, edx, Msg, wParam, lParam);

@@ -3,6 +3,8 @@ module;
 #include <stdafx.h>
 #include "FixSettings.hpp"
 #include "Shared/RWGTA/FixMenu.hpp"
+#include "Shared/D3D8Compatibility.hpp"
+#include "Shared/RainDroplets.hpp"
 #include <array>
 #include <deque>
 
@@ -18,6 +20,10 @@ export namespace PunMenu
     inline uintptr_t GameSettings{}, GameLabels{}, GameValues{};
 
     inline const std::set<std::string> joined{ "MAIN.HudAspectRatioConstraint", "MAIN.FOVFactor" };
+    // The lists hold up to 20 rows; every page of the menu is shown whole (rows, then help lines when they fit)
+    constexpr size_t Capacity{ 18 };
+    constexpr size_t Rows{ Capacity };
+    constexpr int ValueRoom{ 90 };
     // Widgets the game hasn't created yet are null
     template <class T> T Read(const void* base, size_t offset = 0)
     {
@@ -137,24 +143,16 @@ export namespace PunMenu
             bound = false;
         }
     };
+    // A row of a shown list: a model row, or a line of text (help, restart notice, update notice)
     struct Item
     {
-        RWGTAMenu::Row row{};
-        size_t page{ SIZE_MAX };
-        std::string text;
-        bool next{}, previous{}, back{}, details{}, selectable{ true };
-
-        bool MatchesRow(const RWGTAMenu::Row& candidate) const
-        {
-            return row.kind == candidate.kind && row.plugin == candidate.plugin && row.setting == candidate.setting;
-        }
-
-        bool SameAction(const Item& other) const
-        {
-            return selectable && other.selectable && page == other.page && next == other.next &&
-                previous == other.previous && back == other.back && details == other.details && MatchesRow(other.row);
-        }
+        const RWGTAMenu::Row* row{};
+        std::string text, value;
+        bool selectable{};
     };
+    // Where the Plugins menu is: the plugins list on the Options screen, a plugin's page or a category on the Game
+    // Settings screen (labels and values with the game's arrows), as the game shows its own settings
+    enum class Screen { None, List, Settings };
     struct State
     {
         HMODULE module{};
@@ -164,14 +162,18 @@ export namespace PunMenu
         Binding options, labels, values;
         std::vector<Item> items;
         uintptr_t activeRoot{};
-        size_t page{ SIZE_MAX }, slice{}, helpSlice{};
-        std::string title, help, notice;
+        Screen screen{};
+        size_t page{ RWGTAMenu::Model::RootPage };
+        bool entering{};        // the Game Settings screen the game is opening shows a page of the menu
+        bool returning{};       // the Options screen the game is going back to shows the plugins list
+        std::string title, notice;
         const char* titlePointer{};
         const char** originalTitle{};
+        uintptr_t titleRoot{};
         std::array<int, 2> originalTitleSize{};
         std::array<int, 2> originalBackgroundSize{};
         ULONGLONG lastDiscrete{};
-        bool enabled{}, busy{}, open{}, pause{}, details{}, capturedTitle{}, modelOpen{};
+        bool enabled{}, busy{}, open{}, pause{}, capturedTitle{}, modelOpen{};
     };
     inline State& Get() { static auto* state = new State; return *state; }
     inline void (*Tick)(){};
@@ -200,37 +202,44 @@ export namespace PunMenu
                 default: language = "en"; break;
             }
         }
-        state.model.OpenPlugins(state.module, language, 32, joined, true);
+        state.model.OpenMenu(state.module, language, Rows, joined);
         state.modelOpen = true;
-    }
-    inline void Title(const std::string& title)
-    {
-        auto& state = Get();
-        if (!state.capturedTitle)
-        {
-            state.originalTitle = Read<const char**>(Options, 132);
-            state.originalTitleSize = { Read<int>(Options, 152), Read<int>(Options, 156) };
-            state.originalBackgroundSize = { Read<int>(OptionsBackground, 52), Read<int>(OptionsBackground, 56) };
-            state.capturedTitle = true;
-        }
-        state.title = NativeText(title);
-        state.titlePointer = state.title.c_str();
-        Write<const char**>(Options, 132, &state.titlePointer);
-        int width{}, height{};
-        reinterpret_cast<void(__cdecl*)(int*, int*, const char*, int, int)>(Native().measure)(&width, &height, state.titlePointer, -1, MenuFont.get());
-        Write<int>(Options, 152, width);
-        Write<int>(Options, 156, height);
     }
     inline void RestoreTitle()
     {
         auto& state = Get();
         if (!state.capturedTitle) return;
-        Write<const char**>(Options, 132, state.originalTitle);
-        Write<int>(Options, 152, state.originalTitleSize[0]);
-        Write<int>(Options, 156, state.originalTitleSize[1]);
-        Write<int>(OptionsBackground, 52, state.originalBackgroundSize[0]);
-        Write<int>(OptionsBackground, 56, state.originalBackgroundSize[1]);
+        Write<const char**>(state.titleRoot, 132, state.originalTitle);
+        Write<int>(state.titleRoot, 152, state.originalTitleSize[0]);
+        Write<int>(state.titleRoot, 156, state.originalTitleSize[1]);
+        if (state.titleRoot == Options)
+        {
+            Write<int>(OptionsBackground, 52, state.originalBackgroundSize[0]);
+            Write<int>(OptionsBackground, 56, state.originalBackgroundSize[1]);
+        }
         state.capturedTitle = false;
+    }
+    // The screen's title in its header, in the game's capitals
+    inline void Title(uintptr_t root, const std::string& title)
+    {
+        auto& state = Get();
+        if (state.capturedTitle && state.titleRoot != root)
+            RestoreTitle();
+        if (!state.capturedTitle)
+        {
+            state.titleRoot = root;
+            state.originalTitle = Read<const char**>(root, 132);
+            state.originalTitleSize = { Read<int>(root, 152), Read<int>(root, 156) };
+            state.originalBackgroundSize = { Read<int>(OptionsBackground, 52), Read<int>(OptionsBackground, 56) };
+            state.capturedTitle = true;
+        }
+        state.title = NativeText(title);
+        state.titlePointer = state.title.c_str();
+        Write<const char**>(root, 132, &state.titlePointer);
+        int width{}, height{};
+        reinterpret_cast<void(__cdecl*)(int*, int*, const char*, int, int)>(Native().measure)(&width, &height, state.titlePointer, -1, MenuFont.get());
+        Write<int>(root, 152, width);
+        Write<int>(root, 156, height);
     }
     inline bool Entry()
     {
@@ -258,10 +267,12 @@ export namespace PunMenu
         state.labels.Publish(std::move(labels), std::vector<bool>(6 + rows.size(), true), 6);
         state.values.Publish(std::move(values), std::vector<bool>(6 + rows.size(), true), 6);
     }
+    // Leaves the Plugins menu on the Options screen, on its Plugins entry
     inline void Close()
     {
         auto& state = Get();
-        state.open = state.details = false;
+        state.open = false;
+        state.screen = Screen::None;
         state.notice.clear();
         if (Tick) Tick();
         state.items.clear();
@@ -269,103 +280,115 @@ export namespace PunMenu
         Entry();
         Select(OptionsList, 3);
     }
-    inline bool Build(const Item* selection = nullptr)
+    // Lines of text under the rows: the selected row's help, the restart notice
+    inline void Notes(std::vector<Item>& items, const RWGTAMenu::Row* selected, int width)
     {
         auto& state = Get();
-        if (!Current(Options) || !state.options.bound) return false;
+        std::vector<std::string> lines;
+        if (selected && !RWGTAMenu::Model::Opens(*selected))
+            for (auto& line : Wrap(state.model.Help(*selected), OptionsList, width))
+                if (!line.empty()) lines.push_back(line);
+        if (state.model.RestartRequired())
+            for (auto& line : Wrap(state.model.Text("menu.restartwarning"), OptionsList, width))
+                lines.push_back(line);
+        if (lines.empty())
+            return;
+        items.push_back({ nullptr, {}, {}, false });
+        for (auto& line : lines)
+            items.push_back({ nullptr, line, {}, false });
+    }
+    inline const RWGTAMenu::Row* SelectedRow(uintptr_t list)
+    {
+        auto& state = Get();
+        const int index = Selected(list);
+        return index >= 0 && static_cast<size_t>(index) < state.items.size() ? state.items[index].row : nullptr;
+    }
+    // The shown list again; selection: the row to keep selected (or the window's)
+    inline bool Build(const RWGTAMenu::Row* selection = nullptr)
+    {
+        auto& state = Get();
+        const bool settings = state.screen == Screen::Settings;
+        const auto root = settings ? GameSettings : Options;
+        const auto list = settings ? GameLabels : OptionsList;
+        if (!Current(root) || !(settings ? state.labels.bound && state.values.bound : state.options.bound)) return false;
         state.busy = true;
-        state.items.clear();
         const auto& pages = state.model.Pages();
-        if (state.page != SIZE_MAX && state.page >= pages.size())
-        {
-            state.page = SIZE_MAX;
-            state.slice = 0;
-            state.details = false;
-        }
+        if (state.page >= pages.size())
+            state.page = RWGTAMenu::Model::RootPage;
+        auto& window = state.model.Window(state.page);
+        if (selection)
+            window.SelectKey(reinterpret_cast<MenuList::Key>(selection));
         std::vector<Item> all;
-        if (!state.notice.empty())
+        if (!state.notice.empty() && !settings)
         {
             for (const auto& line : Wrap(state.notice, OptionsList, 510))
-                all.push_back({ {}, SIZE_MAX, line, false, false, false, false, false });
-            all.push_back({ {}, SIZE_MAX, NativeText(state.model.Text("menu.back")), false, false, true });
-            Title(state.model.Text("menu.plugins"));
-        }
-        else if (state.details)
-        {
-            auto lines = Wrap(state.help.empty() ? state.model.Text("menu.presethelp") : state.help, OptionsList, 510);
-            state.helpSlice = std::min(state.helpSlice, (lines.size() - 1) / 6);
-            size_t begin = state.helpSlice * 6;
-            for (size_t i = begin; i < std::min(begin + 6, lines.size()); ++i) all.push_back({ {}, SIZE_MAX, lines[i], false, false, false, false, false });
-            if (begin) all.push_back({ {}, SIZE_MAX, NativeText(state.model.Text("menu.previous")), false, true });
-            if (begin + 6 < lines.size()) all.push_back({ {}, SIZE_MAX, NativeText(state.model.Text("menu.next")), true });
-            all.push_back({ {}, SIZE_MAX, NativeText(state.model.Text("menu.back")), false, false, true });
-            Title(state.model.Text("menu.details"));
+                all.push_back({ nullptr, line, {}, false });
         }
         else
         {
-            auto visible = state.page == SIZE_MAX ? std::vector<const RWGTAMenu::Row*>{} : state.model.VisibleRows(state.page);
-            auto count = state.page == SIZE_MAX ? pages.size() : visible.size();
-            state.slice = std::min(state.slice, count ? (count - 1) / 2 : size_t{});
-            size_t begin = state.slice * 2;
-            for (size_t i = begin; i < std::min(begin + 2, count); ++i)
-            {
-                Item item;
-                std::string text;
-                if (state.page == SIZE_MAX)
-                {
-                    item.page = i;
-                    text = pages[i].title;
-                }
-                else
-                {
-                    item.row = *visible[i];
-                    text = state.model.Label(item.row) + ": " + state.model.Value(item.row);
-                }
-                auto lines = Wrap(text, OptionsList, 510);
-                for (size_t line = 0; line < lines.size() && all.size() < 12; ++line)
-                {
-                    auto part = item;
-                    part.text = lines[line];
-                    part.selectable = line == 0;
-                    all.push_back(std::move(part));
-                }
-            }
-            if (begin) all.push_back({ {}, SIZE_MAX, NativeText(state.model.Text("menu.previous")), false, true });
-            if (begin + 2 < count) all.push_back({ {}, SIZE_MAX, NativeText(state.model.Text("menu.next")), true });
-            if (state.page != SIZE_MAX)
-                all.push_back({ {}, SIZE_MAX, NativeText(state.model.Text("menu.details")), false, false, false, true });
-            all.push_back({ {}, SIZE_MAX, NativeText(state.model.Text("menu.back")), false, false, true });
-            Title(state.page == SIZE_MAX ? state.model.Text("menu.plugins") : pages[state.page].title);
+            for (auto row : state.model.Shown(state.page, false))
+                all.push_back({ row, NativeText(state.model.Label(*row)), settings ? NativeText(state.model.Value(*row)) : std::string{}, true });
+            const auto shown = all.size();
+            // On Game Settings the lines stay left of the values; there they span the labels and the values
+            const int width = settings ? state.values.rectangle[0] - state.labels.rectangle[0] - 8 : 510;
+            Notes(all, reinterpret_cast<const RWGTAMenu::Row*>(window.SelectedKey()), width);
+            if (all.size() > Capacity)
+                all.resize(std::max(shown, Capacity));
         }
-        if (state.model.RestartRequired() && !all.empty() && state.notice.empty())
-        {
-            for (const auto& line : Wrap(state.model.Text("menu.restartwarning"), OptionsList, 510))
-                all.insert(all.end() - 1, { {}, SIZE_MAX, line, false, false, false, false, false });
-        }
-        if (all.empty() || all.size() > 18)
-        {
-            state.busy = false;
-            return false;
-        }
+        Title(root, pages[state.page].title);
         state.items = std::move(all);
-        std::vector<std::string> text;
+        std::vector<std::string> labels, values;
         std::vector<bool> enabled;
         for (const auto& item : state.items)
         {
-            text.push_back(item.text);
+            labels.push_back(item.text);
             enabled.push_back(item.selectable);
+            // The values (with the game's arrows) only for the rows; the lines under them have none
+            if (item.row)
+                values.push_back(item.value);
         }
-        state.options.Publish(std::move(text), std::move(enabled));
-        Write<int>(OptionsList, 52, 520);
-        Write<int>(OptionsBackground, 52, 580);
-        Write<int>(OptionsBackground, 56, 30 + static_cast<int>(state.items.size()) * Read<int>(OptionsList, 92));
-        auto selected = selection ? std::find_if(state.items.begin(), state.items.end(),
-            [&](const auto& item) { return item.SameAction(*selection); }) : state.items.end();
-        if (selected == state.items.end())
-            selected = std::find_if(state.items.begin(), state.items.end(), [](const auto& item) { return item.selectable; });
-        Select(OptionsList, static_cast<int>(selected - state.items.begin()));
+        if (settings)
+        {
+            std::vector<bool> valued(values.size(), true);
+            state.labels.Publish(std::move(labels), std::move(enabled));
+            state.values.Publish(std::move(values), std::move(valued));
+            // Room for the longer values of the plugins between the arrows, further right of the labels
+            Write<int>(GameValues, 52, state.values.rectangle[2] + ValueRoom);
+        }
+        else
+        {
+            state.options.Publish(std::move(labels), std::move(enabled));
+            Write<int>(OptionsList, 52, 520);
+            Write<int>(OptionsBackground, 52, 580);
+            Write<int>(OptionsBackground, 56, 30 + static_cast<int>(state.items.size()) * Read<int>(OptionsList, 92));
+        }
+        const bool selectable = window.Count() && window.Slot() < state.items.size() && state.items[window.Slot()].selectable;
+        Select(list, selectable ? static_cast<int>(window.Slot()) : 0);
         state.busy = false;
         return true;
+    }
+    // The Options screen's entries: the accept sound and the opening of another screen (13: Game Settings)
+    struct ScreenCalls
+    {
+        void(__cdecl* sound)(int, int, int, float){};
+        const int* accept{};
+        int(__thiscall* open)(uintptr_t, int, const char*, char){};
+        char(__cdecl* paused)(){};
+    };
+    constexpr int GameSettingsScreen{ 13 };
+    inline const ScreenCalls& Screens()
+    {
+        static const auto calls = []()
+        {
+            ScreenCalls c;
+            auto entries = reinterpret_cast<uintptr_t>(hook::pattern("8B 15 ? ? ? ? 68 00 00 80 3F 6A FF 6A 00 52 E8 ? ? ? ? 83 C4 10 B9 ? ? ? ? E8 ? ? ? ? 83 E8 00 74 3C 48 74 20").get_first());
+            c.accept = *reinterpret_cast<const int**>(entries + 2);
+            c.sound = reinterpret_cast<decltype(c.sound)>(injector::GetBranchDestination(entries + 16).as_int());
+            c.paused = reinterpret_cast<decltype(c.paused)>(injector::GetBranchDestination(entries + 0x4A).as_int());
+            c.open = reinterpret_cast<decltype(c.open)>(injector::GetBranchDestination(entries + 0x59).as_int());
+            return c;
+        }();
+        return calls;
     }
     inline bool Press(int input, int key) { return reinterpret_cast<int(__cdecl*)(int, int)>(Native().press)(input, key) != 0; }
     inline bool Repeat(int input, int key) { return reinterpret_cast<int(__cdecl*)(int, int)>(Native().repeat)(input, key) != 0; }
@@ -377,6 +400,23 @@ export namespace PunMenu
         if (reinterpret_cast<uintptr_t>(hit) == list && row >= 0) Select(list, row);
         return { Press(input, 1) || back == 0, Press(input, 28) || back == 1 || row >= 0,
                  Repeat(input, 203) || direction == 0, Repeat(input, 205) || direction == 1 };
+    }
+    // Opens a page of the menu: the plugins list on the Options screen; anything else on the Game Settings screen,
+    // which the game opens as from its own Game Settings entry (input: the press that opened it)
+    inline uintptr_t Show(size_t page, int input, void* origin)
+    {
+        auto& state = Get();
+        state.page = page;
+        if (page == RWGTAMenu::Model::RootPage)
+        {
+            state.screen = Screen::List;
+            if (!Build()) Close();
+            return 0;
+        }
+        state.entering = true;
+        Screens().sound(*Screens().accept, 0, -1, 1.0f);
+        Screens().open(Options, GameSettingsScreen, nullptr, Screens().paused());
+        return 0;
     }
     inline uintptr_t __cdecl OptionsInput(int input, void* origin)
     {
@@ -390,74 +430,30 @@ export namespace PunMenu
             state.lastDiscrete = GetTickCount64();
             Model(true);
             state.open = true;
-            state.details = false;
-            state.page = SIZE_MAX;
-            state.slice = 0;
-            if (!Build()) Close();
-            return 0;
+            state.model.Window(RWGTAMenu::Model::RootPage).Reset();
+            return Show(RWGTAMenu::Model::RootPage, input, origin);
         }
+        if (state.entering) return 0;
         if ((event.choose || event.back) && GetTickCount64() - state.lastDiscrete < 180) return 0;
-        if (!(event.choose || event.back || event.left || event.right)) return 0;
-        if (event.choose || event.back) state.lastDiscrete = GetTickCount64();
-        int index = Selected(OptionsList);
-        if (index < 0 || static_cast<size_t>(index) >= state.items.size()) return 0;
-        auto item = state.items[index];
-        if (event.back || (event.choose && item.back))
+        if (!(event.choose || event.back)) return 0;
+        state.lastDiscrete = GetTickCount64();
+        if (event.back)
         {
             if (!state.notice.empty())
             {
                 state.notice.clear();
-            }
-            else if (state.details)
-            {
-                state.details = false;
-            }
-            else if (state.page == SIZE_MAX)
-            {
-                Close();
-                return 0;
+                if (!Build()) Close();
             }
             else
-            {
-                state.page = SIZE_MAX;
-                state.slice = 0;
-            }
-        }
-        else if (event.choose && item.next)
-        {
-            if (state.details) ++state.helpSlice;
-            else ++state.slice;
-        }
-        else if (event.choose && item.previous)
-        {
-            if (state.details && state.helpSlice) --state.helpSlice;
-            else if (state.slice) --state.slice;
-        }
-        else if (event.choose && item.details)
-        {
-            state.details = true;
-            state.helpSlice = 0;
-        }
-        else if (event.choose && item.page != SIZE_MAX)
-        {
-            state.page = item.page;
-            state.slice = 0;
-            state.model.PageShown(state.page);
-        }
-        else if (!state.details && item.selectable)
-        {
-            const auto visible = state.model.VisibleRows(state.page);
-            const auto row = std::find_if(visible.begin(), visible.end(), [&](const RWGTAMenu::Row* candidate)
-            {
-                return item.MatchesRow(*candidate);
-            });
-            if (row != visible.end() && state.model.Enabled(**row, state.pause))
-                state.model.Change(**row, event.left ? -1 : event.right ? 1 : 0, state.pause);
-            if (state.open && Current(Options) && !Build(&item)) Close();
+                Close();
             return 0;
         }
-        if (!Build()) Close();
-        return 0;
+        const auto row = SelectedRow(OptionsList);
+        if (!row || !RWGTAMenu::Model::Opens(*row)) return 0;
+        state.model.Window(state.page).SelectKey(reinterpret_cast<MenuList::Key>(row));
+        const auto target = state.model.Enter(*row);
+        if (target == SIZE_MAX) return 0;
+        return Show(target, input, origin);
     }
     inline uintptr_t __cdecl GameInput(int input, void* origin)
     {
@@ -465,6 +461,47 @@ export namespace PunMenu
         if (state.busy || !Current(GameSettings) || !state.labels.bound)
             return state.gameInput.ccall<uintptr_t>(input, origin);
         auto event = Events(input, GameSettings, GameLabels);
+        if (state.screen == Screen::Settings)
+        {
+            if ((event.choose || event.back) && GetTickCount64() - state.lastDiscrete < 180) return 0;
+            if (event.choose || event.back) state.lastDiscrete = GetTickCount64();
+            const auto row = SelectedRow(GameLabels);
+            if (row) state.model.Window(state.page).SelectKey(reinterpret_cast<MenuList::Key>(row));
+            if (event.back)
+            {
+                const auto parent = state.model.Back(state.page);
+                if (parent != RWGTAMenu::Model::RootPage && parent != SIZE_MAX)
+                {
+                    // A category: back to its plugin's page on the same screen, on the row it came from
+                    state.page = parent;
+                    if (!Build()) Close();
+                    return 0;
+                }
+                // The plugin's page: the game goes back to Options, which shows the plugins list again
+                state.page = RWGTAMenu::Model::RootPage;
+                state.screen = Screen::None;
+                state.returning = true;
+                state.labels.Restore();
+                state.values.Restore();
+                RestoreTitle();
+                return state.gameInput.ccall<uintptr_t>(input, origin);
+            }
+            if (!row) return 0;
+            if (RWGTAMenu::Model::Opens(*row))
+            {
+                if (!event.choose) return 0;
+                const auto target = state.model.Enter(*row);
+                if (target == SIZE_MAX) return 0;
+                state.page = target;
+                if (!Build()) Close();
+                return 0;
+            }
+            if (!(event.choose || event.left || event.right)) return 0;
+            if (state.model.Enabled(*row, state.pause))
+                state.model.Change(*row, event.left ? -1 : event.right ? 1 : 0, state.pause);
+            if (state.open && Current(GameSettings) && !Build(row)) Close();
+            return 0;
+        }
         int row = Selected(GameLabels) - state.labels.count;
         if (row < 0 || static_cast<size_t>(row) >= state.model.JoinedRows().size() || event.back)
             return state.gameInput.ccall<uintptr_t>(input, origin);
@@ -478,16 +515,30 @@ export namespace PunMenu
     inline uintptr_t __cdecl OptionsInit(int* previous)
     {
         auto& state = Get();
+        const bool returning = std::exchange(state.returning, false) && state.open;
         state.options.Restore();
         RestoreTitle();
-        state.open = state.details = false;
-        state.notice.clear();
+        if (!returning)
+        {
+            state.open = false;
+            state.screen = Screen::None;
+            state.notice.clear();
+        }
         if (Tick) Tick();
         auto result = state.optionsInit.ccall<uintptr_t>(previous);
         state.activeRoot = Options;
-        state.pause = previous && *previous == 55;
-        Model(true);
+        if (!returning)
+        {
+            state.pause = previous && *previous == 55;
+            Model(true);
+        }
         Entry();
+        if (returning)
+        {
+            state.page = RWGTAMenu::Model::RootPage;
+            state.screen = Screen::List;
+            if (!Build()) Close();
+        }
         return result;
     }
     inline uintptr_t __cdecl GameInit()
@@ -495,10 +546,21 @@ export namespace PunMenu
         auto& state = Get();
         state.labels.Restore();
         state.values.Restore();
+        RestoreTitle();
         auto result = state.gameInit.ccall<uintptr_t>();
         state.activeRoot = GameSettings;
         Model();
-        Joined();
+        if (std::exchange(state.entering, false) && state.open)
+        {
+            state.screen = Screen::Settings;
+            if (!state.labels.Capture(GameLabels) || !state.values.Capture(GameValues) || !Build())
+                Close();
+        }
+        else
+        {
+            state.screen = state.open ? state.screen : Screen::None;
+            Joined();
+        }
         return result;
     }
     inline uintptr_t __cdecl Defaults()
@@ -512,12 +574,17 @@ export namespace PunMenu
         auto& state = Get();
         if (state.busy) return;
         state.activeRoot = root;
+        if (root != Options && root != GameSettings && state.open && !state.entering && !state.returning)
+        {
+            // The game left the Options screens
+            state.open = false;
+            state.screen = Screen::None;
+            state.notice.clear();
+        }
         if (root != Options)
         {
             state.options.Restore();
-            RestoreTitle();
-            state.open = state.details = false;
-            state.notice.clear();
+            if (state.titleRoot == Options) RestoreTitle();
         }
         else if (!state.options.bound)
         {
@@ -527,40 +594,52 @@ export namespace PunMenu
         {
             state.labels.Restore();
             state.values.Restore();
+            if (state.titleRoot == GameSettings) RestoreTitle();
         }
-        else if (!state.labels.bound)
+        else if (!state.labels.bound && state.screen != Screen::Settings)
         {
             Joined();
         }
         if (Tick) Tick();
-        if (state.open && !state.details && state.notice.empty())
+        const bool shown = state.open && ((root == Options && state.screen == Screen::List) || (root == GameSettings && state.screen == Screen::Settings));
+        if (shown)
         {
-            auto index = Selected(OptionsList);
-            if (index >= 0 && static_cast<size_t>(index) < state.items.size())
+            // The help under the rows follows the selection
+            const auto list = root == Options ? OptionsList : GameLabels;
+            const auto row = SelectedRow(list);
+            auto& window = state.model.Window(state.page);
+            if (row && reinterpret_cast<MenuList::Key>(row) != window.SelectedKey() && state.notice.empty())
             {
-                const auto& item = state.items[index];
-                if (item.page == SIZE_MAX && !item.next && !item.previous && !item.back && !item.details && item.selectable)
-                    state.help = state.model.Label(item.row) + "\n" + state.model.Help(item.row);
+                window.SelectKey(reinterpret_cast<MenuList::Key>(row));
+                Build(row);
             }
         }
         if (RWGTAMenu::Model::Changed().exchange(false))
         {
-            if (state.open)
+            if (shown)
             {
-                const auto index = Selected(OptionsList);
-                const auto selection = index >= 0 && static_cast<size_t>(index) < state.items.size()
-                    ? std::optional(state.items[index]) : std::nullopt;
-                if (!Build(selection ? &*selection : nullptr)) Close();
+                if (!Build(SelectedRow(root == Options ? OptionsList : GameLabels))) Close();
             }
-            else if (root == GameSettings)
+            else if (root == GameSettings && state.screen != Screen::Settings)
             {
                 Joined();
             }
         }
     }
+    // The game's screens (the apartment, the briefing, the in-game menu over a paused game) draw through Draw;
+    // play and cutscenes draw none. Decided once a frame, before it is shown.
+    inline ULONGLONG lastScreenDraw{};
+    inline void (*NextFrame)(IDirect3DDevice9*) = nullptr;
+    inline void Presented(IDirect3DDevice9* device)
+    {
+        RainDroplets::MenuOpen(GetTickCount64() - lastScreenDraw < 250);
+        if (NextFrame)
+            NextFrame(device);
+    }
     inline uintptr_t __fastcall Draw(void* root, void*)
     {
         const auto address = reinterpret_cast<uintptr_t>(root);
+        lastScreenDraw = GetTickCount64();
         UpdateDraw(address);
         PunMenuLayout::Scope layout(address);
         auto& state = Get();
@@ -577,6 +656,7 @@ export namespace PunMenu
     }
     inline void Init()
     {
+        NextFrame = std::exchange(D3D8Compatibility::Frame, Presented);
         auto& state = Get();
         const auto& native = Native();
         Options = native.options;
@@ -587,6 +667,7 @@ export namespace PunMenu
         GameValues = native.gameValues;
 
         GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_PIN, reinterpret_cast<LPCWSTR>(&Init), &state.module);
+        Screens();
         state.optionsInit = safetyhook::create_inline(reinterpret_cast<void*>(native.optionsInit), OptionsInit);
         state.optionsInput = safetyhook::create_inline(reinterpret_cast<void*>(native.optionsInput), OptionsInput);
         state.gameInit = safetyhook::create_inline(reinterpret_cast<void*>(native.gameInit), GameInit);

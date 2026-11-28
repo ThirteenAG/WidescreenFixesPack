@@ -19,6 +19,8 @@
   "WFP_PRESET_APPLY": "Aplicar preajuste",
   "WFP_PRESET_APPLY_DESCRIPTION": "Pone los valores del preajuste elegido arriba",
   "WFP_RESTOREDEFAULTS_DESCRIPTION": "Devuelve los ajustes de esta página a sus valores por defecto",
+  "WFP_SETTINGS": "Ajustes",
+  "WFP_SETTINGS_DESCRIPTION": "Los ajustes de este plugin",
   "page.widescreen": "Panorámico",
   "page.graphics": "Gráficos",
   "page.controls": "Controles",

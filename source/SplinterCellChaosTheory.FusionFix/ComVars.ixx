@@ -10,6 +10,10 @@ export module ComVars;
 export void (*NativeMenuTick)(void*) = nullptr;
 export bool (*NativeWindowsMenuMouse)(LPARAM, bool) = nullptr;
 export bool (*NativeWindowsMenuHelp)(bool) = nullptr;
+// The native menu takes the wheel's raw delta while its list is on top (true: the game doesn't get it)
+export bool (*NativeWindowsMenuWheel)(int) = nullptr;
+// The Plugins page is on screen (a page of the fix, not one of the game's menu pages)
+export bool bPluginsPageOpen = false;
 
 export struct Screen
 {

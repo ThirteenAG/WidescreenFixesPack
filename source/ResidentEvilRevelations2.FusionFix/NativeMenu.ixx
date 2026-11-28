@@ -3,6 +3,8 @@ module;
 #include <stdafx.h>
 #include "FixSettings.hpp"
 #include "Shared/RWGTA/FixMenu.hpp"
+#include "Shared/RainDroplets.hpp"
+#include "Shared/MenuList.hpp"
 #include "Shared/RWGTA/UpdateCheck.hpp"
 #include <array>
 #include <map>
@@ -19,9 +21,9 @@ export namespace Rev2Menu
     constexpr size_t Capacity = 8;
     struct Definition { int action, file, text, value, helpFile, helpText, disabledFile, disabledText; uintptr_t extra; };
     static_assert(sizeof(Definition) == 36);
-    enum class View { Root, Plugins, Settings, Details };
-    enum class Kind { None, Plugin, Setting, Previous, Next, Details, Back, Text };
-    struct Item { Kind kind{}; size_t index{}; RWGTAMenu::Row row{}; };
+    enum class View { Root, List, Details };
+    enum class Kind { None, Plugin, Open, Setting, Details, Back, Text };
+    struct Item { Kind kind{}; const RWGTAMenu::Row* row{}; };
 
     inline SafetyHookInline optionsHook, messageHook, destroyHook;
     inline void (__thiscall* build)(void*, int, int){};
@@ -41,16 +43,17 @@ export namespace Rev2Menu
     inline HMODULE module{};
     inline View view = View::Root;
     inline void* currentObject{};
-    inline size_t pluginFirst{}, currentPage{}, first{}, detailsFirst{};
+    inline size_t currentPage{}, detailsFirst{}, listShown{};
     inline int detailsReturnSelection{};
-    inline RWGTAMenu::Row lastRow{};
-    inline bool hasLastRow{};
+    inline const RWGTAMenu::Row* lastRow{};
     inline std::vector<std::string> detailLines;
     inline std::string updateNotice;
     inline bool renderedNotice{};
 
     inline bool UpdateVisible() { return !updateNotice.empty() && FixSettings().Get("MAIN.CheckForUpdates") == "1"; }
-    inline size_t PluginPageSize() { return UpdateVisible() ? 2 : 5; }
+    // Lines of a list the Options list shows at once: its eight rows less Back, Details and the restart warning on a
+    // page of settings, less the update notice on the plugins list. The list scrolls through them.
+    constexpr size_t ListSlots = 5;
 
     inline int TextId(const std::string& value)
     {
@@ -140,7 +143,7 @@ export namespace Rev2Menu
     }
 
     // help: the line the game shows in its footer for the selected row (none keeps the footer empty)
-    inline void Row(size_t slot, const std::string& label, Kind kind, size_t index = 0, RWGTAMenu::Row row = {}, const std::string& help = {})
+    inline void Row(size_t slot, const std::string& label, Kind kind, const RWGTAMenu::Row* row = nullptr, const std::string& help = {})
     {
         rows[slot] = originalRows[0];
         rows[slot].action = ActionBase + static_cast<int>(slot);
@@ -151,7 +154,7 @@ export namespace Rev2Menu
         rows[slot].helpText = TextId(help.empty() ? " " : help);
         rows[slot].disabledFile = -1;
         rows[slot].disabledText = -1;
-        items[slot] = { kind, index, row };
+        items[slot] = { kind, row };
     }
 
     // The row added to the game's Options list, in the menu language
@@ -159,7 +162,7 @@ export namespace Rev2Menu
     {
         auto texts = FixSettings().GetTexts();
         texts.Select(Language());
-        Row(7, texts.Resolve("@menu.plugins"), Kind::Plugin, 0, {}, texts.Resolve("@menu.pluginshelp"));
+        Row(7, texts.Resolve("@menu.plugins"), Kind::Plugin, nullptr, texts.Resolve("@menu.pluginshelp"));
     }
 
     inline void Publish(void* object, size_t count, const std::string& title, int selection = 0)
@@ -208,66 +211,102 @@ export namespace Rev2Menu
             }
     }
 
-    inline void Populate(void* object, int selection = 0)
+    inline MenuList::Window& List()
+    {
+        return model.Window(currentPage);
+    }
+
+    // The page: the list's window, then what acts on the whole page; selection -1 keeps the list's selected row
+    inline void Populate(void* object, int selection = -1)
     {
         items = {};
         size_t count = 0;
         std::string title = model.Text("menu.plugins");
-        if (view == View::Plugins)
-        {
-            const auto& pages = model.Pages();
-            pluginFirst = pages.empty() ? 0 : (std::min)(pluginFirst, ((pages.size() - 1) / PluginPageSize()) * PluginPageSize());
-            const auto end = (std::min)(pages.size(), pluginFirst + PluginPageSize());
-            for (size_t i = pluginFirst; i < end; ++i) Row(count++, pages[i].title, Kind::Plugin, i, {}, model.Text("menu.pluginshelp"));
-            if (pluginFirst) Row(count++, model.Text("menu.previous"), Kind::Previous);
-            if (end < pages.size()) Row(count++, model.Text("menu.next"), Kind::Next);
-            renderedNotice = UpdateVisible();
-            if (renderedNotice)
-            {
-                const auto lines = Wrap(updateNotice);
-                for (size_t i = 0; i < (std::min)(size_t(3), lines.size()); ++i) Row(count++, lines[i], Kind::Text);
-            }
-            Row(count++, model.Text("menu.back"), Kind::Back);
-        }
-        else if (view == View::Settings && currentPage < model.Pages().size())
+        listShown = 0;
+        if (view == View::List && currentPage < model.Pages().size())
         {
             title = model.Pages()[currentPage].title;
-            const auto visible = model.VisibleRows(currentPage);
-            first = (std::min)(first, visible.size());
-            const auto end = (std::min)(visible.size(), first + 2);
-            for (size_t i = first; i < end; ++i)
+            for (auto row : model.Shown(currentPage, false))
             {
-                const auto row = *visible[i];
-                auto label = model.Label(row), value = model.Value(row);
+                auto label = model.Label(*row), value = model.Value(*row);
                 if (!value.empty()) label += ": " + value;
-                const auto help = Wrap(model.Help(row), 80);
-                Row(count++, label, Kind::Setting, i, row, help.empty() ? std::string{} : help.size() > 1 ? help.front() + "..." : help.front());
-                Row(count++, model.Text("menu.details"), Kind::Details, i, row, help.empty() ? std::string{} : help.front());
+                const bool opens = RWGTAMenu::Model::Opens(*row);
+                const auto help = opens ? std::vector<std::string>{} : Wrap(model.Help(*row), 80);
+                Row(count++, label, opens ? Kind::Open : Kind::Setting, row,
+                    row->kind == RWGTAMenu::RowKind::Plugin ? model.Text("menu.pluginshelp") :
+                    help.empty() ? std::string{} : help.size() > 1 ? help.front() + "..." : help.front());
             }
-            if (first) Row(count++, model.Text("menu.previous"), Kind::Previous);
-            if (end < visible.size()) Row(count++, model.Text("menu.next"), Kind::Next);
+            listShown = count;
+            if (selection < 0) selection = static_cast<int>(List().Slot());
+            const auto* selected = static_cast<size_t>(selection) < count ? items[selection].row : lastRow;
+            if (selected && !RWGTAMenu::Model::Opens(*selected) && !model.Help(*selected).empty())
+            {
+                lastRow = selected;
+                Row(count++, model.Text("menu.details"), Kind::Details, selected, Wrap(model.Help(*selected), 80).front());
+            }
+            if (currentPage == RWGTAMenu::Model::RootPage)
+            {
+                renderedNotice = UpdateVisible();
+                if (renderedNotice)
+                {
+                    const auto lines = Wrap(updateNotice);
+                    for (size_t i = 0; i < (std::min)(size_t(2), lines.size()); ++i) Row(count++, lines[i], Kind::Text);
+                }
+            }
             if (RestartRequired()) Row(count++, model.Text("menu.restartwarning"), Kind::Text);
             Row(count++, model.Text("menu.back"), Kind::Back);
         }
         else if (view == View::Details)
         {
-            title = hasLastRow ? model.Label(lastRow) : model.Text("menu.details");
+            title = lastRow ? model.Label(*lastRow) : model.Text("menu.details");
             detailsFirst = (std::min)(detailsFirst, detailLines.size());
-            const auto end = (std::min)(detailLines.size(), detailsFirst + 5);
+            const auto end = (std::min)(detailLines.size(), detailsFirst + 7);
             for (size_t i = detailsFirst; i < end; ++i) Row(count++, detailLines[i], Kind::Text);
-            if (detailsFirst) Row(count++, model.Text("menu.previous"), Kind::Previous);
-            if (end < detailLines.size()) Row(count++, model.Text("menu.next"), Kind::Next);
             Row(count++, model.Text("menu.back"), Kind::Back);
         }
         if (!count) Row(count++, model.Text("menu.back"), Kind::Back);
-        Publish(object, count, title, selection);
+        Publish(object, count, title, (std::max)(selection, 0));
+    }
+
+    // A list's window follows the game's own selection: a step off the last or first shown row scrolls the list by
+    // one, a wrap from Back to the top shows the list's top, and the row the selection lands on is the selected row
+    inline bool Follow(void* object, int previous, int selection)
+    {
+        if (view != View::List || previous == selection) return false;
+        auto& window = List();
+        const int shown = static_cast<int>(listShown);
+        int count = 0;
+        while (count < static_cast<int>(Capacity) && items[count].kind != Kind::None) ++count;
+        if (previous == shown - 1 && selection == shown && window.Below())
+            window.Move(1);
+        else if (previous == 0 && selection == count - 1 && window.Above())
+            window.Move(-1);
+        else if (previous == count - 1 && selection == 0 && window.Above())
+            window.Edge(-1);
+        else if (selection < shown)
+        {
+            window.Point(static_cast<size_t>(selection));
+            return false;
+        }
+        else return false;
+        Populate(object);
+        return true;
     }
 
     inline void Back(void* object)
     {
-        if (view == View::Details) { view = View::Settings; Populate(object, detailsReturnSelection); }
-        else if (view == View::Settings) { view = View::Plugins; Populate(object); }
-        else Root(object);
+        if (view == View::Details) { view = View::List; Populate(object, detailsReturnSelection); return; }
+        if (view == View::List)
+        {
+            const auto parent = model.Back(currentPage);
+            if (parent != SIZE_MAX)
+            {
+                currentPage = parent;
+                Populate(object);
+                return;
+            }
+        }
+        Root(object);
     }
 
     inline void Activate(void* object, const Item& item)
@@ -275,36 +314,31 @@ export namespace Rev2Menu
         switch (item.kind)
         {
         case Kind::Plugin:
-            if (view == View::Root)
-            {
-                model.OpenPlugins(module, Language(), 4, {}, true);
-                RememberRestartValues();
-                pluginFirst = 0; view = View::Plugins;
-            }
-            else if (item.index < model.Pages().size())
-            {
-                currentPage = item.index; first = 0; hasLastRow = false;
-                model.PageShown(currentPage); view = View::Settings;
-            }
-            Populate(object); break;
+            model.OpenMenu(module, Language(), ListSlots);
+            RememberRestartValues();
+            currentPage = RWGTAMenu::Model::RootPage;
+            List().Reset();
+            lastRow = nullptr;
+            view = View::List;
+            Populate(object);
+            break;
+        case Kind::Open:
+        {
+            const auto page = model.Enter(*item.row);
+            if (page == SIZE_MAX) break;
+            currentPage = page;
+            lastRow = nullptr;
+            Populate(object);
+            break;
+        }
         case Kind::Setting:
-            lastRow = item.row; hasLastRow = true; model.Change(item.row, 0, false);
+            lastRow = item.row; model.Change(*item.row, 0, false);
             if (currentObject == object && model.IsOpen()) Populate(object, *reinterpret_cast<int*>(static_cast<uint8_t*>(object) + 0x2c0));
             break;
-        case Kind::Previous:
-            if (view == View::Plugins) pluginFirst = pluginFirst >= PluginPageSize() ? pluginFirst - PluginPageSize() : 0;
-            else if (view == View::Settings) first = first >= 2 ? first - 2 : 0;
-            else if (view == View::Details) detailsFirst = detailsFirst >= 5 ? detailsFirst - 5 : 0;
-            Populate(object); break;
-        case Kind::Next:
-            if (view == View::Plugins) pluginFirst += PluginPageSize();
-            else if (view == View::Settings) first += 2;
-            else if (view == View::Details) detailsFirst += 5;
-            Populate(object); break;
         case Kind::Details:
-            lastRow = item.row; hasLastRow = true;
+            lastRow = item.row;
             detailsReturnSelection = *reinterpret_cast<int*>(static_cast<uint8_t*>(object) + 0x2c0);
-            detailLines = Wrap(model.Help(lastRow)); detailsFirst = 0; view = View::Details; Populate(object);
+            detailLines = Wrap(model.Help(*lastRow)); detailsFirst = 0; view = View::Details; Populate(object, 0);
             break;
         case Kind::Back: Back(object); break;
         default: break;
@@ -314,6 +348,8 @@ export namespace Rev2Menu
     inline void __fastcall Options(void* object, void*)
     {
         auto bytes = static_cast<uint8_t*>(object);
+        // The Options menu is on the screen from its opening (0) to its closing (5)
+        RainDroplets::MenuOpen(*reinterpret_cast<int*>(bytes + 0x260) != 5);
         if (currentObject != object)
         {
             currentObject = object; view = View::Root; model.Close();
@@ -321,7 +357,7 @@ export namespace Rev2Menu
         const auto state = *reinterpret_cast<int*>(bytes + 0x260);
         const auto selection = *reinterpret_cast<int*>(bytes + 0x2c0);
         const auto action = *reinterpret_cast<int*>(bytes + 0x2c4);
-        if (view == View::Plugins && state == 2)
+        if (view == View::List && currentPage == RWGTAMenu::Model::RootPage && state == 2)
         {
             RWGTA::UpdateCheck::Tick();
             if (renderedNotice != UpdateVisible()) Populate(object, selection);
@@ -335,21 +371,32 @@ export namespace Rev2Menu
             Back(object);
             return;
         }
-        if (view == View::Settings && state == 2 && selection >= 0 && selection < static_cast<int>(Capacity))
+        if (view == View::List && state == 2 && selection >= 0 && selection < static_cast<int>(Capacity))
         {
             const auto item = items[selection];
-            if (item.kind == Kind::Setting) { lastRow = item.row; hasLastRow = true; }
             auto table = *reinterpret_cast<uintptr_t**>(object);
             const auto repeated = reinterpret_cast<uint32_t(__thiscall*)(void*)>(table[0xe4 / 4])(object);
             const int direction = repeated & 0x20020 ? -1 : repeated & 0x80080 ? 1 : 0;
             if (direction && item.kind == Kind::Setting)
             {
-                model.Change(item.row, direction, false);
+                model.Change(*item.row, direction, false);
                 if (currentObject != object || !model.IsOpen()) return;
                 Populate(object, selection);
             }
         }
         optionsHook.unsafe_thiscall(object);
+        if (state == 2 && view == View::List && currentObject == object)
+        {
+            const auto now = *reinterpret_cast<int*>(bytes + 0x2c0);
+            if (Follow(object, selection, now)) return;
+            // The Details row follows the selected setting
+            if (now != selection && now >= 0 && now < static_cast<int>(listShown) && items[now].row != lastRow &&
+                items[now].kind == Kind::Setting)
+            {
+                Populate(object, now);
+                return;
+            }
+        }
         if (state == 4 && action >= ActionBase && action < ActionBase + static_cast<int>(Capacity))
             Activate(object, items[action - ActionBase]);
     }
@@ -361,6 +408,7 @@ export namespace Rev2Menu
             currentObject = nullptr;
             ResetTable();
         }
+        RainDroplets::MenuOpen(false);
         return destroyHook.unsafe_thiscall<int>(object);
     }
 
@@ -402,7 +450,7 @@ export namespace Rev2Menu
         updates.pluginId = "ResidentEvilRevelations2.FusionFix";
         updates.fileVersion = rsc_FileVersion;
         updates.settings = &FixSettings();
-        updates.playable = [] { return currentObject && view == View::Plugins; };
+        updates.playable = [] { return currentObject && view == View::List && currentPage == RWGTAMenu::Model::RootPage; };
         updates.show = [](const std::wstring& notice) { updateNotice = asi_settings::text::Narrow(notice); };
         RWGTA::UpdateCheck::Init(std::move(updates));
     }

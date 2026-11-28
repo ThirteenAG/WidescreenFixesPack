@@ -397,6 +397,14 @@ namespace FarCryPadState
         Keys[DIK_DOWN] = Down(XINPUT_GAMEPAD_DPAD_DOWN);
         Keys[DIK_LEFT] = Down(XINPUT_GAMEPAD_DPAD_LEFT);
         Keys[DIK_RIGHT] = Down(XINPUT_GAMEPAD_DPAD_RIGHT);
+        if (FarCryWindow::PluginsOpen)
+        {
+            Keys[DIK_RETURN] = MouseButton;
+            MouseButton = false;
+            FarCryWindow::PluginsPadPage = Down(XINPUT_GAMEPAD_LEFT_SHOULDER) ? -1 : Down(XINPUT_GAMEPAD_RIGHT_SHOULDER) ? 1 : 0;
+        }
+        else
+            FarCryWindow::PluginsPadPage = 0;
 
         float magnitude = 0;
         const auto [x, y] = Stick(Current.lx, Current.ly, 0.2f, magnitude);
@@ -778,6 +786,7 @@ export namespace FarCryPad
             state->rgbButtons[0] |= 0x80;
         state->lZ += FarCryPadState::MouseWheel;
         FarCryPadState::MouseWheel = 0;
+        FarCryWindow::MenuWheel.state += state->lZ;
         FarCryPadState::MouseReported = FarCryPadState::MouseButton;
     }
 
@@ -839,6 +848,12 @@ export namespace FarCryPad
             FarCryPadState::MouseReported = FarCryPadState::MouseButton;
         if (FarCryPadState::MouseWheel && Append(data, stride, count, capacity, DIMOFS_Z, DWORD(FarCryPadState::MouseWheel)))
             FarCryPadState::MouseWheel = 0;
+        FarCryWindow::MenuWheel.dataSeen = true;
+        for (DWORD i = 0; data && stride >= sizeof(DIDEVICEOBJECTDATA) && i < *count; ++i)
+        {
+            auto entry = reinterpret_cast<const DIDEVICEOBJECTDATA*>(static_cast<const uint8_t*>(data) + size_t(i) * stride);
+            if (entry->dwOfs == DIMOFS_Z) FarCryWindow::MenuWheel.data += int32_t(entry->dwData);
+        }
     }
 
     inline void KeyboardData(void* data, DWORD stride, DWORD* count, DWORD capacity, bool peek)

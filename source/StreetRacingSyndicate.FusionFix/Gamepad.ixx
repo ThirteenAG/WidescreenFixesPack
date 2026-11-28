@@ -51,7 +51,7 @@ export namespace SRSPad
     {
         ChangeView = 1, RearView = 4, SteerLeft = 7, SteerRight = 8, Accelerate = 9, HandBrake = 11, Brake = 13,
         GearUp = 15, GearDown = 16, Nos = 17, Clutch = 18, HighBeam = 19,
-        MenuUp = 22, MenuDown = 23, MenuLeft = 24, MenuRight = 25, MenuAccept = 26, MenuOption = 27, MenuBack = 28,
+        MenuUp = 22, MenuDown = 23, MenuLeft = 24, MenuRight = 25, MenuAccept = 26, MenuBack = 27, MenuOption = 28,
         MenuExtra = 29, ViewMap = 73,
     };
 

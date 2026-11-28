@@ -331,6 +331,24 @@ export namespace GTA2Input
             }
         }
         else std::fill(std::begin(held), std::end(held), false);
+        // Held arrow keys repeat like the pad's; the frontend acts on the first press itself
+        static bool keyHeld[4]{};
+        static DWORD keyRepeat[4]{};
+        const bool keys = Focused() && Field<int>(menu, 272) == 1 && page != 8 && page != 15;
+        const int arrows[] = { VK_LEFT, VK_RIGHT, VK_UP, VK_DOWN };
+        for (int i = 0; i < 4; ++i)
+        {
+            const bool down = keys && Key(arrows[i]);
+            const auto now = GetTickCount();
+            if (down && !keyHeld[i])
+                keyRepeat[i] = now + 400;
+            else if (down && static_cast<int32_t>(now - keyRepeat[i]) >= 0)
+            {
+                Field<uint8_t>(menu, 51640 + i) = 1;
+                keyRepeat[i] = now + 120;
+            }
+            keyHeld[i] = down;
+        }
         FrontendMenu = static_cast<char*>(menu);
         WFP::onMenuDrawingEvent().executeAll();
     }

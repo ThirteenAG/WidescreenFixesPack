@@ -35,6 +35,7 @@ void Init()
     DPLPad::Install();
     DPLIcons::Install();
     DPLMenu::padHelp = DPLPad::HelpPressed;
+    DPLMenu::pageButton = DPLPad::ShoulderHeld;
     DPLMenu::blocksInput = []() { return DPLOverlay::BlocksInput(); };
     DPLMenu::helpControls = []() -> DPLMenu::HelpControls
     {

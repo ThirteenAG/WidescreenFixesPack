@@ -64,6 +64,7 @@ export bool bPlayingVideo = false;
 export bool bGadgetVideoIsPlaying = false;
 export bool bShuttingDown = false;
 export bool bDisplayingSplash = false;
+export bool bPluginsMenuOpen = false;
 export bool bPressStartToContinue = false;
 export bool bSkipPressStartToContinue = false;
 export HWND hGameWindow = NULL;
@@ -88,6 +89,8 @@ export namespace UWindowsViewport
     // Set by the native menu; null keeps the default gameplay input.
     bool (__cdecl* WindowsMenuMouseActive)(void*) = nullptr;
     void (__cdecl* FocusPause)(void*, bool) = nullptr;
+    // Set by the native menu: takes the wheel's raw delta while its list is open (true: the game doesn't get it)
+    bool (__cdecl* MenuWheel)(int delta) = nullptr;
     std::queue<std::function<void()>> deferredCauseInputEvent;
     // Feeds the raw mouse movement of an engine tick to the viewport; set while gameplay has the mouse
     std::function<void(int dx, int dy)> RawMouseFeed;

@@ -127,6 +127,8 @@ export namespace BullyWindow
         LRESULT result = 0;
         if (BullyOverlay::Message(window, message, wParam, lParam, result))
             return result;
+        if (message == WM_MOUSEWHEEL)
+            MenuWheel += GET_WHEEL_DELTA_WPARAM(wParam);
         CursorConfinement::Message(message, wParam);
         if ((message == WM_SYSKEYDOWN || message == WM_SYSKEYUP) && wParam == VK_RETURN)
         {

@@ -25,6 +25,8 @@ export namespace DAMenu
         inline constexpr const char* PageDestroy = "56 8B F1 E8 C8 FE FF FF F6 44 24 08 01 74 09 56 E8 FB 96 E5 FF 83 C4 04 8B C6 5E C2 04 00";
         inline constexpr const char* AddPackageChild = "8D 44 24 04 50 83 C1 04 E8 23 FE FF FF C2 04 00";
         inline constexpr const char* FindPage = "53 56 8B 71 08 57 8B 79 0C 3B F7 74 1B 8B 5C 24 10 8B 0E 8D 44 24 10 50 E8";
+        // Node::Navigate(direction): the next enabled neighbour in a direction
+        inline constexpr const char* Navigate = "8B 44 24 04 56 8B F1 B2 02 8D A4 24 00 00 00 00 8B 74 86 2C 85 F6 74 09 84 56 3C 75 0A 3B F1 75 EF";
         // mov eax, [factory]; ret
         inline constexpr const char* FactoryGetter = "A1 ? ? ? ? C3 CC CC CC CC CC CC CC CC CC CC 8B 0D";
         // Handler constructor: mov dword ptr [eax], vtable at +25

@@ -6,14 +6,16 @@ module;
 #include "Shared/RWGTA/FixMenu.hpp"
 #include "Shared/RWGTA/UpdateCheck.hpp"
 #include "Shared/SilentHill/Display.hpp"
+#include "Shared/MenuList.hpp"
+#include "Shared/RainDroplets.hpp"
 
 export module Menu;
 
 import ComVars;
 
-// The fourth Options page lists plugins with settings, with this fix first. Each plugin opens its own
-// numbered settings pages, per-plugin Preset and Restore Defaults. Native text, colours and navigation
-// stay the same; values use the same runtime interface as FusionFixHub.
+// The fourth Options page lists plugins with settings, with this fix first. Each plugin opens its page: Preset, its
+// settings or a row per category opening that category, and Restore Defaults. Every list scrolls row by row. Native
+// text, colours and navigation stay the same; values use the same runtime interface as FusionFixHub.
 //
 // The native Options screen keeps one selection for its 28 rows across its three pages; the page boundaries are
 // hard-coded all over it. The new page therefore is a "virtual" page: while it shows, the native selection stays
@@ -53,7 +55,7 @@ namespace
 
     using RWGTAMenu::RowKind;
 
-    // Our page: the list of pages (View = -1) or one of them
+    // Our page: the plugins list (View = RootPage), a plugin's page or a category
     bool PageActive = false;
     bool HelpActive = false, HelpRequested = false, HelpForNotice = false;
     int HelpScroll = 0;
@@ -65,16 +67,19 @@ namespace
     std::optional<Notice> UpdateNotice;
     bool OptionsSeen = false;
     RWGTAMenu::Model Model;
-    int View = -1;
-    int Row = 1;                    // 1..RowCount(), the last one is Exit (list) or Back (page)
-    int ListRow = 1;                // the list's row while a page shows
-    int Scroll = 0;                 // the list's first row shown, when it has more rows than fit
-    std::vector<const RWGTAMenu::Row*> Rows;
+    size_t View = RWGTAMenu::Model::RootPage;
     std::string DisplayLanguage;
+    // Wheel notches and Home/End from the window and the key state, taken by the next frame
+    std::atomic<int> WheelDelta{ 0 };
+    MenuList::WheelNotches Wheel;
+    bool HomePressed = false, EndPressed = false;
     std::map<std::pair<uintptr_t, std::string>, std::string> RestartValues;     // restart settings as the game started
 
-    constexpr int PageRows = 9;     // settings per page, as many as the OPTIONS page has
-    constexpr int VisibleRows = 10; // rows above the help line
+    constexpr int VisibleRows = 10; // rows above the help line, Back or Exit among them
+    constexpr const char* ScrollUp = "^";
+    constexpr const char* ScrollDown = "v";
+    // The Options frame ran since the last Present: a menu of the game is on the screen
+    bool OptionsFrame = false;
     constexpr int SoundMove = 1, SoundAccept = 3, SoundChange = 5, SoundSlider = 7;
 
     struct MenuPad
@@ -168,17 +173,7 @@ namespace
         }
     } Pad;
 
-    int RowCount()
-    {
-        return (View < 0 ? int(Model.Pages().size()) : int(Rows.size())) + 1;
-    }
-
-    // Screen row of a row of the view
-    int Slot(int row)
-    {
-        return row - Scroll;
-    }
-
+    // The screen row of slot 1..VisibleRows
     int RowY(int slot)
     {
         return 25 * slot + 71;
@@ -268,6 +263,33 @@ namespace
         return text + "...";
     }
 
+    // The default glyph size of the menu text, measured once
+    int DefaultGlyph()
+    {
+        static int size = 0;
+        if (!size)
+        {
+            const std::string sample = "\\hMMMMMMMM";
+            const int normal = Width(sample);
+            SetGlyphSize(32, 32);
+            const int large = Width(sample);
+            ClearGlyphSize();
+            size = large > 0 ? std::max(8, int(std::lround(32.0 * normal / large))) : 24;
+        }
+        return size;
+    }
+
+    // Text wider than width is drawn condensed to fit, like the game's long titles; the caller clears the glyph size
+    void Condense(const std::string& text, int width)
+    {
+        const int measured = Width(text);
+        if (measured > width)
+        {
+            const int size = DefaultGlyph();
+            SetGlyphSize(std::max(8, size * width / measured), size);
+        }
+    }
+
     void SetColour(int index)
     {
         auto c = aTextColours->data() + index * 4;
@@ -295,6 +317,17 @@ namespace
         }
         if (centred)
             CentreOff();
+    }
+
+    // Rows above or below the window: small marks in the normal text colour right of the list
+    void ScrollMarks(bool above, bool below, int shown)
+    {
+        SetGlyphSize(16, 16);
+        if (above)
+            DrawText(1, ToGame(ScrollUp), 478, RowY(1) + 4, true);
+        if (below)
+            DrawText(1, ToGame(ScrollDown), 478, RowY(shown) + 4, true);
+        ClearGlyphSize();
     }
 
     // UTF-8 text split into lines of the game's text no wider than width
@@ -408,38 +441,58 @@ namespace
         return help;
     }
 
-    void ShowRows()
-    {
-        Rows = Model.VisibleRows(size_t(View));
-    }
-
+    // The menu in the language picked in the OPTIONS page; true when the rows were built again
     bool RefreshRows()
     {
         const auto language = LanguageTag();
         if (language != DisplayLanguage && Model.SelectLanguage(language))
         {
             DisplayLanguage = language;
-            Rows.clear();
-            if (View >= 0)
-                ShowRows();
             return true;
         }
-        if (View < 0)
-            return false;
+        return false;
+    }
 
-        auto current = Model.VisibleRows(size_t(View));
-        if (current == Rows)
-            return false;
-        if (Row == static_cast<int>(Rows.size()) + 1)
-            Row = static_cast<int>(current.size()) + 1;
-        else if (Row > 0 && Row <= static_cast<int>(Rows.size()))
+    bool HasHelp(const RWGTAMenu::Row* row)
+    {
+        return row && !RWGTAMenu::Model::Opens(*row);
+    }
+
+    // Rows without a value (an entry that opens or acts, Back, Exit) are centred like the game's own such rows
+    bool Centred(const RWGTAMenu::Row* row)
+    {
+        return !HasHelp(row) || (!SliderPositions(*row) && Model.Value(*row).empty());
+    }
+
+    // The column between labels and values: the game's (labels end at 244, values start 24 further), moved right when
+    // a label shown needs the room and the values leave it; a page with a volume slider keeps the game's column
+    int LabelColumn = 244;
+
+    void PlaceColumn(const std::vector<const RWGTAMenu::Row*>& rows)
+    {
+        int labels = 0, values = 0;
+        bool slider = false;
+        for (auto row : rows)
         {
-            const auto selected = std::find(current.begin(), current.end(), Rows[Row - 1]);
-            if (selected != current.end())
-                Row = static_cast<int>(std::distance(current.begin(), selected)) + 1;
+            if (Centred(row))
+                continue;
+            labels = std::max(labels, Width(ToGame(Label(*row))));
+            if (SliderPositions(*row))
+                slider = true;
+            else
+                values = std::max(values, Width(ToGame(Model.Value(*row))));
         }
-        Rows = std::move(current);
-        return true;
+        LabelColumn = 244;
+        if (!slider && labels > 228)
+            LabelColumn = std::clamp(16 + labels, 244, 496 - 24 - values);
+    }
+
+    // A centred entry: a plugin or category, or Exit (plugins list) and Back (null row)
+    std::string EntryText(const RWGTAMenu::Row* row)
+    {
+        if (row)
+            return Model.Label(*row);
+        return Model.Text(View == RWGTAMenu::Model::RootPage ? "menu.exit" : "menu.back");
     }
 
     void RememberRestartValues(const asi_settings::LoadedPlugin& plugin)
@@ -481,36 +534,21 @@ namespace
         return false;
     }
 
-    void OpenPage(int page)
-    {
-        ListRow = Row;
-        View = page;
-        Row = 1;
-        Scroll = 0;
-        Model.PageShown(size_t(page));
-        ShowRows();
-    }
-
-    void CloseView()
-    {
-        View = -1;
-        Row = ListRow;
-    }
-
     void OpenList()
     {
         HMODULE self = nullptr;
         GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, reinterpret_cast<LPCWSTR>(&OpenList), &self);
         DisplayLanguage = LanguageTag();
-        Model.OpenPlugins(self, DisplayLanguage, PageRows, {}, true);
+        Model.OpenMenu(self, DisplayLanguage, VisibleRows);
         for (auto& page : Model.Pages())
         {
             if (page.plugin)
                 RememberRestartValues(*page.plugin);
         }
-        View = -1;
-        Row = ListRow = 1;
-        Scroll = 0;
+        View = RWGTAMenu::Model::RootPage;
+        Model.Window(View).Reset();
+        Wheel.Clear();
+        WheelDelta = 0;
         PageActive = true;
         Pad = {};
         Sound(SoundMove);
@@ -520,7 +558,6 @@ namespace
     {
         PageActive = HelpActive = false;
         Model.Close();
-        Rows.clear();
         nOptionsSelection = nOptionsSelectionNext = int8_t(nativeRow);
     }
 
@@ -533,6 +570,8 @@ namespace
     int __cdecl Frame()
     {
         OptionsSeen = true;
+        OptionsFrame = true;
+        RainDroplets::MenuOpen(true);
         if (UpdateNotice && FixSettings().Get("MAIN.CheckForUpdates") == "0")
             UpdateNotice.reset();
         if (!PageActive || nOptionsMode != 0)
@@ -541,7 +580,6 @@ namespace
             {
                 PageActive = false;
                 Model.Close();
-                Rows.clear();
             }
             int result = FrameHook.ccall<int>();
             if (UpdateNotice && nOptionsMode == 0)
@@ -569,11 +607,13 @@ namespace
         TextLayerFront();
 
         const bool rowsChanged = RefreshRows();
-        int rows = RowCount();
-        Row = std::clamp(Row, 1, rows);
-        Scroll = std::clamp(Scroll, std::max(0, Row - VisibleRows), Row - 1);
-        int shown = std::min(rows - Scroll, VisibleRows);
-        const RWGTAMenu::Row* selected = View >= 0 && Row < rows ? Rows[Row - 1] : nullptr;
+        auto& window = Model.Window(View);
+        // The rows in the window, slot by slot; a null row is Exit (the plugins list) or Back
+        auto shownRows = Model.Shown(View, true);
+        PlaceColumn(shownRows);
+        int shown = int(shownRows.size());
+        const auto at = [&](int slot) { return slot >= 1 && slot <= shown ? shownRows[slot - 1] : nullptr; };
+        const RWGTAMenu::Row* selected = at(int(window.Slot()) + 1);
         Pad.Poll();
         int action = Pad.Action(nOptionsAction);
         if (rowsChanged && (action == 1 || action == 5 || action == 6))
@@ -581,14 +621,14 @@ namespace
         bool leave = false;
         bool helpPressed = HelpRequested || (Pad.pressed & MenuPad::Help);
         HelpRequested = false;
-        if (helpPressed && !HelpActive && (selected || UpdateNotice))
+        if (helpPressed && !HelpActive && (HasHelp(selected) || UpdateNotice))
         {
             HelpActive = true;
-            HelpForNotice = !selected;
+            HelpForNotice = !HasHelp(selected);
             HelpScroll = 0;
             Sound(SoundAccept);
         }
-        if (HelpActive && (HelpForNotice ? !UpdateNotice : !selected))
+        if (HelpActive && (HelpForNotice ? !UpdateNotice : !HasHelp(selected)))
             HelpActive = false;
         if (HelpActive)
         {
@@ -630,20 +670,22 @@ namespace
         AddRect(arrowWidth / 2 + 271, 54, arrowWidth / 2 + 301, 82, 30);
         bool sliderSelected = selected && SliderPositions(*selected);
         if (sliderSelected)
-            SliderRects(8, RowY(Slot(Row)) - 248);
+            SliderRects(8, RowY(int(window.Slot()) + 1) - 248);
         else
         {
             for (int slot = 1; slot <= shown; ++slot)
             {
-                int row = slot + Scroll, y = RowY(slot);
-                if (View >= 0 && row < rows)
+                const auto row = at(slot);
+                int y = RowY(slot);
+                if (!Centred(row))
                 {
-                    int labelWidth = Width(FitLine(ToGame(Label(*Rows[row - 1])), 228));
-                    AddRect(244 - labelWidth, y, 268 + 200, y + 25, slot);
+                    const auto label = ToGame(Label(*row));
+                    int labelWidth = std::min(Width(label), LabelColumn - 16);
+                    AddRect(LabelColumn - labelWidth, y, LabelColumn + 224, y + 25, slot);
                 }
                 else
                 {
-                    int w = row == rows && View < 0 ? Width(ToGame(Model.Text("menu.exit"))) : 200;
+                    int w = Width(ToGame(row ? Label(*row) : EntryText(row)));
                     AddRect(256 - w / 2, y, 256 + w / 2, y + 25, slot);
                 }
             }
@@ -661,35 +703,49 @@ namespace
         }
         else if (!sliderSelected && hit > 0 && hit <= shown && (MouseMoved() || click))
         {
-            if (hit + Scroll != Row)
-            {
-                Row = hit + Scroll;
+            if (window.Point(size_t(hit - 1)))
                 Sound(SoundMove);
-                selected = View >= 0 && Row < rows ? Rows[Row - 1] : nullptr;
-            }
+            selected = at(int(window.Slot()) + 1);
             if (click)
                 action = 1;
+        }
+        // The wheel moves the list a row per notch; Home and End go to its ends
+        bool moved = false;
+        for (int notches = Wheel.Take(WheelDelta.exchange(0)); notches; notches += notches > 0 ? -1 : 1)
+            moved |= window.Scroll(notches > 0 ? -1 : 1);
+        if (HomePressed)
+            moved |= window.Edge(-1);
+        if (EndPressed)
+            moved |= window.Edge(1);
+        HomePressed = EndPressed = false;
+        if (moved)
+        {
+            Sound(SoundMove);
+            selected = at(int(window.Slot()) + 1);
         }
 
         if ((action == 1 || action == 5 || action == 6) && RefreshRows())
             action = 0;
         switch (action)
         {
-        case 2:     // Cancel: from a page back to the list, from the list out of Options like the native pages
-            if (View >= 0)
+        case 2:     // Cancel: back to the list the page was opened from; from the plugins list out of Options
+        {
+            const auto parent = Model.Back(View);
+            if (parent == SIZE_MAX)
+                leave = true;
+            else
             {
-                CloseView();
+                View = parent;
                 Sound(SoundMove);
             }
-            else
-                leave = true;
             break;
+        }
         case 3:
-            Row = Row > 1 ? Row - 1 : rows;
+            window.Move(-1);
             Sound(SoundMove);
             break;
         case 4:
-            Row = Row < rows ? Row + 1 : 1;
+            window.Move(1);
             Sound(SoundMove);
             break;
         case 7:     // next page: OPTIONS
@@ -703,23 +759,25 @@ namespace
         case 1:
         case 5:
         case 6:
-            if (Row == rows)
+            if (!selected)
             {
                 if (action == 1)
                 {
                     Sound(SoundAccept);
-                    if (View >= 0)
-                        CloseView();
-                    else
+                    const auto parent = Model.Back(View);
+                    if (parent == SIZE_MAX)
                         leave = true;
+                    else
+                        View = parent;
                 }
             }
-            else if (View < 0)
+            else if (RWGTAMenu::Model::Opens(*selected))
             {
-                if (action == 1)
+                const auto page = action == 1 ? Model.Enter(*selected) : SIZE_MAX;
+                if (page != SIZE_MAX)
                 {
                     Sound(SoundAccept);
-                    OpenPage(Row - 1);
+                    View = page;
                 }
             }
             else if (sliderSelected)
@@ -735,16 +793,16 @@ namespace
         if (PageActive)
         {
             RefreshRows();
-            rows = RowCount();
-            Row = std::clamp(Row, 1, rows);
-            Scroll = std::clamp(Scroll, std::max(0, Row - VisibleRows), Row - 1);
-            shown = std::min(rows - Scroll, VisibleRows);
-            selected = View >= 0 && Row < rows ? Rows[Row - 1] : nullptr;
+            auto& view = Model.Window(View);
+            shownRows = Model.Shown(View, true);
+            PlaceColumn(shownRows);
+            shown = int(shownRows.size());
+            selected = at(int(view.Slot()) + 1);
 
             // Background and the native title arrows; the native title itself is hidden by the DrawOptText hook
             OptBackground();
             // The title between the arrows, narrower when it's longer than the game's titles
-            auto title = ToGame(View < 0 ? Model.Text("menu.title") : Model.Pages()[View].title);
+            auto title = ToGame(View == RWGTAMenu::Model::RootPage ? Model.Text("menu.title") : Model.Pages()[View].title);
             SetGlyphSize(30, 30);
             int titleWidth = Width(title), room = arrowWidth + 20;
             if (titleWidth > room)
@@ -754,23 +812,24 @@ namespace
 
             for (int slot = 1; slot <= shown; ++slot)
             {
-                int row = slot + Scroll;
-                int colour = row == Row ? 5 : 1;
+                const auto row = at(slot);
+                int colour = slot == int(view.Slot()) + 1 ? 5 : 1;
                 int y = RowY(slot);
-                if (row == rows)
+                if (Centred(row))
                 {
-                    DrawText(colour, ToGame(Model.Text(View < 0 ? "menu.exit" : "menu.back")), 256, y, true);
+                    // Plugins, categories, actions, Back and Exit are centred like the game's own page entries
+                    const auto text = ToGame(row ? Label(*row) : EntryText(row));
+                    Condense(text, 460);
+                    DrawText(colour, text, 256, y, true);
+                    ClearGlyphSize();
                     continue;
                 }
-                if (View < 0)
-                {
-                    DrawText(colour, ToGame(Model.Pages()[row - 1].title), 256, y, true);
-                    continue;
-                }
-                auto& entry = *Rows[row - 1];
-                auto label = FitLine(ToGame(Label(entry)), 228);
-                // Labels never show raised except when selected, like the native rows
-                DrawText(colour, label, 244 - Width(label), y);
+                auto& entry = *row;
+                const auto label = ToGame(Label(entry));
+                // Labels never show raised except when selected, like the native rows; long ones are condensed
+                Condense(label, LabelColumn - 16);
+                DrawText(colour, label, LabelColumn - Width(label), y);
+                ClearGlyphSize();
                 if (SliderPositions(entry))
                 {
                     auto& slider = Sliders[slot];
@@ -780,27 +839,36 @@ namespace
                     QueueDraw(reinterpret_cast<void*>(&DrawSlider), &slider, 1);
                 }
                 else
-                    DrawText(colour, FitLine(ToGame(Model.Value(entry)), 228), 268, y);
+                {
+                    const auto value = ToGame(Model.Value(entry));
+                    Condense(value, 496 - LabelColumn - 24);
+                    DrawText(colour, value, LabelColumn + 24, y);
+                    ClearGlyphSize();
+                }
             }
+            // More rows above or below the window
+            ScrollMarks(view.Above(), view.Below(), shown);
 
-            SetGlyphSize(18, 18);
-            if (RestartRequired())
-                DrawText(1, FitLine(ToGame(Model.Text("menu.restartwarning")), 480), 256, 425, true);
-            ClearGlyphSize();
-
-            // The complete description opens separately; the footer remains a hint.
-            SetGlyphSize(18, 18);
-            DrawText(1, ToGame(Model.Text("menu.helphint")), 256, 401, true);
-            ClearGlyphSize();
-            // Help line of the selected row
-            if (selected)
+            // The help of the selected row where the game shows its help line, in up to three lines of the help page's size; the
+            // complete text opens with F1, whose hint sits below with the restart warning
+            std::vector<std::string> help;
+            SetGlyphSize(20, 20);
+            if (HasHelp(selected))
+                help = Wrap(Help(*selected), 480);
+            else if (!selected && View == RWGTAMenu::Model::RootPage)
+                help = Wrap(Model.Text("menu.exithelp"), 480);
+            if (help.size() > 3)
             {
-                auto lines = Wrap(Help(*selected), 480);
-                for (size_t i = 0; i < lines.size() && i < 1; ++i)
-                    DrawText(1, lines[i], 256, 374 + int(i) * 20, true);
+                help.resize(3);
+                help[2] = FitLine(help[2] + " ...", 480);
             }
-            else if (View < 0 && Row == rows)
-                DrawText(1, FitLine(ToGame(Model.Text("menu.exithelp")), 480), 256, 374, true);
+            for (size_t i = 0; i < help.size(); ++i)
+                DrawText(1, help[i], 256, 354 + int(i) * 20, true);
+            SetGlyphSize(16, 16);
+            DrawText(1, ToGame(Model.Text("menu.helphint")), 256, 414, true);
+            if (RestartRequired())
+                DrawText(1, FitLine(ToGame(Model.Text("menu.restartwarning")), 480), 256, 432, true);
+            ClearGlyphSize();
         }
 
         TextLayerBack();
@@ -886,6 +954,8 @@ public:
             FrameHook = safetyhook::create_inline(frame.get_first(), &Frame);
             SHDisplay::OnWindowMessage().push_back([](HWND, UINT message, WPARAM key, LPARAM flags, LRESULT& result)
             {
+                if (PageActive && message == WM_MOUSEWHEEL)
+                    WheelDelta += GET_WHEEL_DELTA_WPARAM(key);
                 if (PageActive && message == WM_KEYDOWN && key == VK_F1)
                 {
                     if (!(flags & (1L << 30)))
@@ -907,7 +977,14 @@ public:
                 return asi_settings::text::Widen(FormatNotice(*UpdateNotice, LanguageTag()));
             };
             RWGTA::UpdateCheck::Init(std::move(updates));
-            SHDisplay::OnPresent().push_back([]() { RWGTA::UpdateCheck::Tick(); });
+            SHDisplay::OnPresent().push_back([]()
+            {
+                RWGTA::UpdateCheck::Tick();
+                // The droplets stay off the Options screen while it shows
+                if (!OptionsFrame)
+                    RainDroplets::MenuOpen(false);
+                OptionsFrame = false;
+            });
 
             // Page Up / Page Down switch pages too (the game only uses its step keys and the shoulder buttons)
             ReadInputHook = safetyhook::create_inline(ReadOptInput, static_cast<void(__cdecl*)()>([]()
@@ -920,6 +997,13 @@ public:
                 bool previous = focused && (GetAsyncKeyState(VK_PRIOR) & 0x8000);
                 bool next = focused && (GetAsyncKeyState(VK_NEXT) & 0x8000);
                 bool help = focused && (GetAsyncKeyState(VK_F1) & 0x8000);
+                static bool homeHeld = false, endHeld = false;
+                const bool home = focused && (GetAsyncKeyState(VK_HOME) & 0x8000);
+                const bool end = focused && (GetAsyncKeyState(VK_END) & 0x8000);
+                HomePressed |= PageActive && home && !homeHeld;
+                EndPressed |= PageActive && end && !endHeld;
+                homeHeld = home;
+                endHeld = end;
                 if (PageActive && help && !helpHeld)
                     HelpRequested = true;
                 if (previous && !previousHeld)
@@ -963,7 +1047,6 @@ public:
             {
                 PageActive = HelpActive = false;
                 Model.Close();
-                Rows.clear();
             });
         };
     }

@@ -11,6 +11,7 @@ export module Display;
 
 import Renderer;
 import ComVars;
+import NativeMenu;
 
 export namespace PsychonautsDisplay
 {
@@ -137,6 +138,8 @@ export namespace PsychonautsDisplay
                 Change(hwnd, mode == 0 ? lastWindowMode : 0, false);
             return 0;
         }
+        if (message == WM_MOUSEWHEEL)
+            PsychonautsMenu::wheelDelta += GET_WHEEL_DELTA_WPARAM(wParam);
         if (message == WM_SYSKEYDOWN && wParam == VK_RETURN)
         {
             if (!(lParam & (1u << 30)) && GetForegroundWindow() == hwnd)

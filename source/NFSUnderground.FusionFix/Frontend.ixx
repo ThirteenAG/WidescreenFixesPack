@@ -173,21 +173,6 @@ export bool IsScreenBackdropImage(const FEObject* object)
     return std::find(ScreenBackdropImages.begin(), ScreenBackdropImages.end(), object) != ScreenBackdropImages.end();
 }
 
-// An object the fix adds to an in-game menu, such as the pause menu's "Plugins" row: it's moved for the
-// screen's aspect ratio like the object it was copied from. The layout table matches objects by their position.
-export void AddHudLayoutCopy(float fromX, float fromY, float toX, float toY)
-{
-    auto bits = [](float value) { uint32_t result; memcpy(&result, &value, sizeof(result)); return result; };
-    auto it = std::find_if(HudLayout.begin(), HudLayout.end(), [&](const HudLayoutEntry& e) { return e.posX == bits(fromX) && e.posY == bits(fromY); });
-    if (it == HudLayout.end())
-        return;
-    auto copy = *it;
-    copy.posX = bits(toX);
-    copy.posY = bits(toY);
-    if (std::none_of(HudLayout.begin(), HudLayout.end(), [&](const HudLayoutEntry& e) { return e.posX == copy.posX && e.posY == copy.posY; }))
-        HudLayout.push_back(copy);
-}
-
 namespace
 {
     float fMinimapPosX = 320.0f;

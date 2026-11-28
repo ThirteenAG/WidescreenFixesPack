@@ -4,6 +4,8 @@ module;
 #include <stdexcept>
 #include "FixSettings.hpp"
 #include "Shared/RWGTA/FixMenu.hpp"
+#include "Shared/MenuList.hpp"
+#include <atomic>
 
 export module NativeMenu;
 
@@ -404,10 +406,10 @@ export namespace PTMenu
         WriteStringValue(object, L"Caption", fitted);
         caption.font = font; caption.width = width; caption.height = height; caption.fitted = true;
     }
-    inline void DrawDetails(void* object, void* canvas);
+    inline void WrapHelp(void* object, void* canvas);
     inline void __fastcall DrawButton(void* object, void*, void* canvas)
     {
-        DrawDetails(object, canvas);
+        WrapHelp(object, canvas);
         FitCaption(object, canvas, false);
         buttonDrawHook.thiscall<void>(object, canvas);
     }
@@ -442,11 +444,11 @@ export namespace PTMenu
             throw std::runtime_error("GUI bounds exports unavailable");
         InitControlsDrawing();
     }
+    // A line of the page: a row of the model, or Back (none)
     struct Item
     {
-        RWGTAMenu::Row row;
+        const RWGTAMenu::Row* row = nullptr;
         std::string label, value, help;
-        int link = 0;
         bool enabled = true;
     };
     struct Controls;
@@ -460,20 +462,20 @@ export namespace PTMenu
         void* panel = nullptr;
         void* title = nullptr;
         void* help = nullptr;
+        void* help2 = nullptr;
+        std::wstring helpText, helpWrapped;
+        void* helpFont = nullptr;
         void* savedFocus = nullptr;
         std::vector<void*> labels, values, widgets;
         std::vector<Item> items;
         std::vector<std::pair<void*, bool>> visibility;
         std::vector<std::pair<void*, Rect>> stockTabs;
         std::vector<Placement> placements;
-        size_t page = SIZE_MAX, rootStart = 0, rowStart = 0, pageRows = 6;
+        // The page shown (RootPage: the plugins list) and the lines it shows at once, Back among its rows
+        size_t page = RWGTAMenu::Model::RootPage, pageRows = 6;
         bool open = false, pause = false, pendingOpen = false, retired = false, building = false;
-        size_t helpIndex = SIZE_MAX, detailsPage = 0;
-        bool details = false, detailsDirty = false;
-        std::wstring detailsText;
-        std::vector<std::wstring> detailsLines;
-        void* detailsFont = nullptr;
-        float detailsWidth = 0;
+        void* scroll = nullptr;
+        std::vector<void*> scrollButtons;
         uint64_t viewGeneration = 0;
         std::shared_ptr<Controls> controls;
         std::shared_ptr<Video> video;
@@ -547,7 +549,7 @@ export namespace PTMenu
         }
         return title && Alive(host->tabBox) && PlanHint(canvas, Bounds(title), Bounds(host->tabBox), body, hint);
     }
-    enum class Action { Toggle, Activate, Back, Tab, Close, Details, DetailNext, DetailPrevious };
+    enum class Action { Toggle, Activate, Back, Tab, Close, Details, Move, Page, Edge, Scroll };
     struct Pending
     {
         std::weak_ptr<Host> owner;
@@ -563,16 +565,13 @@ export namespace PTMenu
         if (Current(host) && pendingActions.size() < 64)
             pendingActions.push_back({ host, host->viewGeneration, action, selected, direction, sender });
     }
-    inline size_t RootLinks(const Host& host) { return host.pageRows - 2; }
-    inline size_t ContentLinks(const Host& host) { return host.pageRows - 3; }
-    inline size_t Links(const Host& host)
-    {
-        return std::min(RootLinks(host), model.Pages().size() - std::min(host.rootStart, model.Pages().size()));
-    }
+    inline size_t Slots(const Host& host) { return host.pageRows + 1; }
+    inline MenuList::WheelNotches wheel;
+    inline std::atomic<int> wheelDelta{ 0 };
     inline void RestoreStock(Host& host, void* dying = nullptr)
     {
         if (host.retired) return;
-        host.open = false; host.pendingOpen = false; host.details = false; host.detailsText.clear(); host.detailsLines.clear(); host.detailsFont = nullptr;
+        host.open = false; host.pendingOpen = false;
         if (host.panel != dying) Visible(host.panel, false);
         for (auto [object, value] : host.visibility) if (object != dying) Visible(object, value);
         host.visibility.clear();
@@ -587,50 +586,34 @@ export namespace PTMenu
         if (active.get() == &host) { active.reset(); model.Close(); }
         if (!host.retired && focus && savedFocus != dying && Alive(savedFocus)) Focus(savedFocus);
     }
+    // The lines of the page's window: the label and the value of each row, the native scroll bar for rows out of view
     inline void Populate(Host& host)
     {
         const auto keep = Keep(host);
         if (!Current(keep) || !host.open || active != keep) return;
-        const auto sourceSnapshot = model;
         ++host.viewGeneration;
-        if (host.page != SIZE_MAX && host.page >= model.Pages().size()) host.page = SIZE_MAX;
-        const bool root = host.page == SIZE_MAX;
-        host.items.clear(); host.helpIndex = SIZE_MAX;
-        auto title = root ? model.Text("menu.plugins") : model.Pages()[host.page].title;
+        if (host.page >= model.Pages().size()) host.page = RWGTAMenu::Model::RootPage;
+        host.items.clear();
+        auto title = model.Pages()[host.page].title;
         if (model.RestartRequired()) title += " - " + model.Text("menu.restartwarning");
         StringValue(host.title, L"Caption", title, true); Visible(host.title, true);
-        if (root)
+        for (auto row : model.Shown(host.page, true))
         {
-            auto links = Links(host);
-            for (size_t i = 0; i < links; ++i) host.items.push_back({ {}, model.Pages()[host.rootStart + i].title, "", "", int(host.rootStart + i + 1) });
-            if (host.rootStart) host.items.push_back({ {}, model.Text("menu.previous"), "", "", -2 });
-            if (host.rootStart + links < model.Pages().size()) host.items.push_back({ {}, model.Text("menu.next"), "", "", -3 });
-        }
-        else
-        {
-            auto visible = model.VisibleRows(host.page);
-            if (!Current(keep) || active != keep) return;
-            std::vector<RWGTAMenu::Row> rows;
-            for (const auto row : visible) rows.push_back(*row);
-            auto content = ContentLinks(host);
-            if (host.rowStart >= rows.size()) host.rowStart = 0;
-            for (size_t i = host.rowStart; i < rows.size() && i < host.rowStart + content; ++i)
+            Item item;
+            item.row = row;
+            if (!row)
+                item.label = model.Text("menu.back");
+            else
             {
-                Item item; item.row = rows[i];
-                item.label = model.Label(item.row);
-                item.value = model.Value(item.row);
+                item.label = model.Label(*row);
+                if (!RWGTAMenu::Model::Opens(*row)) item.value = model.Value(*row);
                 if (!Current(keep) || active != keep) return;
-                item.help = model.Help(item.row);
-                item.enabled = model.Enabled(item.row, host.pause);
+                item.help = model.Help(*row);
+                item.enabled = model.Enabled(*row, host.pause);
                 if (!Current(keep) || active != keep) return;
-                host.items.push_back(std::move(item));
             }
-            host.items.push_back({ {}, model.Text("menu.details"), "", "", -4 });
-            if (host.rowStart) host.items.push_back({ {}, model.Text("menu.previous"), "", "", -2 });
-            if (host.rowStart + content < rows.size()) host.items.push_back({ {}, model.Text("menu.next"), "", "", -3 });
+            host.items.push_back(std::move(item));
         }
-        host.items.push_back({ {}, model.Text("menu.back"), "", "", -1 });
-        if (!root && !host.items.empty()) host.helpIndex = 0;
         auto focused = Object(host.controller, L"FocusedControl");
         for (size_t i = 0; i < host.labels.size(); ++i)
         {
@@ -638,7 +621,9 @@ export namespace PTMenu
             auto& item = host.items[i];
             auto labelBounds = Bounds(host.labels[i]);
             const auto valueBounds = Bounds(host.values[i]);
-            labelBounds.w = (item.link ? valueBounds.x + valueBounds.w : valueBounds.x) - labelBounds.x;
+            // Rows without a value (plugins, categories, Back) take the whole line, as the menus' own entries
+            const bool wide = !item.row || item.value.empty();
+            labelBounds.w = (wide ? valueBounds.x + valueBounds.w : valueBounds.x) - labelBounds.x;
             Position(host.labels[i], labelBounds);
             auto value = item.enabled ? item.value : model.Text("menu.unavailable");
             StringValue(host.labels[i], L"Caption", item.label); StringValue(host.values[i], L"Caption", value);
@@ -649,10 +634,91 @@ export namespace PTMenu
             Set(host.values[i], L"MenuState", L"ByteProperty", uint8_t(item.enabled ? (focused == host.values[i] ? 2 : 0) : 4));
             Visible(host.labels[i], true); Visible(host.values[i], !value.empty());
         }
+        // The scroll bar of the game's lists, shown while rows are out of view
+        if (host.scroll)
+        {
+            auto& window = model.Window(host.page);
+            const bool shown = window.Above() || window.Below();
+            Call params(host.scroll, L"SetParams");
+            if (params.Put(L"iTotal", L"IntProperty", int(window.Count())) && params.Put(L"iCurIndex", L"IntProperty", int(window.First())) &&
+                params.Put(L"iDisplayed", L"IntProperty", int(window.Slots())))
+                params.Run();
+            Visible(host.scroll, shown);
+            for (auto arrow : host.scrollButtons) Visible(arrow, shown);
+        }
+        std::string help;
+        const auto slot = model.Window(host.page).Slot();
+        if (slot < host.items.size() && !host.items[slot].help.empty())
+            help = model.Text("menu.detailskey") + "  " + host.items[slot].help;
+        // Wrapped to the two help lines when they are drawn (WrapHelp)
+        StringValue(host.help, L"Caption", help);
+        host.helpText = captions[host.help].requested;
+        Visible(host.help, true); Visible(host.help2, true);
+    }
+    // The help over its two lines in their font: all of it when it fits, else its first sentences that do (F1 shows
+    // the whole text), else the F1 key alone
+    inline void WrapHelp(void* object, void* canvas)
+    {
+        const auto host = active;
+        if (!host || host->retired || !host->open || object != host->help || !canvas || !textSize) return;
+        auto controller = Object(object, L"Controller");
+        auto name = ReadString(object, L"FontName");
+        std::vector<void*> fonts;
+        if (name.empty() || !ArrayValues(controller, fonts, L"FontStack")) return;
+        void* font = nullptr;
+        for (auto candidate : fonts)
+            if (_wcsicmp(ReadString(candidate, L"KeyName").c_str(), name.c_str()) == 0) { font = Object(candidate, L"OnlyDefaultFont"); break; }
+        if (!font || (font == host->helpFont && host->helpText == host->helpWrapped)) return;
+        const auto rect = Bounds(object);
+        const float width = rect.w - 18, height = rect.h - 2;
+        auto old = Object(canvas, L"Font");
+        if (!Set(canvas, L"Font", L"ObjectProperty", font)) return;
+        auto measure = [&](const std::wstring& value)
+        {
+            float w = 0, h = 0; textSize(canvas, nullptr, value.c_str(), &w, &h);
+            return std::isfinite(w) && std::isfinite(h) && h <= height ? w : INFINITY;
+        };
+        auto wrap = [&](const std::wstring& text)
+        {
+            std::vector<std::wstring> lines;
+            std::wstring line;
+            for (size_t at = 0; at < text.size();)
+            {
+                while (at < text.size() && text[at] == L' ') ++at;
+                auto end = text.find(L' ', at);
+                if (end == std::wstring::npos) end = text.size();
+                auto word = text.substr(at, end - at);
+                at = end;
+                if (word.empty()) continue;
+                auto joined = line.empty() ? word : line + L" " + word;
+                if (!line.empty() && measure(joined) > width) { lines.push_back(line); line = word; }
+                else line = joined;
+            }
+            if (!line.empty()) lines.push_back(line);
+            return lines;
+        };
+        const auto& text = host->helpText;
+        auto lines = wrap(text);
+        for (size_t cut = text.size(); lines.size() > 2 && cut > 0;)
+        {
+            cut = text.find_last_of(L".!?", cut - 1);
+            if (cut == std::wstring::npos) { lines = wrap(text.substr(0, text.find(L"  "))); break; }
+            if (cut + 1 < text.size() && text[cut + 1] != L' ') continue;
+            lines = wrap(text.substr(0, cut + 1));
+        }
+        Set(canvas, L"Font", L"ObjectProperty", old);
+        for (size_t i = 0; i < 2; ++i)
+        {
+            auto& caption = captions[i ? host->help2 : host->help];
+            auto value = i < lines.size() ? lines[i] : std::wstring{};
+            if (caption.requested != value) { caption.requested = std::move(value); caption.fitted = false; }
+        }
+        host->helpFont = font;
+        host->helpWrapped = host->helpText;
     }
     inline void DisabledStates(Host& host)
     {
-        if (host.retired || host.details) return;
+        if (host.retired) return;
         // GUIMultiComponent.MenuStateChange re-enables the visual state of
         // disabled children when focus propagates. Keep availability drawn as
         // disabled, while native focus/navigation still skips bTabStop=false.
@@ -661,30 +727,20 @@ export namespace PTMenu
         for (auto object : host.values)
             if (Bool(object, L"bVisible") && !Bool(object, L"bAcceptsInput")) Set(object, L"MenuState", L"ByteProperty", uint8_t(4));
     }
+    // The native focus is on the window's selected line
     inline void First(Host& host)
     {
         const auto keep = Keep(host);
         if (host.retired) return;
+        const auto slot = model.Window(host.page).Slot();
+        if (slot < host.labels.size() && Bool(host.labels[slot], L"bVisible") && Bool(host.labels[slot], L"bAcceptsInput"))
+        {
+            if (Object(host.controller, L"FocusedControl") != host.labels[slot]) Focus(host.labels[slot]);
+            if (!host.retired) DisabledStates(host);
+            return;
+        }
         for (auto label : host.labels)
             if (Bool(label, L"bVisible") && Bool(label, L"bAcceptsInput")) { Focus(label); if (!host.retired) DisabledStates(host); return; }
-    }
-    inline std::wstring DetailWide(const std::string& text)
-    {
-        if (text.size() > size_t(INT_MAX)) return {};
-        const int count = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, text.data(), int(text.size()), nullptr, 0);
-        if (count <= 0) return {};
-        std::wstring result(count, L'\0');
-        MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, text.data(), int(text.size()), result.data(), count);
-        for (auto& c : result) if (c < 32 && c != L'\n') c = L' ';
-        return result;
-    }
-    inline std::string DetailUtf8(const std::wstring& text)
-    {
-        if (text.empty()) return {};
-        const int count = WideCharToMultiByte(CP_UTF8, 0, text.data(), int(text.size()), nullptr, 0, nullptr, nullptr);
-        std::string result(count, '\0');
-        WideCharToMultiByte(CP_UTF8, 0, text.data(), int(text.size()), result.data(), count, nullptr, nullptr);
-        return result;
     }
     inline void* PageFocus(const Host& host)
     {
@@ -698,146 +754,79 @@ export namespace PTMenu
         }
         return nullptr;
     }
+    // The selected row's whole help in the menus' own message box
     inline void BeginDetails(Host& host)
     {
         const auto keep = Keep(host);
-        if (!Current(keep) || !host.open || host.page == SIZE_MAX || host.helpIndex >= host.items.size()) return;
-        const auto& row = host.items[host.helpIndex];
-        if (row.link || row.help.empty()) return;
-        auto text = row.label;
-        if (!row.value.empty()) text += ": " + row.value;
-        text += "\n" + row.help;
-        auto wide = DetailWide(text);
-        if (wide.empty()) return;
-        host.detailsText = std::move(wide);
-        host.details = host.detailsDirty = true;
-        host.detailsPage = 0; host.detailsFont = nullptr; host.detailsLines.clear();
+        const auto slot = model.Window(host.page).Slot();
+        if (!Current(keep) || !host.open || slot >= host.items.size()) return;
+        const auto& item = host.items[slot];
+        if (!item.row || item.help.empty()) return;
+        auto text = item.label;
+        if (!item.value.empty()) text += ": " + item.value;
+        text += "\n" + item.help;
+        std::wstring wide(MultiByteToWideChar(CP_UTF8, 0, text.data(), int(text.size()), nullptr, 0), L'\0');
+        MultiByteToWideChar(CP_UTF8, 0, text.data(), int(text.size()), wide.data(), int(wide.size()));
+        constexpr uint8_t eMsgBtnBox_OK = 1;
+        Call message(host.parent, L"OpenMessageBox");
+        if (!message.Put(L"eType", L"ByteProperty", eMsgBtnBox_OK) || !message.PutString(L"strCaption", wide) ||
+            !message.PutBool(L"bNotLocalizeMsg", true) || !message.Run())
+            LogOnce("details", host.parent, "native message box unavailable");
     }
-    inline void EndDetails(Host& host)
+    inline void Back(Host& host)
     {
-        const auto selected = host.helpIndex;
-        host.details = false; host.detailsText.clear(); host.detailsLines.clear(); host.detailsFont = nullptr;
+        const auto keep = Keep(host);
+        auto parent = model.Back(host.page);
+        if (parent == SIZE_MAX)
+        {
+            // Back from the plugins list leaves the Options as Esc does there: the controller closes the page
+            auto controller = host.controller;
+            Close(host, false);
+            Call close(controller, L"CloseMenu");
+            if (close.PutBool(L"bCanceled", true)) close.Run();
+            else LogOnce("back", controller, "native menu close unavailable");
+            return;
+        }
+        host.page = parent;
         Populate(host);
-        if (!host.retired && selected < host.items.size()) Focus(host.labels[selected]);
+        if (Current(keep) && active == keep) First(host);
     }
-    inline void StepDetails(Host& host, int direction)
-    {
-        if (!host.details || host.labels.size() < 2) return;
-        const auto count = host.labels.size() - 1;
-        const auto pages = std::max(size_t(1), (host.detailsLines.size() + count - 1) / count);
-        host.detailsPage = direction < 0 ? (host.detailsPage + pages - 1) % pages : (host.detailsPage + 1) % pages;
-        host.detailsDirty = true;
-    }
-    inline std::vector<std::wstring> WrapDetails(const std::wstring& text, float width, const std::function<float(const std::wstring&)>& measure)
-    {
-        std::vector<std::wstring> lines;
-        std::wstring line;
-        auto flush = [&]() { if (!line.empty()) { lines.push_back(std::move(line)); line.clear(); } };
-        for (size_t at = 0; at < text.size();)
-        {
-            if (text[at] == L'\n') { flush(); ++at; continue; }
-            if (iswspace(text[at])) { ++at; continue; }
-            auto end = at;
-            while (end < text.size() && !iswspace(text[end])) ++end;
-            auto word = text.substr(at, end - at); at = end;
-            if (!line.empty() && measure(line + L" " + word) > width) flush();
-            while (!word.empty() && measure(word) > width)
-            {
-                size_t take = 0;
-                for (size_t i = 0; i < word.size();)
-                {
-                    size_t next = i + 1;
-                    if (word[i] >= 0xD800 && word[i] <= 0xDBFF && next < word.size() && word[next] >= 0xDC00 && word[next] <= 0xDFFF) ++next;
-                    if (measure(word.substr(0, next)) > width) break;
-                    take = next; i = next;
-                }
-                if (!take) return {};
-                lines.push_back(word.substr(0, take)); word.erase(0, take);
-            }
-            if (!word.empty()) { if (!line.empty()) line += L' '; line += word; }
-        }
-        flush();
-        return lines;
-    }
-    inline void DrawDetails(void* object, void* canvas)
-    {
-        const auto host = active;
-        if (!Current(host) || !host->open || !host->details || !canvas || !textSize || host->labels.size() < 2) return;
-        const auto count = host->labels.size() - 1;
-        if (std::find(host->labels.begin(), host->labels.end() - 1, object) != host->labels.end() - 1)
-            Set(object, L"MenuState", L"ByteProperty", uint8_t(0));
-        const auto key = ReadString(host->labels.front(), L"FontName");
-        std::vector<void*> fonts;
-        if (key.empty() || !ArrayValues(host->controller, fonts, L"FontStack")) return;
-        void* font = nullptr;
-        for (auto candidate : fonts)
-            if (_wcsicmp(ReadString(candidate, L"KeyName").c_str(), key.c_str()) == 0) { font = Object(candidate, L"OnlyDefaultFont"); break; }
-        const auto left = Bounds(host->labels.front()), value = Bounds(host->values.front());
-        const float width = value.x + value.w - left.x - 18;
-        if (!Alive(font) || !std::isfinite(width) || width < 100) return;
-        if (font != host->detailsFont || width != host->detailsWidth)
-        {
-            auto old = Object(canvas, L"Font");
-            if (!Set(canvas, L"Font", L"ObjectProperty", font)) return;
-            auto measure = [&](const std::wstring& text)
-            {
-                float w = 0, h = 0; textSize(canvas, nullptr, text.c_str(), &w, &h);
-                return std::isfinite(w) && std::isfinite(h) && h <= left.h - 2 && (text.empty() || w > 0) ? w : INFINITY;
-            };
-            auto lines = WrapDetails(host->detailsText, width, measure);
-            Set(canvas, L"Font", L"ObjectProperty", old);
-            if (lines.empty()) return;
-            host->detailsLines = std::move(lines); host->detailsFont = font; host->detailsWidth = width; host->detailsDirty = true;
-        }
-        if (!host->detailsDirty) return;
-        host->detailsDirty = false;
-        const auto pages = std::max(size_t(1), (host->detailsLines.size() + count - 1) / count);
-        host->detailsPage = std::min(host->detailsPage, pages - 1);
-        StringValue(host->title, L"Caption", model.Text("menu.details") + " (" + std::to_string(host->detailsPage + 1) + "/" + std::to_string(pages) + ")", true);
-        for (size_t i = 0; i < count; ++i)
-        {
-            auto rect = Bounds(host->labels[i]); rect.w = width + 18; Position(host->labels[i], rect);
-            const auto index = host->detailsPage * count + i;
-            SetBool(host->labels[i], L"bAcceptsInput", false); SetBool(host->labels[i], L"bTabStop", false);
-            Set(host->labels[i], L"MenuState", L"ByteProperty", uint8_t(0));
-            if (index < host->detailsLines.size()) StringValue(host->labels[i], L"Caption", DetailUtf8(host->detailsLines[index]));
-            Visible(host->labels[i], index < host->detailsLines.size()); Visible(host->values[i], false);
-        }
-        auto rect = Bounds(host->labels[count]); const auto right = Bounds(host->values[count]);
-        rect.w = pages > 1 ? right.x - rect.x : right.x + right.w - rect.x; Position(host->labels[count], rect);
-        StringValue(host->labels[count], L"Caption", model.Text("menu.back")); SetBool(host->labels[count], L"bAcceptsInput", true); SetBool(host->labels[count], L"bTabStop", true); Visible(host->labels[count], true);
-        StringValue(host->values[count], L"Caption", model.Text("menu.next")); SetBool(host->values[count], L"bAcceptsInput", pages > 1); SetBool(host->values[count], L"bTabStop", pages > 1); Visible(host->values[count], pages > 1);
-        StringValue(host->help, L"Caption", model.Text("menu.detailshint")); Visible(host->help, true);
-        Focus(host->labels[count]);
-    }
+    // A line: left (-1), right (+1) or accept (0); accepting a plugin or a category opens it, Back goes up a level
     inline void Activate(Host& host, size_t selected, int direction)
     {
         const auto keep = Keep(host);
         if (host.retired || selected >= host.items.size()) return;
-        auto item = host.items[selected];
-        if (item.link == -4) { if (!direction) BeginDetails(host); return; }
-        bool changedPage = false;
-        if (!item.link) model.Change(item.row, direction, host.pause);
-        else if (!direction)
+        auto& window = model.Window(host.page);
+        window.Point(selected);
+        const auto* row = host.items[selected].row;
+        if (!row)
         {
-            changedPage = true;
-            if (item.link == -1)
-            {
-                if (host.page == SIZE_MAX) { Close(host); return; }
-                model.PageShown(host.page); host.page = SIZE_MAX; host.rowStart = 0;
-            }
-            else if (item.link == -2)
-            {
-                auto& start = host.page == SIZE_MAX ? host.rootStart : host.rowStart;
-                const auto step = host.page == SIZE_MAX ? RootLinks(host) : ContentLinks(host);
-                start = start >= step ? start - step : 0;
-            }
-            else if (item.link == -3) (host.page == SIZE_MAX ? host.rootStart : host.rowStart) += host.page == SIZE_MAX ? RootLinks(host) : ContentLinks(host);
-            else { host.page = size_t(item.link - 1); host.rowStart = 0; model.PageShown(host.page); }
+            if (!direction) Back(host);
+            return;
         }
+        if (RWGTAMenu::Model::Opens(*row))
+        {
+            if (direction) return;
+            auto page = model.Enter(*row);
+            if (page == SIZE_MAX) return;
+            host.page = page;
+        }
+        else
+            model.Change(*row, direction, host.pause);
         if (!Current(keep) || active != keep) return;
         Populate(host);
-        if (Current(keep) && active == keep && changedPage) First(host);
+        if (Current(keep) && active == keep) First(host);
+    }
+    // Up/Down (Move), Page Up/Down and the shoulders (Page), Home/End (Edge), the wheel and the scroll arrows (Scroll)
+    inline void Navigate(Host& host, Action action, int direction)
+    {
+        const auto keep = Keep(host);
+        auto& window = model.Window(host.page);
+        bool changed = action == Action::Move ? window.Move(direction) : action == Action::Page ? window.Page(direction) :
+            action == Action::Edge ? window.Edge(direction) : window.Scroll(direction);
+        if (!changed) return;
+        Populate(host);
+        if (Current(keep) && active == keep) First(host);
     }
     inline bool PauseContext(Host& host, bool& pause)
     {
@@ -863,15 +852,19 @@ export namespace PTMenu
         { LogOnce("open", host.parent, "active page/modal/title-or-pause route guard rejected"); return; }
         if (active) Close(*active);
         if (host.retired) return;
-        model.OpenPlugins(hostModule, Language(), 4096, JoinedControlIDs(host));
+        model.OpenMenu(hostModule, Language(), Slots(host), JoinedControlIDs(host));
         if (host.retired) { model.Close(); return; }
-        host.page = SIZE_MAX; host.rootStart = host.rowStart = 0;
+        host.page = RWGTAMenu::Model::RootPage;
+        model.Window(host.page).Reset();
+        wheel.Clear();
+        wheelDelta = 0;
         host.savedFocus = Object(host.controller, L"FocusedControl");
         std::vector<void*> controls;
         if (!ArrayValues(host.parent, controls)) { model.Close(); return; }
         for (auto object : controls)
         {
-            if (!object || object == host.tabBox || object == host.panel) continue;
+            // The page's title stays, as on the other tabs
+            if (!object || object == host.tabBox || object == host.panel || Type(object, L"GUIMenuTitleAndLines")) continue;
             host.visibility.emplace_back(object, Bool(object, L"bVisible")); Visible(object, false);
         }
         active = keep; host.open = true;
@@ -988,8 +981,10 @@ export namespace PTMenu
         host.parent = parent; host.controller = controller; host.tabBox = tabBox; host.building = true;
         for (auto tab : { controls, video, sound }) host.stockTabs.emplace_back(tab, Bounds(tab));
         std::sort(host.stockTabs.begin(), host.stockTabs.end(), [](const auto& a, const auto& b) { return a.second.x < b.second.x; });
-        host.pageRows = size_t(std::clamp(int((body.h - 50) / 22) - 1, 3, 8));
-        if (50 + float(host.pageRows + 1) * 22 > body.h)
+        // The lines, then two help lines under them
+        const float footerTop = footer.y;
+        host.pageRows = size_t(std::clamp(int((footerTop - 36 - body.y - 28) / 22) - 1, 3, 8));
+        if (body.y + 28 + float(host.pageRows + 1) * 22 > footerTop - 36)
         { LogOnce("prepare", parent, "native body too short for bounded rows and help"); return false; }
         Rect entryRect{};
         std::array<Rect, 3> placedTabs{};
@@ -1045,19 +1040,54 @@ export namespace PTMenu
         bool complete = host.title && StringValue(host.title, L"FontName", "GUITitleBoldFont");
         if (host.retired) return false;
         if (!complete) LogOnce("prepare", parent, "native heading/font creation failed");
-        host.help = create(buttonClass, host.panel, {body.x, body.y + body.h - 22, body.w, 22}, false, 0);
-        complete = complete && host.help;
+        // The first help line above the separator over the footer, the second in the footer where the game's help was
+        host.help = create(buttonClass, host.panel, {body.x, footerTop - 36, body.w, 22}, false, 0);
+        host.help2 = create(buttonClass, host.panel, {body.x, body.y + body.h - 22, body.w, 22}, false, 0);
+        complete = complete && host.help && host.help2;
         if (host.retired) return false;
         if (!host.help) LogOnce("prepare", parent, "native help control creation failed");
+        // The lines end where the Controls list's scroll bar begins; the page shows the same bar and arrows there
+        auto nativeBar = Object(nativeList, L"scrollBarLongList");
+        auto nativeUp = Object(nativeList, L"btnSBarComponetUp");
+        const auto barBounds = Bounds(nativeBar);
+        const float rowWidth = std::isfinite(barBounds.x) && barBounds.x > body.x + 200 && barBounds.x < body.x + body.w ?
+            barBounds.x - 4 - body.x : body.w;
         for (size_t i = 0; complete && i < host.pageRows + 1; ++i)
         {
             auto y = body.y + 28 + float(i) * 22;
-            auto label = create(buttonClass, host.panel, {body.x, y, body.w * 0.62f, 22}, true, 0);
-            auto value = create(buttonClass, host.panel, {body.x + body.w * 0.62f, y, body.w * 0.38f, 22}, true, 2);
+            auto label = create(buttonClass, host.panel, {body.x, y, rowWidth * 0.62f, 22}, true, 0);
+            auto value = create(buttonClass, host.panel, {body.x + rowWidth * 0.62f, y, rowWidth * 0.38f, 22}, true, 2);
             complete = label && value;
             if (host.retired) return false;
             if (!complete) LogOnce("prepare", parent, "native label/value creation failed at row " + std::to_string(i));
             if (complete) { bool no = false; Bool(value, L"bTabStop", &no); host.labels.push_back(label); host.values.push_back(value); }
+        }
+        if (complete)
+        {
+            const auto barClass = Type(nativeBar, L"GUIScrollBarSC1") ? Read<void*>(nativeBar, 36) : nullptr;
+            const auto arrowClass = Type(nativeUp, L"GUIVertScrollButtonSC2_PC") ? Read<void*>(nativeUp, 36) : nullptr;
+            const float top = body.y + 28, bottom = top + float(host.pageRows + 1) * 22, x = body.x + rowWidth + 4, size = barBounds.w;
+            if (barClass && arrowClass && FunctionContract(barClass, L"SetParams", {{ L"iTotal", L"IntProperty", 4 },
+                { L"iCurIndex", L"IntProperty", 4 }, { L"iDisplayed", L"IntProperty", 4 }}) && size >= 4 && size <= 24)
+            {
+                host.scroll = create(barClass, host.panel, { x, top + size + 1, size, bottom - top - 2 * size - 2 }, true, 0);
+                auto up = create(arrowClass, host.panel, { x, top, size, size }, true, 1);
+                auto down = create(arrowClass, host.panel, { x, bottom - size, size, size }, true, 1);
+                if (host.retired) return false;
+                complete = host.scroll && up && down && Property(up, L"bUpButton", L"BoolProperty", 4);
+                for (auto object : { host.scroll, up, down })
+                {
+                    bool no = false;
+                    if (object) Bool(object, L"bTabStop", &no);
+                }
+                bool upFlag = true, downFlag = false;
+                if (up) Bool(up, L"bUpButton", &upFlag);
+                if (down) Bool(down, L"bUpButton", &downFlag);
+                host.scrollButtons = { up, down };
+            }
+            else
+                complete = false;
+            if (!complete) LogOnce("prepare", parent, "native scroll bar creation failed");
         }
         if (complete)
             host.entry = create(tabClass, tabBox, host.stockTabs.back().second, true, 1);
@@ -1111,16 +1141,11 @@ export namespace PTMenu
             if (action.action == Action::Toggle) { if (host->open) Close(*host); else Open(*host); }
             else if (action.action == Action::Activate && host->open) Activate(*host, action.selected, action.direction);
             else if (action.action == Action::Details && host->open) BeginDetails(*host);
-            else if (action.action == Action::DetailNext && host->open) StepDetails(*host, 1);
-            else if (action.action == Action::DetailPrevious && host->open) StepDetails(*host, -1);
+            else if ((action.action == Action::Move || action.action == Action::Page || action.action == Action::Edge ||
+                action.action == Action::Scroll) && host->open) Navigate(*host, action.action, action.direction);
             else if (action.action == Action::Tab) SelectTab(*host, action.sender, action.direction);
             else if (action.action == Action::Close) Close(*host, false);
-            else if (action.action == Action::Back && host->open)
-            {
-                if (host->details) EndDetails(*host);
-                else if (host->page == SIZE_MAX) Close(*host);
-                else { host->page = SIZE_MAX; Populate(*host); if (!host->retired) First(*host); }
-            }
+            else if (action.action == Action::Back && host->open) Back(*host);
         }
         std::vector<HostRef> snapshot;
         for (const auto& [parent, host] : hosts) if (host->controller == controller) snapshot.push_back(host);
@@ -1136,20 +1161,27 @@ export namespace PTMenu
             if (!OwnerCurrent(host) || !host->open) Close(*host, false);
             else if (Current(host))
             {
-                if (RWGTAMenu::Model::Changed().exchange(false) && !host->details) Populate(*host);
-                if (Current(host) && active == host && !host->details)
+                if (RWGTAMenu::Model::Changed().exchange(false)) Populate(*host);
+                if (Current(host) && active == host)
                 {
+                    // The mouse moves the native focus over the lines: the window's selection follows it
                     auto focused = PageFocus(*host);
-                    std::string help;
-                    for (size_t i = 0; i < host->items.size(); ++i)
-                        if (focused == host->labels[i] || focused == host->values[i])
+                    auto& window = model.Window(host->page);
+                    for (size_t i = 0; i < host->items.size() && i < host->labels.size(); ++i)
+                    {
+                        if (focused != host->labels[i] && focused != host->values[i]) continue;
+                        if (i != window.Slot())
                         {
-                            help = host->items[i].help;
-                            if (!host->items[i].link) host->helpIndex = i;
-                            break;
+                            window.Point(i);
+                            Populate(*host);
                         }
-                    if (!help.empty()) help = model.Text("menu.detailskey") + "  " + help;
-                    StringValue(host->help, L"Caption", help); Visible(host->help, true);
+                        // The whole line is highlighted, as in the game's lists, also with the mouse over its value
+                        if (Current(host) && active == host && focused == host->values[i]) First(*host);
+                        break;
+                    }
+                    // The wheel, a row per notch from its raw deltas
+                    for (int notches = wheel.Take(wheelDelta.exchange(0)); notches && Current(host) && active == host; notches += notches > 0 ? -1 : 1)
+                        Navigate(*host, Action::Scroll, notches > 0 ? -1 : 1);
                 }
             }
         }
@@ -1190,7 +1222,15 @@ export namespace PTMenu
         if (own != hosts.end() && own->second->open)
         {
             auto host = own->second;
-            if (leaf == L"OnKeyCancel" && Result(frame, result)) { Queue(host, Action::Back); return; }
+            if (leaf == L"OnKeyCancel")
+            {
+                // From the plugins list the game's own cancel leaves the Options
+                if (host->page == RWGTAMenu::Model::RootPage)
+                {
+                    RestoreStock(*host); Queue(host, Action::Close);
+                }
+                else if (Result(frame, result)) { Queue(host, Action::Back); return; }
+            }
             if (leaf == L"OnClose" || leaf == L"OnOpen" || leaf == L"OnReOpen")
             {
                 Queue(host, Action::Close);
@@ -1215,7 +1255,33 @@ export namespace PTMenu
             auto value = std::find(host.values.begin(), host.values.end(), object);
             bool entry = object == host.entry;
             bool ours = entry || row != host.labels.end() || value != host.values.end() || object == host.panel;
+            // The scroll arrows move the window a row, a click on the bar a window towards the click
+            if (host.open && leaf == L"OnClick" && !Object(host.parent, L"theMsgBox") &&
+                (object == host.scroll || std::find(host.scrollButtons.begin(), host.scrollButtons.end(), object) != host.scrollButtons.end()) &&
+                Result(frame, result))
+            {
+                if (object == host.scroll)
+                {
+                    float mouse = 0;
+                    Get(host.controller, L"MouseY", L"FloatProperty", mouse);
+                    auto& window = model.Window(host.page);
+                    const auto bar = Bounds(host.scroll);
+                    const float range = float(std::max<size_t>(1, window.Count() - std::min(window.Count(), window.Slots())));
+                    const float thumb = bar.y + bar.h * float(window.First()) / range;
+                    Queue(keep, Action::Page, 0, mouse < thumb ? -1 : 1);
+                }
+                else
+                    Queue(keep, Action::Scroll, 0, object == host.scrollButtons.front() ? -1 : 1);
+                return;
+            }
             if (!ours || (host.open && Object(host.parent, L"theMsgBox"))) continue;
+            // The menus move the focus between their entries here (Up/Down, the d-pad, the stick, with the game's
+            // repeat): the page's window moves instead, scrolling past its last line and wrapping at the ends
+            if (host.open && object == host.panel && (leaf == L"NextControl" || leaf == L"PrevControl") && Result(frame, result))
+            {
+                Queue(keep, Action::Move, 0, leaf == L"NextControl" ? 1 : -1);
+                return;
+            }
             auto selected = row != host.labels.end() ? size_t(row - host.labels.begin()) : size_t(value - host.values.begin());
             if (entry && leaf == L"OnActivate")
             {
@@ -1225,13 +1291,24 @@ export namespace PTMenu
             if ((entry || host.open) && leaf == L"OnKeyEvent" && (entry || row != host.labels.end() || value != host.values.end()))
             {
                 uint8_t key = 0, state = 0;
-                if (Locals(frame, L"Key", L"ByteProperty", 1, &key) && Locals(frame, L"State", L"ByteProperty", 1, &state) && host.open &&
-                    (key == 112 || (host.details && (key == 37 || key == 39 || key == 33 || key == 34 || key == 198 || key == 199 || key == 215 || key == 213))) && Result(frame, result))
+                // The page's own keys (keyboard and the pad's menu mapping): the game repeats a held key (State 2)
+                if (Locals(frame, L"Key", L"ByteProperty", 1, &key) && Locals(frame, L"State", L"ByteProperty", 1, &state) && host.open && !entry)
                 {
-                    if (state == 1 || (state == 2 && key != 112))
-                        Queue(keep, key == 112 ? (host.details ? Action::Back : Action::Details) :
-                            (key == 37 || key == 33 || key == 198 || key == 215 ? Action::DetailPrevious : Action::DetailNext));
-                    return;
+                    const bool press = state == 1, repeat = state == 1 || state == 2;
+                    bool handled = true;
+                    switch (key)
+                    {
+                        case 112: case 203: if (press) Queue(keep, Action::Details); break;                       // F1, pad Y
+                        case 38: case 196: case 212: if (repeat) Queue(keep, Action::Move, 0, -1); break;        // Up, stick, d-pad
+                        case 40: case 197: case 214: if (repeat) Queue(keep, Action::Move, 0, 1); break;
+                        case 33: case 204: if (repeat) Queue(keep, Action::Page, 0, -1); break;                  // Page Up, LB
+                        case 34: case 205: if (repeat) Queue(keep, Action::Page, 0, 1); break;                   // Page Down, RB
+                        case 36: if (press) Queue(keep, Action::Edge, 0, -1); break;                             // Home
+                        case 35: if (press) Queue(keep, Action::Edge, 0, 1); break;                              // End
+                        case 236: case 237: break;                                                              // the wheel comes raw
+                        default: handled = false; break;
+                    }
+                    if (handled && Result(frame, result)) return;
                 }
                 if (Locals(frame, L"Key", L"ByteProperty", 1, &key) && Locals(frame, L"State", L"ByteProperty", 1, &state) &&
                     (key == 37 || key == 39 || key == 198 || key == 199 || key == 215 || key == 213) && (state == 1 || state == 2) && Result(frame, result))
@@ -1242,15 +1319,10 @@ export namespace PTMenu
             }
             if (leaf == L"OnClick" && (entry || row != host.labels.end() || value != host.values.end()) && Result(frame, result))
             {
-                if (host.details)
-                {
-                    if (object == host.labels.back()) Queue(keep, Action::Back);
-                    else if (object == host.values.back()) Queue(keep, Action::DetailNext);
-                }
-                else Queue(keep, entry ? Action::Toggle : Action::Activate, selected);
+                Queue(keep, entry ? Action::Toggle : Action::Activate, selected);
                 return;
             }
-            if (host.open && leaf == L"OnKeyCancel" && Result(frame, result)) { Queue(keep, Action::Back); return; }
+            if (host.open && host.page != RWGTAMenu::Model::RootPage && leaf == L"OnKeyCancel" && Result(frame, result)) { Queue(keep, Action::Back); return; }
         }
         const bool prepare = (leaf == L"InitComponent" || leaf == L"OnOpen") && Type(object, L"MenuOptions") &&
             function == Field(Read<void*>(object, 36), leaf.c_str(), L"Function");
@@ -1322,7 +1394,7 @@ export namespace PTMenu
         {
             const auto& host = *keep;
             bool tracked = ControlsTrack(host, object) || VideoTrack(host, object) || object == host.parent || object == host.controller || object == host.tabBox || object == host.entry ||
-                object == host.panel || object == host.title || object == host.help || std::find(host.labels.begin(), host.labels.end(), object) != host.labels.end() ||
+                object == host.panel || object == host.title || object == host.help || object == host.help2 || std::find(host.labels.begin(), host.labels.end(), object) != host.labels.end() ||
                 std::find(host.values.begin(), host.values.end(), object) != host.values.end() ||
                 std::find(host.widgets.begin(), host.widgets.end(), object) != host.widgets.end() ||
                 std::any_of(host.stockTabs.begin(), host.stockTabs.end(), [object](const auto& item) { return item.first == object; }) ||
@@ -1370,6 +1442,12 @@ export namespace PTMenu
         }
         destroyHook = safetyhook::create_inline(destroy, Destroy);
         internalHook = safetyhook::create_inline(internal, Internal);
+        UWindowsViewport::MenuWheel = [](int delta)
+        {
+            if (!active || !active->open || active->retired || Object(active->parent, L"theMsgBox")) return false;
+            wheelDelta += delta;
+            return true;
+        };
     }
 }
 
@@ -1650,9 +1728,9 @@ export namespace PTMenu
         PauseContext(*host, host->pause);
         const auto snapshot = state->model;
         std::vector<Item> next;
-        for (auto row : state->rows)
+        for (const auto& row : state->rows)
         {
-            Item item; item.row = row; item.label = snapshot.Label(row); item.value = snapshot.Value(row);
+            Item item; item.row = &row; item.label = snapshot.Label(row); item.value = snapshot.Value(row);
             if (!ControlsCurrent(host, state)) return;
             item.help = snapshot.Help(row); item.enabled = snapshot.Enabled(row, host->pause);
             if (!ControlsCurrent(host, state)) return;

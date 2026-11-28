@@ -4,11 +4,18 @@ module;
 #include "FixSettings.hpp"
 #include "Shared/RWGTA/FixMenu.hpp"
 #include "Shared/PadInput.hpp"
+#include "Shared/MenuList.hpp"
 
 export module Menu;
 
 import ComVars;
 
+// The fix's settings in the game's Options (pause) and Video (title) screens: "Plugins" opens the list of plugins (the
+// fix first, then the other plugins with ASI Settings, see Shared/RWGTA/FixMenu.hpp), drawn with the screens' own font,
+// colours and layout. A plugin opens its settings with their values, or, when they come in several categories, the
+// list of them, each opening its settings. Every list scrolls by a row through the seven rows the screen shows (Up/Down
+// wrap at its ends, Page Up/Page Down and the shoulder buttons move by a screen, Home/End go to the ends, the wheel
+// scrolls), small arrows mark the rows above and below, and Back returns to the row a list was opened from.
 namespace BullyMenu
 {
     using ScreenFn = void(__thiscall*)(void*);
@@ -38,8 +45,15 @@ namespace BullyMenu
     static bool paused;
     static bool showingHelp = false, helpKeyDown = false;
     static size_t helpFirst = 0;
-    static size_t page, selected, first;
-    constexpr size_t PageRows = 64;     // a plugin's rows on one page; the page scrolls 7 rows at a time
+    static size_t page = RWGTAMenu::Model::RootPage;   // the model's page shown
+    constexpr size_t Rows = 5;          // rows shown at once
+    // The Video screen's rows: their font, the first one's height and the distance between them
+    constexpr int RowFont = 3;
+    constexpr float RowTop = 172.0f, RowStep = 40.0f;
+    float RowY(size_t slot) { return RowTop + RowStep * float(slot); }
+    static MenuList::WheelNotches wheelNotches;
+    static MenuList::Repeat pageUpKey, pageDownKey;
+    static bool homeDown, endDown;
 
     template<class T> T& Field(void* object, size_t offset)
     {
@@ -224,7 +238,7 @@ namespace BullyMenu
     {
         model.Close();
         owner = nullptr;
-        page = selected = first = 0;
+        page = RWGTAMenu::Model::RootPage;
         showingHelp = helpKeyDown = false;
         helpFirst = 0;
         mouseMode = false;
@@ -236,8 +250,10 @@ namespace BullyMenu
         HMODULE module = nullptr;
         GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
             reinterpret_cast<LPCWSTR>(&Open), &module);
-        model.OpenPlugins(module, Language(), PageRows);
+        model.OpenMenu(module, Language(), Rows);
         owner = screen;
+        MenuWheel.exchange(0);
+        wheelNotches.Clear();
         paused = pause;
         previousMouseX = MenuMouseX;
         previousMouseY = MenuMouseY;
@@ -252,13 +268,13 @@ namespace BullyMenu
         previousMouseY = MenuMouseY;
     }
 
-    static bool Hover(float x, float y, const std::string& text, int align = 0, float width = 440.0f, Casing casing = AsWritten)
+    static bool Hover(float x, float y, const std::string& text, int align = 0, float width = 440.0f, Casing casing = AsWritten, int font = 1)
     {
         if (!mouseMode) return false;
         auto converted = FontText(text);
         ApplyCasing(converted, casing);
-        style(3, align, 1, 0);
-        while (!converted.empty() && measure(converted.c_str(), 1) > width * MenuScaleX)
+        style(3, align, font, 0);
+        while (!converted.empty() && measure(converted.c_str(), font) > width * MenuScaleX)
             converted.pop_back();
         float rectangle[4] = {};
         // Use the same centered coordinates and native font bounds as the stock title mouse hit-test.
@@ -267,9 +283,28 @@ namespace BullyMenu
         return MenuMouseX >= rectangle[0] && MenuMouseX <= rectangle[2] && MenuMouseY >= rectangle[1] && MenuMouseY <= rectangle[3];
     }
 
-    static size_t RowCount()
+    // The rows of the page shown, in its window
+    static std::vector<const RWGTAMenu::Row*> ShownRows()
     {
-        return page == 0 ? model.Pages().size() : model.VisibleRows(page - 1).size();
+        return model.Shown(page, false);
+    }
+
+    static MenuList::Window& Window()
+    {
+        return model.Window(page);
+    }
+
+    // The row a list shows at the selection (null when the list is empty)
+    static const RWGTAMenu::Row* SelectedRow()
+    {
+        auto rows = model.ListRows(page, false);
+        return Window().Selected() < rows.size() ? rows[Window().Selected()] : nullptr;
+    }
+
+    // Plugin and category rows open a list; they have no value
+    static bool HasValue(const RWGTAMenu::Row* row)
+    {
+        return row && !RWGTAMenu::Model::Opens(*row);
     }
 
     static void ProcessPage()
@@ -284,7 +319,9 @@ namespace BullyMenu
         const bool helpKey = (GetAsyncKeyState(VK_F1) & 0x8000) != 0;
         const bool helpPressed = helpKey && !helpKeyDown;
         helpKeyDown = helpKey;
-        if (page && (helpPressed || (PadHelp && PadHelp()) || (pointer && Hover(ValueX(), 420, HelpLabel(), 1))))
+        auto current = SelectedRow();
+        const bool help = HasValue(current);
+        if (help && (helpPressed || (PadHelp && PadHelp()) || (pointer && Hover(ValueX(), 420, HelpLabel(), 1))))
         {
             showingHelp = !showingHelp;
             helpFirst = 0;
@@ -299,22 +336,21 @@ namespace BullyMenu
                 showingHelp = false;
                 return;
             }
-            if (page != 0)
-            {
-                page = selected = first = 0;
-                model.PageShown(size_t(-1));
-            }
-            else Close();
+            // To the list the page was opened from, on its row, or out of the plugins list
+            size_t parent = model.Back(page);
+            if (parent == SIZE_MAX)
+                Close();
+            else
+                page = parent;
             return;
         }
-        auto count = RowCount();
-        if (count == 0)
+        auto& window = Window();
+        auto rows = ShownRows();
+        if (rows.empty())
             return;
-        selected = std::min(selected, count - 1);
         if (showingHelp)
         {
-            const auto rows = model.VisibleRows(page - 1);
-            const auto lines = Wrap(model.Help(*rows[selected]), ValueX() - 100.0f, 256);
+            const auto lines = current ? Wrap(model.Help(*current), ValueX() - 100.0f, 256) : std::vector<std::wstring>{};
             if (repeat(0) && (MenuUp || MenuDown))
             {
                 const auto last = lines.size() > 12 ? lines.size() - 12 : 0;
@@ -323,44 +359,65 @@ namespace BullyMenu
             }
             return;
         }
+        // The wheel scrolls the list by a row per notch; the selection stays on its row while it is shown
+        for (int notches = wheelNotches.Take(MenuWheel.exchange(0)); notches; notches += notches > 0 ? -1 : 1)
+            window.Scroll(notches > 0 ? -1 : 1);
+        rows = ShownRows();
         bool rowHovered = false;
-        auto visible = page == 0 ? std::vector<const RWGTAMenu::Row*>{} : model.VisibleRows(page - 1);
-        for (size_t i = first; i < std::min(count, first + 7); ++i)
+        for (size_t slot = 0; slot < rows.size(); ++slot)
         {
-            float y = 145.0f + float(i - first) * 30.0f;
-            if (Hover(100, y, page == 0 ? model.Pages()[i].title : model.Label(*visible[i]), 0, page == 0 ? 440.0f : 300.0f, TitleCase)
-                || (page != 0 && Hover(ValueX(), y, model.Value(*visible[i]), 1, 220.0f, Capitals)))
+            float y = RowY(slot);
+            if (Hover(100, y, model.Label(*rows[slot]), 0, HasValue(rows[slot]) ? 300.0f : 440.0f, TitleCase, RowFont)
+                || (HasValue(rows[slot]) && Hover(ValueX(), y, model.Value(*rows[slot]), 1, 220.0f, Capitals, RowFont)))
             {
-                selected = i;
+                window.Point(slot);
                 rowHovered = true;
                 break;
             }
         }
         if (repeat(0) && (MenuUp || MenuDown))
         {
-            selected = MenuUp ? (selected + count - 1) % count : (selected + 1) % count;
+            window.Move(MenuUp ? -1 : 1, true);
             delay(0);
             mouseMode = false;
         }
+        // A screen of rows up or down, or to the ends
+        const auto now = GetTickCount64();
+        XINPUT_STATE pad{};
+        DWORD padSlot = 0;
+        WORD buttons = UsingPad && UsingPad() && PadInput::Read(pad, padSlot) ? pad.Gamepad.wButtons : 0;
+        auto held = [](int key) { return (GetAsyncKeyState(key) & 0x8000) != 0; };
+        if (pageUpKey.Step(held(VK_PRIOR) || (buttons & XINPUT_GAMEPAD_LEFT_SHOULDER), now) && window.Page(-1))
+            mouseMode = false;
+        if (pageDownKey.Step(held(VK_NEXT) || (buttons & XINPUT_GAMEPAD_RIGHT_SHOULDER), now) && window.Page(1))
+            mouseMode = false;
+        bool home = held(VK_HOME), end = held(VK_END);
+        if (home && !homeDown && window.Edge(-1))
+            mouseMode = false;
+        if (end && !endDown && window.Edge(1))
+            mouseMode = false;
+        homeDown = home;
+        endDown = end;
         bool pressed = accept(0) != 0;
         if (pointer && !rowHovered) { consume(); return; }
         int direction = repeat(0) ? (MenuLeft ? -1 : MenuRight ? 1 : 0) : 0;
         if (!pressed && !direction)
             return;
-        if (page == 0)
+        if (auto row = SelectedRow())
         {
-            if (pressed)
+            if (RWGTAMenu::Model::Opens(*row))
             {
-                page = selected + 1;
-                selected = first = 0;
-                model.PageShown(page - 1);
+                if (pressed)
+                {
+                    size_t next = model.Enter(*row);
+                    if (next != SIZE_MAX)
+                        page = next;
+                }
             }
-        }
-        else
-        {
-            auto rows = model.VisibleRows(page - 1);
-            if (selected < rows.size())
-                model.Change(*rows[selected], pressed ? 0 : direction, paused);
+            else
+            {
+                model.Change(*row, pressed ? 0 : direction, paused);
+            }
         }
         if (pressed) consume();
         else delay(0);
@@ -370,54 +427,44 @@ namespace BullyMenu
     {
         // Repaint the same native menu background before replacing its heading/content.
         background();
-        auto title = FontText(page == 0 ? Text("menu.plugins") : model.Pages()[page - 1].title);
+        auto title = FontText(model.Pages()[page].title);
         ApplyCasing(title, Capitals);
         style(8, 2, 4, 0);
         drawText(int((bWidescreen ? 853.0f : 640.0f) * 0.5f * MenuScaleX), 50, title.c_str(), 8, 2, 4, 0);
         divider(320.0f, 440.0f, 110.0f, MenuDividerColor.get_ptr(), 2.0f);
-        if (showingHelp && page)
+        auto current = SelectedRow();
+        if (showingHelp && HasValue(current))
         {
-            const auto rows = model.VisibleRows(page - 1);
-            if (selected < rows.size())
+            Print(100, 122, model.Label(*current), false, true, 0, ValueX() - 100.0f, 1, TitleCase);
+            const auto lines = Wrap(model.Help(*current), ValueX() - 100.0f, 256);
+            helpFirst = std::min(helpFirst, lines.size() > 12 ? lines.size() - 12 : 0);
+            for (size_t i = helpFirst; i < std::min(lines.size(), helpFirst + 12); ++i)
             {
-                Print(100, 122, model.Label(*rows[selected]), false, true, 0, ValueX() - 100.0f, 1, TitleCase);
-                const auto lines = Wrap(model.Help(*rows[selected]), ValueX() - 100.0f, 256);
-                helpFirst = std::min(helpFirst, lines.size() > 12 ? lines.size() - 12 : 0);
-                for (size_t i = helpFirst; i < std::min(lines.size(), helpFirst + 12); ++i)
-                {
-                    style(11, 0, 1, 0);
-                    drawText(int(100.0f * MenuScaleX), 150 + int(i - helpFirst) * 18, lines[i].c_str(), 11, 0, 1, 0);
-                }
+                style(11, 0, 1, 0);
+                drawText(int(100.0f * MenuScaleX), 150 + int(i - helpFirst) * 18, lines[i].c_str(), 11, 0, 1, 0);
             }
             Print(100, 395, Text("menu.back"), false, true, 0, 440.0f, 1, TitleCase);
             controls("FEO_CHGCTRL");
             return;
         }
-        auto count = RowCount();
-        if (count)
+        auto& window = Window();
+        auto rows = ShownRows();
+        for (size_t slot = 0; slot < rows.size(); ++slot)
         {
-            selected = std::min(selected, count - 1);
-            if (selected < first) first = selected;
-            if (selected >= first + 7) first = selected - 6;
-            auto rows = page == 0 ? std::vector<const RWGTAMenu::Row*>{} : model.VisibleRows(page - 1);
-            for (size_t i = first; i < std::min(count, first + 7); ++i)
-            {
-                float y = 145.0f + float(i - first) * 30.0f;
-                bool enabled = page == 0 || model.Enabled(*rows[i], paused);
-                Print(100, y, page == 0 ? model.Pages()[i].title : model.Label(*rows[i]), i == selected, enabled, 0, page == 0 ? 440.0f : 300.0f, 1, TitleCase);
-                if (page != 0)
-                    Print(ValueX(), y, model.Value(*rows[i]), i == selected, enabled, 1, 220.0f, 1, Capitals);
-            }
-            if (page != 0 && selected < rows.size() && updateNotice.empty())
-            {
-                auto lines = Wrap(model.Help(*rows[selected]), ValueX() - 100.0f);
-                for (size_t i = 0; i < lines.size(); ++i)
-                {
-                    style(11, 0, 1, 0);
-                    drawText(int(100.0f * MenuScaleX), int(352.0f + 18.0f * float(i)), lines[i].c_str(), 11, 0, 1, 0);
-                }
-            }
+            float y = RowY(slot);
+            auto row = rows[slot];
+            bool highlight = slot == window.Slot();
+            bool enabled = !HasValue(row) || model.Enabled(*row, paused);
+            Print(100, y, model.Label(*row), highlight, enabled, 0, HasValue(row) ? 300.0f : 440.0f, RowFont, TitleCase);
+            if (HasValue(row))
+                Print(ValueX(), y, model.Value(*row), highlight, enabled, 1, 220.0f, RowFont, Capitals);
         }
+        // Rows above and below: small arrows of the screen's font left of the first and last row shown
+        if (window.Above())
+            Print(80, RowY(0), "^", false, true, 0, 20.0f, RowFont);
+        if (window.Below())
+            Print(80, RowY(rows.size() - 1), "v", false, true, 0, 20.0f, RowFont);
+        // Like the Video screen's rows, no description under them: Help shows the selected setting's
         // A changed setting that applies at the next start: one line under the heading
         if (model.RestartRequired())
         {
@@ -426,9 +473,8 @@ namespace BullyMenu
             drawText(int((bWidescreen ? 426.5f : 320.0f) * MenuScaleX), 122, warning.c_str(), 8, 2, 1, 0);
         }
         Print(100, 395, Text("menu.back"), false, true, 0, 440.0f, 1, TitleCase);
-        if (page)
+        if (HasValue(current))
             Print(ValueX(), 420, HelpLabel(), false, true, 1, 220.0f);
-        if (count > 7) Print(ValueX(), 395, std::to_string(first + 1) + "/" + std::to_string(count), false, true, 1);
         controls("FEO_CHGCTRL");
     }
 

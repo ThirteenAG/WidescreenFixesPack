@@ -57,6 +57,8 @@ public:
                 RE6Overlay::BeforeReset(device);
             };
             RE6Icons::Install(RE6Overlay::ThisModule());
+            // A display that is off or asleep loses the device: wait for it instead of the game's fatal error
+            D3D9Options::waitForDevice = true;
             D3D9Options::HookCreation();
             IATHook::Replace(GetModuleHandleW(nullptr), "USER32.dll", std::forward_as_tuple("ClipCursor", NativeClip));
             if (auto device = GetD3DDevice()) D3D9Options::HookDevice(device);

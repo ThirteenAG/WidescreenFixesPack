@@ -35,7 +35,7 @@ export namespace GunUpdates
         config.playable = []()
         {
             const auto& state = GunMenu::Get();
-            return state.open && !state.details && !state.busy && GunMenu::Current();
+            return GunMenu::Open() && !state.busy && GunMenu::Current();
         };
         config.format = [](const std::string&, bool hub)
         {
@@ -44,13 +44,11 @@ export namespace GunUpdates
         config.show = [](const std::wstring& text)
         {
             auto& state = GunMenu::Get();
-            if (!state.open || !GunMenu::Current())
+            if (!GunMenu::Open() || !GunMenu::Current())
                 return;
-            state.help = asi_settings::text::Narrow(text);
-            state.notice = state.details = true;
-            state.helpSlice = 0;
-            if (!GunMenu::BuildHelp())
-                GunMenu::Close();
+            // Shown where the rows' descriptions are, until the selection moves
+            state.notice = asi_settings::text::Narrow(text);
+            GunMenu::Help();
         };
         RWGTA::UpdateCheck::Init(std::move(config));
         GunMenu::Frame = []() { RWGTA::UpdateCheck::Tick(); };

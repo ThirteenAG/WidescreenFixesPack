@@ -37,6 +37,7 @@ export namespace GunDisplay
     inline void(__cdecl* pauseGame)() = nullptr;
     inline void(__cdecl* resumeGame)() = nullptr;
     inline bool (*messageHook)(HWND, UINT, WPARAM, LPARAM, LRESULT&) = nullptr;
+    inline void (*menuInput)(UINT, WPARAM) = nullptr;
 
     inline void WakeReset()
     {
@@ -98,6 +99,8 @@ export namespace GunDisplay
         if ((message == WM_ACTIVATE && LOWORD(wParam) == WA_INACTIVE) ||
             (message == WM_ACTIVATEAPP && !wParam) || message == WM_KILLFOCUS)
             keyboardPending = -1;
+        if (menuInput)
+            menuInput(message, wParam);
         LRESULT handled{};
         if (messageHook && messageHook(hwnd, message, wParam, lParam, handled))
             return handled;

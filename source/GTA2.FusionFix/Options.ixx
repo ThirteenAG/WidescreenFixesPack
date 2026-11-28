@@ -5,6 +5,7 @@ module;
 #include "Shared/GTAClassic/InputDevices.hpp"
 #include <functional>
 #include "Shared/RWGTA/FixMenu.hpp"
+#include "Shared/MenuList.hpp"
 
 export module Options;
 
@@ -16,11 +17,18 @@ import Log;
 // In-game Options page. GTA2's Options button started the external GTA2 Manager;
 // it now opens a frontend page with the native setup sections and one Plugins
 // row. Plugins lists the fix first, then other loaded plugins with settings;
-// settings already on the setup pages stay there. The page reuses
-// the frontend's own page format (frontend2.cpp: 17 pages of 3018 bytes, up to
-// ten 130-byte items each) on the unused page 16, and is rebuilt for each section.
-// Enter, Left and Right change the selected setting, Esc goes back; changes are
-// written to the cfg and applied immediately where the game allows it.
+// settings already on the setup pages stay there. A plugin opens its settings,
+// or, when they come in several categories, the list of them, each opening its
+// settings. The page reuses the frontend's own page format (frontend2.cpp: 17
+// pages of 3018 bytes, up to ten 130-byte items each) on the unused page 16, and
+// is rebuilt for each section. A section longer than the page's ten items is one
+// list that scrolls by a row: the frontend moves its highlight, and at the first
+// or last item shown the list moves under it (wrapping at its ends like the
+// frontend's own pages); Page Up/Page Down and the shoulder buttons move by a
+// page, Home/End go to the ends, and three dots of the frontend's font mark the
+// rows above and below. Enter, Left and Right change the selected setting,
+// Esc goes back to the row a section was opened from; changes are written to the
+// cfg and applied immediately where the game allows it.
 export namespace GTA2Options
 {
     constexpr uint16_t Page = 16;
@@ -52,12 +60,15 @@ export namespace GTA2Options
     HMODULE HostModule = nullptr;
     size_t NativeSections = 0;
     std::vector<Entry> NativeRoot;
-    std::vector<uint16_t> Remembered;
+    std::vector<MenuList::Window> Windows;  // the rows each section shows of its list
+    constexpr int ListItems = 8;            // items a section shows at once, the marks and the footer's help around them
+    int LastSection = -1, LastSlot = -1;    // the section and highlighted item last built
     int (__stdcall* TextWidth)(const wchar_t*, int){};
     bool NativeRestartRequired{};
     std::pair<int, uint16_t> HelpSelection{ -1, 0 };
     ULONGLONG HelpStarted{};
-    std::vector<size_t> ModelPages;
+    std::vector<size_t> ModelPages;        // the model's page of each section after the native ones
+    std::vector<int> PageSections;         // the section of each model page
 
     char* PagePtr(char* menu) { return menu + PageBase + PageSize * Page; }
 
@@ -327,6 +338,17 @@ export namespace GTA2Options
         }
         return {};
     }
+    // A section's place in its list as it was entered (shown from its first row) or left (kept)
+    MenuList::Window& SectionWindow(int section)
+    {
+        if (Windows.size() < Sections.size())
+            Windows.resize(Sections.size());
+        auto& window = Windows[size_t(section)];
+        window.SetSlots(ListItems);
+        return window;
+    }
+
+    // The rows of the model's pages: a plugin's or a category's row opens its section, a setting changes; Back last
     void RefreshModelRows()
     {
         for (size_t i = 0; i < ModelPages.size(); ++i)
@@ -334,9 +356,24 @@ export namespace GTA2Options
             auto& entries = Sections[NativeSections + i];
             entries.clear();
             for (auto row : Model.VisibleRows(ModelPages[i]))
+            {
+                if (RWGTAMenu::Model::Opens(*row))
+                {
+                    entries.push_back({ FontText(Model.Label(*row)), nullptr, [row](int step)
+                        {
+                            if (step != 0) return;
+                            size_t page = Model.Enter(*row);
+                            if (page >= PageSections.size()) return;
+                            int section = PageSections[page];
+                            Parents.resize(Sections.size()); Parents[section] = Section; Section = section;
+                            SectionWindow(section).Reset();
+                        } });
+                    continue;
+                }
                 entries.push_back({ FontText(Model.Label(*row)), [row] { return FontText(Model.Value(*row)); },
                     [row](int step) { Model.Change(*row, step, false); }, NoAction,
                     [row] { return FontText(Model.Help(*row)); } });
+            }
             entries.push_back(Back());
         }
     }
@@ -357,61 +394,42 @@ export namespace GTA2Options
         "INPUT.PauseKey"
     };
 
+    // The model's pages as sections: the plugins list (opened by the Plugins row of the first section), a section per
+    // plugin and per category of a plugin with several
     void OpenModel()
     {
         if (!HostModule)
             GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
                 reinterpret_cast<LPCWSTR>(&HostModule), &HostModule);
-        Model.OpenPlugins(HostModule, LanguageTag(), MaxItems - 2, JoinedSettings);
+        Model.OpenMenu(HostModule, LanguageTag(), MaxItems, JoinedSettings);
         Sections.resize(NativeSections);
         Titles.resize(NativeSections);
         ModelPages.clear();
+        PageSections.clear();
         auto root = NativeRoot;
         if (!root.empty()) root.pop_back();
-        std::vector<Entry> links;
-        for (size_t page = 0; page < Model.Pages().size(); ++page)
+        auto& pages = Model.Pages();
+        if (pages.size() > 1)
         {
-            auto& described = Model.Pages()[page];
-            int section = int(Sections.size());
-            ModelPages.push_back(page); Sections.emplace_back();
-            Titles.push_back(FontText(described.title));
-            links.push_back({ FontText(described.title), nullptr, [page, section](int step)
-                {
-                    if (step != 0) return;
-                    Parents.resize(Sections.size()); Parents[section] = Section;
-                    Model.PageShown(page); Section = section;
-                } });
-        }
-        Parents.assign(Sections.size(), 0);
-        if (!links.empty())
-        {
-            // Native pages have ten rows. Reserve Previous/Next/Back so additional
-            // loaded plugins never disappear behind the frontend's row bound.
-            size_t count = (links.size() + 6) / 7;
-            std::vector<int> pages;
-            for (size_t i = 0; i < count; ++i) { pages.push_back(int(Sections.size())); Sections.emplace_back(); Titles.push_back(FontText(Model.Text("menu.plugins"))); }
-            Parents.resize(Sections.size(), 0);
-            for (size_t i = 0; i < count; ++i)
+            for (size_t page = 0; page < pages.size(); ++page)
             {
-                auto& entries = Sections[pages[i]];
-                auto begin = std::min(links.size(), i * 7), end = std::min(links.size(), begin + 7);
-                entries.assign(links.begin() + begin, links.begin() + end);
-                auto turn = [](const wchar_t* label, int section)
-                    { return Entry{ label, nullptr, [section](int step) { if (!step) Section = section; } }; };
-                if (i) entries.push_back(turn(FontText(Model.Text("menu.previous")).c_str(), pages[i - 1]));
-                if (i + 1 < count) entries.push_back(turn(FontText(Model.Text("menu.next")).c_str(), pages[i + 1]));
-                entries.push_back(Back());
+                PageSections.push_back(int(Sections.size()));
+                ModelPages.push_back(page);
+                Sections.emplace_back();
+                Titles.push_back(FontText(pages[page].title));
             }
-            int first = pages[0];
+            int first = PageSections[RWGTAMenu::Model::RootPage];
             root.push_back({ FontText(Model.Text("menu.plugins")), nullptr, [first](int step)
                 {
                     if (step != 0) return;
                     Parents.resize(Sections.size()); Parents[first] = Section; Section = first;
+                    SectionWindow(first).Reset();
                 } });
         }
+        Parents.assign(Sections.size(), 0);
         root.push_back(Back());
         Sections[0] = std::move(root);
-        Remembered.assign(Sections.size(), 0);
+        Windows.assign(Sections.size(), {});
         HelpSelection = { -1, 0 };
         RefreshModelRows();
     }
@@ -419,8 +437,14 @@ export namespace GTA2Options
     {
         Menu = menu;
         auto page = PagePtr(menu);
-        auto& entries = Sections[Section];
-        const int count = int(std::min<size_t>(entries.size(), MaxItems));
+        auto& all = Sections[Section];
+        auto& window = SectionWindow(Section);
+        std::vector<MenuList::Key> keys(all.size());
+        for (size_t k = 0; k < keys.size(); ++k)
+            keys[k] = MenuList::Key(k + 1);
+        window.Update(keys);
+        const std::vector<Entry> entries(all.begin() + window.First(), all.begin() + window.First() + window.Shown());
+        const int count = int(entries.size());
         const int top = std::max(180, 240 - (count * 22) / 2), x = 190; // right of the menu artwork
         *reinterpret_cast<uint16_t*>(page) = uint16_t(count);
         // Native static text is separate from the ten selectable items. Page 0
@@ -464,7 +488,9 @@ export namespace GTA2Options
             marker[4] = 1;
         }
         auto& selected = *reinterpret_cast<uint16_t*>(page + 3014);
-        if (selected >= count) selected = 0;
+        selected = uint16_t(window.Slot());
+        LastSection = Section;
+        LastSlot = selected;
         *reinterpret_cast<uint16_t*>(page + 3016) = 0;
         auto staticText = [page](const std::wstring& text, int x, int y, uint16_t font)
         {
@@ -484,7 +510,7 @@ export namespace GTA2Options
         {
             return TextWidth(text.c_str(), wFooterFont);
         };
-        auto selection = std::pair{ Section, selected };
+        auto selection = std::pair{ Section, uint16_t(window.Selected()) };
         if (HelpSelection != selection)
         {
             HelpSelection = selection;
@@ -510,6 +536,12 @@ export namespace GTA2Options
             for (size_t i = 0; i < std::min<size_t>(lines.size(), 2); ++i)
                 staticText(lines[i], 48, 448 + int(i) * 16, wFooterFont);
         }
+        // More rows above or below: three dots of the frontend's font (it has no arrows) above the first and below the
+        // last item
+        if (window.Above())
+            staticText(L"...", x, top - 16, font);
+        if (window.Below())
+            staticText(L"...", x, top + 22 * count - 4, font);
     }
 
     // Called when the frontend builds its pages: route the Options button here.
@@ -522,7 +554,6 @@ export namespace GTA2Options
         std::memcpy(PagePtr(menu), menu + PageBase, PageSize); // start from the main page's layout
         OpenModel();
         Section = 0;
-        *reinterpret_cast<uint16_t*>(PagePtr(menu) + 3014) = 0;
         Build(menu);
         return result;
     }
@@ -533,7 +564,6 @@ export namespace GTA2Options
         if (page != Page) { Model.Close(); return; }
         OpenModel();
         Section = 0; CaptureTarget = nullptr; NativeCapture = -1; Pending = {};
-        *reinterpret_cast<uint16_t*>(PagePtr(menu) + 3014) = 0;
         Build(menu);
     }
 
@@ -561,13 +591,50 @@ export namespace GTA2Options
         return true;
     }
 
-    void RememberSelection(char* page, int before)
+    // Back to the section a section was opened from: on the row it was opened from (the model forgets its pending
+    // confirmations)
+    void Leave(int before)
     {
-        if (Section == before)
-            return;
-        Remembered.resize(Sections.size());
-        Remembered[before] = *reinterpret_cast<uint16_t*>(page + 3014);
-        *reinterpret_cast<uint16_t*>(page + 3014) = Remembered[Section];
+        Section = before < int(Parents.size()) ? Parents[before] : 0;
+        for (size_t i = 0; i < ModelPages.size(); ++i)
+        {
+            if (PageSections[i] == before)
+                Model.Back(ModelPages[i]);
+        }
+    }
+
+    // The frontend moved its highlight (Up/Down, with its sound): the section's list follows. Its highlight wraps
+    // within the items shown, so a wrap from the last item to the first is Down past the window (the list moves by a
+    // row, or to its top at its end) and the other way Up past it. Page Up/Page Down, shoulders and Home/End move by
+    // a page and to the ends.
+    MenuList::Repeat PageUpKey, PageDownKey;
+    bool HomeDown = false, EndDown = false;
+    void Navigate(char* menu)
+    {
+        auto page = PagePtr(menu);
+        auto selected = int(*reinterpret_cast<uint16_t*>(page + 3014));
+        auto& window = SectionWindow(Section);
+        const int count = int(window.Shown());
+        if (Section == LastSection && window.Count() > window.Slots() && count > 2 && LastSlot == count - 1 && selected == 0)
+            window.Move(1, true);
+        else if (Section == LastSection && window.Count() > window.Slots() && count > 2 && LastSlot == 0 && selected == count - 1)
+            window.Move(-1, true);
+        else
+            window.Point(size_t(selected));
+        const auto now = GetTickCount64();
+        auto held = [](int key) { return InputDevices::Focused() && InputDevices::Key(key); };
+        if (PageUpKey.Step(held(VK_PRIOR) || InputDevices::Button(XINPUT_GAMEPAD_LEFT_SHOULDER), now))
+            window.Page(-1);
+        if (PageDownKey.Step(held(VK_NEXT) || InputDevices::Button(XINPUT_GAMEPAD_RIGHT_SHOULDER), now))
+            window.Page(1);
+        bool home = held(VK_HOME), end = held(VK_END);
+        if (home && !HomeDown)
+            window.Edge(-1);
+        if (end && !EndDown)
+            window.Edge(1);
+        HomeDown = home;
+        EndDown = end;
+        Build(menu);
     }
 
     // After the frontend decoded its input for this frame.
@@ -575,6 +642,7 @@ export namespace GTA2Options
     {
         Menu = menu;
         if (*reinterpret_cast<uint16_t*>(menu + CurrentPage) != Page) return;
+        Navigate(menu);
         if (RWGTAMenu::Model::Changed().exchange(false)) { RefreshModelRows(); Build(menu); }
         auto flags = reinterpret_cast<uint8_t*>(menu + Flags);
         if (CaptureTarget || NativeCapture >= 0 || int32_t(GetTickCount() - IgnoreUntil) < 0)
@@ -582,22 +650,20 @@ export namespace GTA2Options
             std::fill(flags, flags + 7, uint8_t(0));
             return;
         }
-        auto page = PagePtr(menu);
-        auto selected = *reinterpret_cast<uint16_t*>(page + 3014);
+        auto& window = SectionWindow(Section);
         auto& entries = Sections[Section];
         if (flags[5])                                        // Esc
         {
             flags[5] = 0;
             if (Section != 0)
             {
-                int before = Section;
-                Section = Section < int(Parents.size()) ? Parents[Section] : 0;
-                RememberSelection(page, before);
+                Leave(Section);
                 Build(menu);
             }
             else if (SetPage) SetPage(menu, 0, 0);
             return;
         }
+        size_t selected = window.Selected();
         if (selected >= entries.size()) return;
         auto& entry = entries[selected];
         if (entry.action != NoAction) return;                 // native button (GTA2 Manager)
@@ -610,9 +676,8 @@ export namespace GTA2Options
         if (Section == -1)                                   // Back
         {
             if (before == 0) { Section = 0; if (SetPage) SetPage(menu, 0, 0); return; }
-            Section = before < int(Parents.size()) ? Parents[before] : 0;
+            Leave(before);
         }
-        RememberSelection(page, before);
         Build(menu);
     }
 
@@ -630,7 +695,7 @@ export namespace GTA2Options
         SetPage = reinterpret_cast<decltype(SetPage)>(setPage);
         NativeSections = Sections.size(); NativeRoot = Sections[0];
         Titles = { L"ADVANCED OPTIONS", L"DISPLAY", L"GRAPHICS", L"SOUND", L"CAMERA", L"CONTROLS",
-            L"MODERN KEYS", L"MORE MODERN KEYS", L"CLASSIC KEYS", L"MORE CLASSIC KEYS", L"GAME" };
+            L"MODERN KEYS", L"CLASSIC KEYS", L"GAME" };
         BuildHook = safetyhook::create_inline(build.get_first(), BuildPages);
         Log::Write("GTA2 in-game options page installed.");
     }

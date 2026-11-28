@@ -1,11 +1,13 @@
 #pragma once
 #include <algorithm>
 #include <atomic>
+#include <cctype>
 #include <cmath>
 #include <cstdio>
 #include <map>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <vector>
 #include "AsiSettings/asi_settings.hpp"
 
@@ -383,6 +385,117 @@ namespace OtherPlugins
     inline int32_t Invoke(const LoadedPlugin& plugin, const Setting& setting)
     {
         return HasFunction(plugin.api, offsetof(AsiSettingsApi, Invoke)) ? plugin.api->Invoke(setting.id.c_str()) : ASI_SETTINGS_UNSUPPORTED;
+    }
+
+    // A setting a menu shows: visibility "menu", a value or an action
+    inline bool MenuShown(const Setting& setting)
+    {
+        return setting.visibility == "menu" && setting.type != asi_settings::Type::Info &&
+            (setting.HasValue() || setting.type == asi_settings::Type::Action);
+    }
+
+    // A part of a plugin's settings that a menu shows as a submenu: a page of its description
+    struct Category
+    {
+        std::string title;      // UTF-8
+        std::vector<const Setting*> settings;
+    };
+
+    // An ini section's name as a title: "DRAW_DISTANCE" -> "Draw distance"
+    inline std::string SectionTitle(std::string_view section)
+    {
+        std::string title;
+        for (char c : section)
+        {
+            c = c == '_' ? ' ' : char(std::tolower(uint8_t(c)));
+            title += title.empty() ? char(std::toupper(uint8_t(c))) : c;
+        }
+        return title;
+    }
+
+    // The plugin's menu settings (MenuShown and include(setting)) by category, in menu order: the description's pages
+    // by their order, compatibility pages last, settings by their order. One category: the menu shows the settings
+    // directly. A description without pages is split by its ini sections when it has several, so a plugin that
+    // groups its settings only that way still gets submenus; one page, or one section, is one category.
+    template<class Include>
+    inline std::vector<Category> Categories(const LoadedPlugin& plugin, Include include)
+    {
+        auto& description = plugin.file.description;
+        std::vector<const asi_settings::Page*> pages;
+        for (auto& page : description.pages)
+            pages.push_back(&page);
+        std::stable_sort(pages.begin(), pages.end(), [](auto a, auto b) { return a->order < b->order; });
+        std::vector<const Setting*> settings;
+        for (auto& setting : description.settings)
+        {
+            if (MenuShown(setting) && include(setting))
+                settings.push_back(&setting);
+        }
+
+        // The group of a setting: its page's index (unknown pages after the known ones), or its section's
+        const bool bySection = pages.empty();
+        std::vector<std::string> sections;
+        auto group = [&](const Setting& setting) -> size_t
+        {
+            if (bySection)
+            {
+                auto it = std::find_if(sections.begin(), sections.end(), [&](auto& s) { return asi_settings::text::IEquals(s, setting.section); });
+                if (it == sections.end())
+                {
+                    sections.push_back(setting.section);
+                    return sections.size() - 1;
+                }
+                return size_t(it - sections.begin());
+            }
+            for (size_t i = 0; i < pages.size(); ++i)
+            {
+                if (asi_settings::text::IEquals(pages[i]->id, setting.page))
+                    return i;
+            }
+            return pages.size();
+        };
+        std::vector<size_t> groups;
+        for (auto setting : settings)
+            groups.push_back(group(*setting));
+        std::vector<size_t> order(settings.size());
+        for (size_t i = 0; i < order.size(); ++i)
+            order[i] = i;
+        std::stable_sort(order.begin(), order.end(), [&](size_t a, size_t b)
+        {
+            if (settings[a]->compatibility != settings[b]->compatibility)
+                return settings[b]->compatibility;
+            if (groups[a] != groups[b])
+                return groups[a] < groups[b];
+            return settings[a]->order < settings[b]->order;
+        });
+
+        std::vector<Category> categories;
+        size_t previous = SIZE_MAX;
+        bool compatibility = false;
+        for (auto i : order)
+        {
+            auto setting = settings[i];
+            if (categories.empty() || groups[i] != previous || setting->compatibility != compatibility)
+            {
+                std::string title;
+                if (bySection)
+                    title = SectionTitle(setting->section);
+                else
+                    title = groups[i] < pages.size() ? Text(plugin, pages[groups[i]]->title) : Name(plugin);
+                categories.push_back({ title, {} });
+            }
+            categories.back().settings.push_back(setting);
+            previous = groups[i];
+            compatibility = setting->compatibility;
+        }
+        if (bySection && sections.size() < 2 && categories.size() == 1)
+            categories.front().title = Name(plugin);
+        return categories;
+    }
+
+    inline std::vector<Category> Categories(const LoadedPlugin& plugin)
+    {
+        return Categories(plugin, [](const Setting&) { return true; });
     }
 
     // The rows of the plugins' pages, in the menu's page size: a plugin's first page starts with its preset selector

@@ -39,11 +39,16 @@ namespace MafiaMouse
 
     void ReadMouse(SafetyHookContext&)
     {
-        if (!DirectInputRawMouse::Active()) return;
+        if (!DirectInputRawMouse::Active())
+        {
+            MenuWheel += nativeMouse->lZ;
+            return;
+        }
         const auto state = DirectInputRawMouse::Take();
         nativeMouse->lX = state.x;
         nativeMouse->lY = state.y;
         nativeMouse->lZ = state.wheel;
+        MenuWheel += state.wheel;
         for (size_t i = 0; i < std::size(nativeMouse->rgbButtons); ++i)
             nativeMouse->rgbButtons[i] = ((state.down | state.pressed) & (1u << i)) ? 0x80 : 0;
     }

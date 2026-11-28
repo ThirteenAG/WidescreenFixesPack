@@ -3,6 +3,7 @@ module;
 #include <stdafx.h>
 #include <atomic>
 #include <stdexcept>
+#include "Shared/PadInput.hpp"
 
 export module Xidi;
 
@@ -19,6 +20,20 @@ const wchar_t* SelectXidiProfile()
 {
     if (bPlayingVideo || bPressStartToContinue)
         return L"Video";
+
+    // The Plugins page reads the pad itself; after it closes, the buttons still held (the B that closed it) stay
+    // away from the menu mapping until they are let go
+    static bool pluginsHeld = false;
+    if (bPluginsMenuOpen)
+        pluginsHeld = true;
+    else if (pluginsHeld)
+    {
+        XINPUT_STATE state{};
+        DWORD slot = 0;
+        pluginsHeld = PadInput::Read(state, slot) && state.Gamepad.wButtons;
+    }
+    if (pluginsHeld)
+        return L"Plugins";
 
     if (IsEnhanced())
         return L"EnhancedMain";

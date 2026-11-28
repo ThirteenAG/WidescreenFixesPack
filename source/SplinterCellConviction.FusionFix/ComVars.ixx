@@ -14,6 +14,11 @@ export void (*SuspendGameMouse)(bool) = nullptr;
 export void (*ProcessWindowResize)() = nullptr;
 export std::atomic<bool> FullscreenVideo = false;
 export bool (*NativeMenuHelp)(bool) = nullptr;
+// The fix's menu takes the wheel's raw delta and Page Up/Down, Home/End while its list is open (true: consumed)
+export bool (*NativeMenuWheel)(int) = nullptr;
+export bool (*NativeMenuKey)(int) = nullptr;
+// Mouse moves and key presses, for the menu to tell a resting mouse from a moving one
+export void (*NativeMenuInput)(UINT) = nullptr;
 
 export bool bSkipIntro;
 export bool bWindowedMode;

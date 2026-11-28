@@ -4,6 +4,8 @@ module;
 #include <d3d9.h>
 #include "FixSettings.hpp"
 #include "Shared/RWGTA/FixMenu.hpp"
+#include "Shared/RainDroplets.hpp"
+#include "Shared/PadInput.hpp"
 #include <array>
 #include <cstring>
 #include <cmath>
@@ -24,11 +26,17 @@ export namespace Driv3rMenu
     // Native class tables and functions, found by pattern at Init
     inline uintptr_t textClass, bitmapClass, buttonClass, rootClass, guiClass, fontClass, nativeFontClass, languageClass;
     inline uintptr_t buttonAction;
+    inline void** menuSound;
     inline HMODULE module;
+    // Rows the settings page shows at once; the list scrolls through them
+    constexpr size_t Slots = 7;
+    // The game's font has its menu arrows here
+    constexpr wchar_t ArrowDown = 0x2480, ArrowUp = 0x2481, ArrowRight = 0x2482, ArrowLeft = 0x2483;
     inline uint32_t processDepth = 0;
     inline std::function<bool()> padHelp, blocksInput;
     inline std::function<std::wstring()> helpPrefix;
-    inline SafetyHookInline loadHook, processHook, destroyHook, releaseHook, textHook, switchHook, activateHook, deactivateHook;
+    inline SafetyHookInline loadHook, processHook, destroyHook, releaseHook, textHook, switchHook, deactivateHook;
+    inline SafetyHookMid activateEntry;
     struct Host;
     inline std::unordered_map<void*, std::shared_ptr<Host>> hosts;
 
@@ -40,6 +48,10 @@ export namespace Driv3rMenu
         float height = 0.044f;
         bool fullValue = false;
         bool fitted = false;
+        bool centered = false;      // centred in its width, as the game's titles and values
+        int role = 0;               // a row's label (0), value (1), left (2) or right arrow (3)
+        float narrow = 0, wide = 0; // a label's width beside a value, and alone (a submenu row)
+        float offset = 0;
         std::wstring cachedValue, formatted;
         std::array<uint32_t, 13> cachedStyle{};
         void* cachedFont = nullptr;
@@ -54,7 +66,7 @@ export namespace Driv3rMenu
         size_t row = 0;
         bool entry = false;
     };
-    struct Item { std::string label, value; RWGTAMenu::Row row; int link = -1; bool enabled = true; };
+    struct Item { std::string label, value; RWGTAMenu::Row row; bool enabled = true; };
     struct Host
     {
         void* root = nullptr;
@@ -65,15 +77,32 @@ export namespace Driv3rMenu
         std::array<uint8_t, 312> page{};
         std::unique_ptr<Button> entry;
         std::vector<std::unique_ptr<Button>> buttons;
-        std::unique_ptr<Text> heading, description;
+        std::unique_ptr<Text> heading, description, description2, above, below;
+        // The selected row's whole help text on two lines; a longer one moves on by a line after a while
+        std::wstring describedText;
+        std::vector<std::wstring> describedLines;
+        size_t describedFirst = 0;
+        ULONGLONG describedTick = 0;
         std::vector<std::unique_ptr<Text>> helpText;
-        std::vector<Bytes> backdrop;
+        // Where the page's parts go, taken from the game's own settings page the page copies
+        struct Layout
+        {
+            float rowX, rowTop, rowStep, rowHeight, leftX, valueX, valueWidth, rightX, arrowWidth, scrollX, textX, textWidth;
+        } layout{};
+        std::vector<Bytes> backdrop;        // the game page's frame and, in the pause menu, its menu column
+        std::unique_ptr<Text> pluginsLabel; // that column's highlighted "Plugins"
+        std::vector<void*> decor;
+        std::array<float, 4> backIcon{};    // the game's Back icon (front end), clicked like the game's
+        bool backIconShown = false, mouseDown = false;
         std::vector<std::wstring> helpLines;
         size_t helpOffset = 0, helpSelection = 0;
         bool help = false;
         RWGTAMenu::Model model;
         std::vector<Item> items;
-        size_t modelPage = 0, rootOffset = 0, rowStart = 0;
+        size_t modelPage = RWGTAMenu::Model::RootPage;
+        MenuList::WheelNotches wheel;
+        MenuList::Repeat pageRepeat, arrowRepeat, holdRepeat;
+        MenuList::StickAxis holdStick;
         bool pause = false, retired = false, open = false, busy = false;
         int pending = 0;
         int menuId = 0;
@@ -140,11 +169,29 @@ export namespace Driv3rMenu
     }
     inline float Measure(std::array<uint32_t, 13>& style, const std::wstring& value, float maximumHeight = 0.044f, float* height = nullptr)
     {
-        float extent[2]{};
-        auto formatted = Format(value);
-        Virtual<void*(__cdecl*)(void*, float*, uint32_t*, const wchar_t*, ...)>(FontService.get(), 36)(FontService.get(), extent, style.data(), formatted.c_str());
-        if (height) *height = extent[1];
-        return std::isfinite(extent[0]) && std::isfinite(extent[1]) && extent[1] > 0 && extent[1] <= maximumHeight ? extent[0] : INFINITY;
+        // The game's measure goes wrong across spaces (the font has no space glyph), so words are measured one by
+        // one and each space counts as the font's space advance
+        auto measure = [&](const std::wstring& text, float* lineHeight)
+        {
+            float extent[2]{};
+            auto formatted = Format(text);
+            Virtual<void*(__cdecl*)(void*, float*, uint32_t*, const wchar_t*, ...)>(FontService.get(), 36)(FontService.get(), extent, style.data(), formatted.c_str());
+            if (lineHeight) *lineHeight = std::max(*lineHeight, extent[1]);
+            return std::isfinite(extent[0]) && std::isfinite(extent[1]) ? extent[0] : INFINITY;
+        };
+        float lineHeight = 0, width = 0;
+        size_t spaces = 0;
+        for (size_t start = 0; start <= value.size();)
+        {
+            size_t end = value.find(L' ', start);
+            if (end == std::wstring::npos) end = value.size();
+            if (end > start) width += measure(value.substr(start, end - start), &lineHeight);
+            if (end < value.size()) ++spaces;
+            start = end + 1;
+        }
+        if (spaces) width += static_cast<float>(spaces) * measure(std::wstring(1, wchar_t(0x202F)), nullptr);
+        if (height) *height = lineHeight;
+        return std::isfinite(width) && lineHeight > 0 && lineHeight <= maximumHeight ? width : INFINITY;
     }
     inline int __fastcall DrawText(void* self, void*, int render, int bank)
     {
@@ -166,6 +213,7 @@ export namespace Driv3rMenu
         {
             At<float>(style.data(), 36) = text.fittedScale;
             At<float>(style.data(), 40) = text.fittedVerticalScale;
+            At<float>(style.data(), 24) += text.offset;
             return Virtual<int(__cdecl*)(void*, int, uint32_t*, const wchar_t*, ...)>(FontService.get(), 24)(FontService.get(), render, style.data(), text.formatted.c_str());
         }
         auto originalStyle = style;
@@ -204,8 +252,15 @@ export namespace Driv3rMenu
             value += L"...";
         }
         auto formatted = Format(value);
+        text.offset = 0;
+        if (text.centered)
+        {
+            const float width = Measure(style, value, text.height + 0.00001f);
+            if (std::isfinite(width) && width < text.width) text.offset = (text.width - width) * 0.5f;
+        }
         text.cachedValue = text.value; text.cachedStyle = originalStyle; text.cachedFont = glyphData;
         text.formatted = formatted; text.fittedScale = At<float>(style.data(), 36); text.fittedVerticalScale = At<float>(style.data(), 40); text.fitted = true;
+        At<float>(style.data(), 24) += text.offset;
         return Virtual<int(__cdecl*)(void*, int, uint32_t*, const wchar_t*, ...)>(FontService.get(), 24)(FontService.get(), render, style.data(), formatted.c_str());
     }
     inline void Populate(const std::shared_ptr<Host>& host);
@@ -235,8 +290,9 @@ export namespace Driv3rMenu
         }
         if (action == 2 || action == 3)
         {
-            auto count = static_cast<int>(host->items.size());
-            if (count) { state[5] = 1; state[6] = static_cast<uint32_t>((static_cast<int>(button->row) + count + (action == 2 ? -1 : 1)) % count); }
+            // The list moves after native input returns; selecting the same slot keeps the native move sound
+            if (!host->items.empty()) { state[5] = 1; state[6] = static_cast<uint32_t>(button->row); }
+            host->pending = action; host->pendingRow = button->row;
         }
         else if (action >= 4 && action <= 6) { host->pending = action; host->pendingRow = button->row; }
         return 0;
@@ -259,8 +315,10 @@ export namespace Driv3rMenu
         button->vtable[3] = reinterpret_cast<uintptr_t>(&Input);
         At<void*>(button->bytes.data(), 0) = button->vtable.data();
         float dx = x - At<float>(source, 4), dy = y - At<float>(source, 8);
+        const auto& layout = host->layout;
         At<float>(button->bytes.data(), 4) = x; At<float>(button->bytes.data(), 8) = y;
-        At<float>(button->bytes.data(), 12) = entry ? 0.45f : 0.84f;
+        // A row reacts over its label; the arrows around its value are separate, as on the game's pages
+        At<float>(button->bytes.data(), 12) = entry ? 0.45f : layout.leftX - layout.rowX;
         At<uint32_t>(button->bytes.data(), 36) = 1;
         At<uint8_t>(button->bytes.data(), 448) = 0;
         for (size_t offset = 192; offset <= 416; offset += 32)
@@ -275,28 +333,27 @@ export namespace Driv3rMenu
                 if (index >= 4) return nullptr;
                 auto native = At<void*>(source, 40 + state * 20 + child * 4);
                 auto vt = At<uintptr_t>(native, 0);
-                if (vt == textClass)
+                if (vt == textClass && entry)
                 {
-                    auto text = CloneText(host, native, At<float>(native, 4) + dx, At<float>(native, 8) + dy, entry ? 0.44f : 0.45f);
-                    if (!entry && state == 1)
-                    {
-                        for (size_t color : { 20u, 24u, 28u })
-                            At<float>(text->bytes.data(), color) = std::max(0.65f, At<float>(text->bytes.data(), color));
-                        At<float>(text->bytes.data(), 32) = 1.0f;
-                    }
+                    auto text = CloneText(host, native, At<float>(native, 4) + dx, At<float>(native, 8) + dy, 0.44f);
                     At<void*>(button->bytes.data(), 40 + state * 20 + index++ * 4) = text->bytes.data();
                     button->text.push_back(std::move(text));
-                    if (!entry && index < 4)
+                }
+                else if (vt == textClass)
+                {
+                    // Label, value between the game's arrows, in the template's own colours per state
+                    if (count != 1) return nullptr;
+                    const float textY = At<float>(native, 8) + dy;
+                    const std::array<std::tuple<float, float, int>, 4> parts{ {
+                        { layout.rowX, layout.leftX - layout.rowX - layout.arrowWidth, 0 }, { layout.valueX, layout.valueWidth, 1 },
+                        { layout.leftX, layout.arrowWidth, 2 }, { layout.rightX, layout.arrowWidth, 3 } } };
+                    for (auto [partX, width, role] : parts)
                     {
-                        auto value = CloneText(host, native, x + 0.5f, At<float>(native, 8) + dy, 0.32f, true);
-                        if (state == 1)
-                        {
-                            for (size_t color : { 20u, 24u, 28u })
-                                At<float>(value->bytes.data(), color) = std::max(0.65f, At<float>(value->bytes.data(), color));
-                            At<float>(value->bytes.data(), 32) = 1.0f;
-                        }
-                        At<void*>(button->bytes.data(), 40 + state * 20 + index++ * 4) = value->bytes.data();
-                        button->text.push_back(std::move(value));
+                        auto text = CloneText(host, native, partX, textY, width, role == 1);
+                        text->role = role; text->centered = role != 0;
+                        if (role == 0) { text->narrow = width; text->wide = layout.rightX + layout.arrowWidth - layout.rowX; }
+                        At<void*>(button->bytes.data(), 40 + state * 20 + index++ * 4) = text->bytes.data();
+                        button->text.push_back(std::move(text));
                     }
                 }
                 else if (vt == bitmapClass)
@@ -323,6 +380,8 @@ export namespace Driv3rMenu
                 if (found == texts.end()) continue;
                 auto original = found->second.second;
                 auto dim = CloneText(host, child, At<float>(child, 4), At<float>(child, 8), original->width, original->fullValue);
+                dim->role = original->role; dim->centered = original->centered;
+                dim->narrow = original->narrow; dim->wide = original->wide;
                 for (auto offset : { 20u, 24u, 28u }) At<float>(dim->bytes.data(), offset) *= 0.5f;
                 At<void*>(button->bytes.data(), 80 + count++ * 4) = dim->bytes.data();
                 button->text.push_back(std::move(dim));
@@ -334,48 +393,51 @@ export namespace Driv3rMenu
     }
     inline void SetText(Button& button, const std::string& label, const std::string& value)
     {
-        for (auto& text : button.text) text->value = Wide(text->fullValue ? value : label);
+        for (auto& text : button.text)
+        {
+            if (text->role >= 2) text->value = value.empty() ? L"" : std::wstring(1, text->role == 2 ? ArrowLeft : ArrowRight);
+            else text->value = Wide(text->role == 1 ? value : label);
+            if (text->role == 0 && text->wide > 0)
+            {
+                const float width = value.empty() ? text->wide : text->narrow;
+                if (text->width != width) { text->width = width; text->fitted = false; }
+            }
+        }
     }
     inline void Populate(const std::shared_ptr<Host>& host)
     {
         if (!Active(host)) return;
         std::vector<Item> items;
         auto& model = host->model;
-        std::string title = model.Text("menu.plugins");
-        auto pages = model.Pages();
-        if (!host->modelPage)
+        if (host->modelPage >= model.Pages().size()) host->modelPage = RWGTAMenu::Model::RootPage;
+        std::string title = model.Pages()[host->modelPage].title;
+        // One continuous list per page (Back is the native back control, as on the game's own pages)
+        auto rows = model.ListRows(host->modelPage, false);
+        if (!Active(host)) return;
+        auto& window = model.Window(host->modelPage);
+        // Disabled rows aren't selectable, as in the game's own lists
+        for (size_t tries = 0; tries < rows.size() && !RWGTAMenu::Model::Opens(*rows[window.Selected()]) &&
+            !model.Enabled(*rows[window.Selected()], host->pause); ++tries)
+            window.Move(1);
+        if (!Active(host)) return;
+        for (size_t i = window.First(); i < window.First() + window.Shown(); ++i)
         {
-            if (host->rootOffset >= pages.size()) host->rootOffset = 0;
-            for (size_t i = host->rootOffset; i < pages.size() && items.size() < 4; ++i) items.push_back({ pages[i].title, "", {}, static_cast<int>(i + 1) });
-            if (host->rootOffset) items.push_back({ model.Text("menu.previous"), "", {}, -3 });
-            if (host->rootOffset + 4 < pages.size()) items.push_back({ model.Text("menu.next"), "", {}, -2 });
-        }
-        else if (host->modelPage <= pages.size())
-        {
-            size_t page = host->modelPage - 1;
-            title = pages[page].title;
-            auto rows = model.VisibleRows(page);
+            auto row = *rows[i];
+            const bool opens = RWGTAMenu::Model::Opens(row);
+            bool enabled = opens || model.Enabled(row, host->pause);
             if (!Active(host)) return;
-            if (host->rowStart >= rows.size()) host->rowStart = 0;
-            for (size_t i = host->rowStart; i < rows.size() && i < host->rowStart + 4; ++i)
-            {
-                auto row = *rows[i];
-                bool enabled = model.Enabled(row, host->pause);
-                if (!Active(host)) return;
-                auto value = model.Value(row);
-                if (!Active(host)) return;
-                auto label = model.Label(row);
-                if (!Active(host)) return;
-                items.push_back({ std::move(label), std::move(value), row, -1, enabled });
-            }
-            if (host->rowStart) items.push_back({ model.Text("menu.previous"), "", {}, -5 });
-            if (host->rowStart + 4 < rows.size()) items.push_back({ model.Text("menu.next"), "", {}, -6 });
+            auto value = opens ? std::string{} : model.Value(row);
+            if (!Active(host)) return;
+            auto label = model.Label(row);
+            if (!Active(host)) return;
+            items.push_back({ std::move(label), std::move(value), row, enabled });
         }
         if (!Active(host)) return;
-        items.push_back({ model.Text("menu.back"), "", {}, -4 });
         host->items = std::move(items);
         host->heading->value = Wide(title + (model.RestartRequired() ? " - " + model.Text("menu.restartwarning") : ""));
         host->description->value.clear();
+        host->description2->value.clear();
+        host->describedText.clear();
         for (size_t i = 0; i < host->items.size(); ++i)
         {
             auto& item = host->items[i];
@@ -383,19 +445,20 @@ export namespace Driv3rMenu
             SetText(*host->buttons[i], item.label, value);
             At<void*>(host->page.data(), 100 + i * 4) = host->buttons[i]->bytes.data();
         }
-        At<void*>(host->page.data(), 100 + host->items.size() * 4) = host->heading->bytes.data();
-        At<void*>(host->page.data(), 104 + host->items.size() * 4) = host->description->bytes.data();
-        for (size_t i = 0; i < host->backdrop.size(); ++i)
-            At<void*>(host->page.data(), 108 + (host->items.size() + i) * 4) = host->backdrop[i].data();
-        At<uint32_t>(host->page.data(), 300) = static_cast<uint32_t>(host->items.size() + 2 + host->backdrop.size());
-        if (At<uint32_t>(host->page.data(), 304) >= host->items.size()) At<uint32_t>(host->page.data(), 304) = 0;
+        // Scroll arrows in the game's font, only while rows are hidden above or below
+        host->above->value = window.Above() ? std::wstring(1, ArrowUp) : L"";
+        host->below->value = window.Below() ? std::wstring(1, ArrowDown) : L"";
+        size_t element = host->items.size();
+        for (auto text : { host->heading.get(), host->description.get(), host->description2.get(), host->above.get(), host->below.get() })
+            At<void*>(host->page.data(), 100 + element++ * 4) = text->bytes.data();
+        for (auto decor : host->decor)
+            At<void*>(host->page.data(), 100 + element++ * 4) = decor;
+        At<uint32_t>(host->page.data(), 300) = static_cast<uint32_t>(element);
         for (size_t i = 0; i < host->buttons.size(); ++i)
             At<uint32_t>(host->buttons[i]->bytes.data(), 36) = i < host->items.size() && !host->items[i].enabled ? 2 : 1;
-        auto selected = At<uint32_t>(host->page.data(), 304);
-        if (!host->items[selected].enabled)
-            for (size_t i = 0; i < host->items.size(); ++i) if (host->items[i].enabled) { selected = static_cast<uint32_t>(i); break; }
+        const auto selected = static_cast<uint32_t>(std::min(window.Slot(), host->items.empty() ? 0 : host->items.size() - 1));
         At<uint32_t>(host->page.data(), 304) = selected;
-        At<uint32_t>(host->buttons[selected]->bytes.data(), 36) = 0;
+        if (selected < host->items.size()) At<uint32_t>(host->buttons[selected]->bytes.data(), 36) = 0;
         RWGTAMenu::Model::Changed() = false;
     }
     inline void ScrollHelp(const std::shared_ptr<Host>& host, int amount)
@@ -439,9 +502,9 @@ export namespace Driv3rMenu
             At<void*>(host->page.data(), 104 + i * 4) = host->helpText[i]->bytes.data();
         At<void*>(host->page.data(), 128) = host->heading->bytes.data();
         At<void*>(host->page.data(), 132) = host->description->bytes.data();
-        for (size_t i = 0; i < host->backdrop.size(); ++i)
-            At<void*>(host->page.data(), 136 + i * 4) = host->backdrop[i].data();
-        At<uint32_t>(host->page.data(), 300) = static_cast<uint32_t>(9 + host->backdrop.size());
+        for (size_t i = 0; i < host->decor.size(); ++i)
+            At<void*>(host->page.data(), 136 + i * 4) = host->decor[i];
+        At<uint32_t>(host->page.data(), 300) = static_cast<uint32_t>(9 + host->decor.size());
         At<uint32_t>(host->page.data(), 304) = 0;
         ScrollHelp(host, 0);
     }
@@ -467,6 +530,30 @@ export namespace Driv3rMenu
         host->help = false;
         host->open = false; host->model.Close(); host->items.clear(); host->pending = 0;
     }
+    // Up/Down: the next selectable row, wrapping at the ends like the game's own lists
+    inline void Move(const std::shared_ptr<Host>& host, int direction)
+    {
+        auto& model = host->model;
+        auto rows = model.ListRows(host->modelPage, false);
+        auto& window = model.Window(host->modelPage);
+        for (size_t tries = 0; tries < rows.size() && Active(host); ++tries)
+        {
+            if (!window.Move(direction)) return;
+            auto row = rows[window.Selected()];
+            if (RWGTAMenu::Model::Opens(*row) || model.Enabled(*row, host->pause)) return;
+        }
+    }
+    inline void PlayMoveSound()
+    {
+        if (*menuSound) Virtual<void(__thiscall*)(void*, int)>(*menuSound, 8)(*menuSound, 0);
+    }
+    // Page Up/Down, Home/End, the wheel and the scroll arrows; the native move sound when the list moved
+    inline void Navigate(const std::shared_ptr<Host>& host, bool moved)
+    {
+        if (!moved || !Active(host)) return;
+        PlayMoveSound();
+        Populate(host);
+    }
     inline void Action(const std::shared_ptr<Host>& host)
     {
         int action = std::exchange(host->pending, 0);
@@ -483,12 +570,13 @@ export namespace Driv3rMenu
             auto selected = At<uint32_t>(host->root, 16664);
             if (selected >= host->originalScreens || At<void*>(host->root, 16460 + selected * 4) != host->parent) return;
             auto menuId = At<int>(GuiService.get(), 33572);
-            host->model.OpenPlugins(module, Language(), 4096);
+            host->model.OpenMenu(module, Language(), Slots);
             if (Current(host) && host->model.IsOpen() && At<int>(GuiService.get(), 33572) == menuId &&
                 At<uint32_t>(host->root, 16664) == selected && At<void*>(host->root, 16460 + selected * 4) == host->parent)
             {
                 host->menuId = menuId;
-                host->open = true; host->modelPage = host->rootOffset = host->rowStart = 0;
+                host->open = true; host->modelPage = RWGTAMenu::Model::RootPage;
+                host->wheel.Clear(); MouseRead::MenuWheel = 0;
                 // The native named-page switch pushes the native parent onto its own Back stack.
                 Virtual<char(__thiscall*)(void*, const char*)>(host->root, 40)(host->root, "WFPMenu");
                 if (Active(host)) { Populate(host); }
@@ -499,19 +587,20 @@ export namespace Driv3rMenu
         else if (Active(host) && host->pendingRow < host->items.size())
         {
             auto item = host->items[host->pendingRow];
-            if (item.link == -1)
+            auto& window = host->model.Window(host->modelPage);
+            window.Point(host->pendingRow);
+            if (action == 2 || action == 3)
+                Move(host, action == 2 ? -1 : 1);
+            else if (RWGTAMenu::Model::Opens(item.row))
             {
+                if (action == 6)
+                {
+                    auto page = host->model.Enter(item.row);
+                    if (page != SIZE_MAX) host->modelPage = page;
+                }
+            }
+            else
                 host->model.Change(item.row, action == 4 ? -1 : action == 5 ? 1 : 0, host->pause);
-            }
-            else if (action == 6)
-            {
-                if (item.link == -4) { if (host->modelPage) { host->model.PageShown(host->modelPage - 1); host->modelPage = host->rowStart = 0; } else Close(host, true); }
-                else if (item.link == -3) host->rootOffset = host->rootOffset >= 4 ? host->rootOffset - 4 : 0;
-                else if (item.link == -2) host->rootOffset += 4;
-                else if (item.link == -5) host->rowStart = host->rowStart >= 4 ? host->rowStart - 4 : 0;
-                else if (item.link == -6) host->rowStart += 4;
-                else if (item.link > 0) { host->rowStart = 0; host->modelPage = static_cast<size_t>(item.link); host->model.PageShown(host->modelPage - 1); }
-            }
             if (Active(host)) Populate(host);
         }
     }
@@ -545,6 +634,160 @@ export namespace Driv3rMenu
         for (auto i = texts.begin(); i != texts.end();) { if (i->second.first.lock() == host) i = texts.erase(i); else ++i; }
         for (auto i = buttons.begin(); i != buttons.end();) { if (i->second.first.lock() == host) i = buttons.erase(i); else ++i; }
         hosts.erase(host->root);
+    }
+    // The page copies the game's own settings page: Settings > Display in the front end, the pause menu's Settings
+    // page (whose frame also shows the pause menu column, with Plugins highlighted here). Its frame bitmaps, title,
+    // row and arrow styles and their places are taken from that page.
+    inline bool Design(const std::shared_ptr<Host>& host, void* root, uint32_t count)
+    {
+        auto refuse = [](const char* reason) { Log(reason); return false; };
+        void* source = nullptr;
+        for (size_t i = 0; i < count && !source; ++i)
+        {
+            auto* screen = At<void*>(root, 16460 + i * 4);
+            if (!strncmp(static_cast<char*>(screen), host->pause ? "Pause_O" : "Display", 8) &&
+                At<uint32_t>(screen, 300) == (host->pause ? 39u : 16u))
+                source = screen;
+        }
+        if (!source) return refuse("native settings page missing");
+        void* title = nullptr;
+        void* row = nullptr;
+        void* left = nullptr;
+        void* right = nullptr;
+        void* backIcon = nullptr;
+        std::vector<void*> textElements;
+        auto singleText = [&](void* button)
+        {
+            return At<uint32_t>(button, 56) == 1 && At<uint32_t>(button, 76) == 1 &&
+                At<uintptr_t>(At<void*>(button, 40), 0) == textClass && At<uintptr_t>(At<void*>(button, 60), 0) == textClass;
+        };
+        const uint32_t elements = At<uint32_t>(source, 300);
+        for (uint32_t i = 0; i < elements; ++i)
+        {
+            auto* element = At<void*>(source, 100 + i * 4);
+            const auto vt = At<uintptr_t>(element, 0);
+            if (vt == bitmapClass)
+            {
+                Bytes bitmap(56);
+                std::memcpy(bitmap.data(), element, bitmap.size());
+                host->backdrop.push_back(std::move(bitmap));
+            }
+            else if (vt == textClass)
+            {
+                textElements.push_back(element);
+                if (At<uint32_t>(element, 44) == 2 && (!title || At<float>(element, 48) > At<float>(title, 48))) title = element;
+            }
+            else if (vt == buttonClass && singleText(element))
+            {
+                const float x = At<float>(element, 4), width = At<float>(element, 12);
+                if (width < 0.05f)
+                {
+                    if (!left || x < At<float>(left, 4)) left = element;
+                    if (!right || x > At<float>(right, 4)) right = element;
+                }
+                else if (width >= 0.2f && (!row || x > At<float>(row, 4))) row = element;
+            }
+            else if (vt == buttonClass && At<uint32_t>(element, 56) == 1 && At<uintptr_t>(At<void*>(element, 40), 0) == bitmapClass &&
+                (!backIcon || At<float>(element, 4) < At<float>(backIcon, 4)))
+                backIcon = element;
+        }
+        if (!title || !row || !left || !right || left == right) return refuse("native settings page contract differs");
+        auto& layout = host->layout;
+        layout.rowX = At<float>(row, 4);
+        layout.rowHeight = At<float>(row, 16);
+        layout.leftX = At<float>(left, 4);
+        layout.arrowWidth = At<float>(left, 12);
+        layout.valueX = layout.leftX + layout.arrowWidth;
+        layout.rightX = At<float>(right, 4);
+        layout.valueWidth = layout.rightX - layout.valueX;
+        layout.scrollX = layout.rightX + layout.arrowWidth + layout.arrowWidth * 0.5f;
+        // Rows start at the page's first heading and keep its line spacing
+        std::vector<float> lines;
+        layout.rowTop = INFINITY; layout.textX = INFINITY;
+        for (auto text : textElements)
+        {
+            if (text == title || At<float>(text, 4) < layout.rowX - 0.05f) continue;
+            lines.push_back(At<float>(text, 8));
+            if (At<uint32_t>(text, 44) == 0)
+            {
+                layout.rowTop = std::min(layout.rowTop, At<float>(text, 8));
+                layout.textX = std::min(layout.textX, At<float>(text, 4));
+            }
+        }
+        for (uint32_t i = 0; i < elements; ++i)
+        {
+            auto* element = At<void*>(source, 100 + i * 4);
+            if (At<uintptr_t>(element, 0) == buttonClass && At<float>(element, 4) >= layout.rowX - 0.05f) lines.push_back(At<float>(element, 8));
+        }
+        std::sort(lines.begin(), lines.end());
+        layout.rowStep = INFINITY;
+        for (size_t i = 1; i < lines.size(); ++i)
+            if (lines[i] - lines[i - 1] > 0.01f) layout.rowStep = std::min(layout.rowStep, lines[i] - lines[i - 1]);
+        if (!std::isfinite(layout.rowTop) || !std::isfinite(layout.textX) || !std::isfinite(layout.rowStep) || layout.valueWidth <= 0)
+            return refuse("native settings page geometry differs");
+        layout.textWidth = layout.rightX + layout.arrowWidth - layout.textX;
+        for (size_t i = 0; i < Slots; ++i)
+        {
+            auto button = CloneButton(host, row, layout.rowX, layout.rowTop + static_cast<float>(i) * layout.rowStep, i, false);
+            if (!button || button->text.size() < 4) return refuse("native settings row contract differs");
+            host->buttons.push_back(std::move(button));
+        }
+        auto rowText = At<void*>(row, 60);    // a row's unselected text
+        host->heading = CloneText(host, title, At<float>(title, 4), At<float>(title, 8), At<float>(title, 12));
+        host->heading->centered = true;
+        host->heading->height = 0.06f;
+        host->description = CloneText(host, rowText, layout.textX, layout.rowTop + (Slots + 0.5f) * layout.rowStep, layout.textWidth);
+        host->description2 = CloneText(host, rowText, layout.textX, layout.rowTop + (Slots + 1.5f) * layout.rowStep, layout.textWidth);
+        const float rowTextY = At<float>(rowText, 8) - At<float>(row, 8);
+        host->above = CloneText(host, rowText, layout.scrollX, layout.rowTop + rowTextY, layout.arrowWidth);
+        host->below = CloneText(host, rowText, layout.scrollX, layout.rowTop + (Slots - 1) * layout.rowStep + rowTextY, layout.arrowWidth);
+        host->above->centered = host->below->centered = true;
+        for (size_t i = 0; i < 6; ++i)
+            host->helpText.push_back(CloneText(host, rowText, layout.textX, layout.rowTop + static_cast<float>(i) * layout.rowStep, layout.textWidth));
+        if (backIcon)
+        {
+            // Its normal-state picture, clicked like the game's own Back icon
+            auto* picture = At<void*>(backIcon, 60);
+            Bytes bitmap(56);
+            std::memcpy(bitmap.data(), At<uint32_t>(backIcon, 76) ? picture : At<void*>(backIcon, 40), bitmap.size());
+            host->backIcon = { At<float>(backIcon, 4), At<float>(backIcon, 8), At<float>(backIcon, 12), At<float>(backIcon, 16) };
+            host->backIconShown = true;
+            host->backdrop.push_back(std::move(bitmap));
+        }
+        if (host->pause)
+        {
+            // The pause menu column the game's page shows beside it: Plugins highlighted instead of Settings
+            void* highlighted = nullptr;
+            void* plain = nullptr;
+            float last = -INFINITY, previous = -INFINITY;
+            for (auto text : textElements)
+            {
+                if (At<float>(text, 4) + At<float>(text, 12) > At<float>(title, 4) + 0.001f) continue;
+                Bytes copy(120);
+                std::memcpy(copy.data(), text, copy.size());
+                if (At<uint32_t>(text, 44) == 0)
+                {
+                    const bool lit = At<float>(text, 28) < 0.5f;  // the yellow one
+                    if (lit) highlighted = text; else plain = text;
+                    const float y = At<float>(text, 8);
+                    if (y > last) { previous = last; last = y; }
+                    else if (y > previous) previous = y;
+                }
+                host->backdrop.push_back(std::move(copy));
+            }
+            if (!highlighted || !plain || !std::isfinite(previous)) return refuse("native pause column contract differs");
+            for (auto& copy : host->backdrop)
+            {
+                if (copy.size() == 120 && At<float>(copy.data(), 8) == At<float>(highlighted, 8) && At<float>(copy.data(), 4) == At<float>(highlighted, 4))
+                    for (size_t offset : { 20u, 24u, 28u, 32u }) At<float>(copy.data(), offset) = At<float>(plain, offset);
+            }
+            host->pluginsLabel = CloneText(host, highlighted, At<float>(highlighted, 4), last + (last - previous), At<float>(highlighted, 12));
+            host->pluginsLabel->value = Wide(FixSettings().GetTexts().Resolve("@menu.plugins"));
+        }
+        for (auto& bytes : host->backdrop) host->decor.push_back(bytes.data());
+        if (host->pluginsLabel) host->decor.push_back(host->pluginsLabel->bytes.data());
+        if (host->buttons.size() + 4 + host->decor.size() > 50) return refuse("native page element capacity exceeded");
+        return true;
     }
     inline bool Prepare(void* root)
     {
@@ -599,59 +842,7 @@ export namespace Driv3rMenu
         strcpy_s(reinterpret_cast<char*>(host->page.data() + 49), 32, "<NoAction>");
         At<uint8_t>(host->page.data(), 16) = At<uint8_t>(host->page.data(), 81) = 0;
         At<uint32_t>(host->page.data(), 12) = At<uint32_t>(host->page.data(), 304) = 0;
-        for (size_t i = 0; i < 7; ++i)
-        {
-            auto button = CloneButton(host, templateButton, 0.075f, 0.22f + static_cast<float>(i) * 0.045f, i, false);
-            if (!button || button->text.empty()) return false;
-            host->buttons.push_back(std::move(button));
-        }
-        if (host->pause)
-        {
-            // The native pause panel consists of its center and four frame bitmaps.
-            for (size_t i = 8; i <= 12; ++i)
-            {
-                auto* native = At<void*>(host->parent, 100 + i * 4);
-                if (At<uintptr_t>(native, 0) != bitmapClass)
-                    return refuse("native pause panel bitmap contract differs");
-                Bytes bitmap(56);
-                std::memcpy(bitmap.data(), native, bitmap.size());
-                At<float>(bitmap.data(), 4) = (At<float>(native, 4) - 0.05f) * (1.0f / 0.3265622f);
-                At<float>(bitmap.data(), 8) = 0.08f + (At<float>(native, 8) - 0.10f) * (0.68f / 0.5020831f);
-                At<float>(bitmap.data(), 12) *= 1.0f / 0.3265622f;
-                At<float>(bitmap.data(), 16) *= 0.68f / 0.5020831f;
-                if (i == 10)
-                {
-                    host->backdrop.push_back(bitmap);
-                    host->backdrop.push_back(bitmap);
-                }
-                host->backdrop.push_back(std::move(bitmap));
-            }
-        }
-        else
-        {
-            void* panel = nullptr;
-            for (size_t i = 0; i < count; ++i)
-            {
-                auto* screen = At<void*>(root, 16460 + i * 4);
-                if (!strncmp(static_cast<char*>(screen), "Display", 7) && At<uint32_t>(screen, 300))
-                    panel = At<void*>(screen, 100);
-            }
-            if (!panel || At<uintptr_t>(panel, 0) != bitmapClass)
-                return refuse("native display panel bitmap contract differs");
-            Bytes bitmap(56);
-            std::memcpy(bitmap.data(), panel, bitmap.size());
-            At<float>(bitmap.data(), 4) = 0;
-            At<float>(bitmap.data(), 8) = 0.08f;
-            At<float>(bitmap.data(), 12) = 1;
-            At<float>(bitmap.data(), 16) = 0.68f;
-            for (int i = 0; i < 3; ++i) host->backdrop.push_back(bitmap);
-        }
-        auto textTemplate = host->entry->text.front()->bytes.data();
-        host->heading = CloneText(host, textTemplate, 0.075f, 0.12f, 0.84f);
-        host->description = CloneText(host, textTemplate, 0.075f, 0.64f, 0.78f);
-        host->heading->height = host->description->height = 0.06f;
-        for (size_t i = 0; i < 6; ++i)
-            host->helpText.push_back(CloneText(host, textTemplate, 0.075f, 0.22f + static_cast<float>(i) * 0.045f, 0.84f));
+        if (!Design(host, root, count)) return false;
         // Native input dereferences selected before validating count. Keep a valid placeholder even
         // during native enter callbacks, before model discovery/first population completes.
         At<void*>(host->page.data(), 100) = host->buttons[0]->bytes.data();
@@ -685,6 +876,88 @@ export namespace Driv3rMenu
         return !Virtual<bool(__thiscall*)(void*, int)>(input, 8)(input, 7) &&
             Virtual<bool(__thiscall*)(void*, int)>(input, 4)(input, 7);
     }
+    // Input the game's own lists don't have: Page Up/Down and the shoulders, Home/End, the wheel (one row per notch)
+    // and the scroll arrows (click or hold). The native hover moves the selection only while the mouse moves.
+    inline void Scrolling(const std::shared_ptr<Host>& host)
+    {
+        auto& window = host->model.Window(host->modelPage);
+        const auto slot = At<uint32_t>(host->page.data(), 304);
+        if (slot < host->items.size()) window.Point(slot);
+        DWORD foregroundProcess = 0;
+        GetWindowThreadProcessId(GetForegroundWindow(), &foregroundProcess);
+        const bool input = foregroundProcess == GetCurrentProcessId() && !(blocksInput && blocksInput());
+        auto key = [&](int code) { return input && (GetAsyncKeyState(code) & 0x8000) != 0; };
+        const uint64_t now = GetTickCount64();
+        bool moved = false;
+        for (int notches = host->wheel.Take(std::exchange(MouseRead::MenuWheel, 0)); notches; notches += notches > 0 ? -1 : 1)
+            moved |= window.Scroll(notches > 0 ? -1 : 1);
+        const int page = key(VK_PRIOR) || (input && IsJoyButtonPressed(5)) ? -1 : key(VK_NEXT) || (input && IsJoyButtonPressed(6)) ? 1 : 0;
+        if (host->pageRepeat.Step(page != 0, now) && page) moved |= window.Page(page);
+        // A held Up/Down: the game's own repeat stops at the last shown row, the list goes on from there
+        XINPUT_STATE pad{};
+        DWORD padSlot = 0;
+        const bool padRead = input && PadInput::Read(pad, padSlot);
+        const WORD padButtons = padRead ? pad.Gamepad.wButtons : 0;
+        const int stick = host->holdStick.Direction(padRead ? pad.Gamepad.sThumbLY : 0);
+        const int held = key(VK_UP) || (padButtons & XINPUT_GAMEPAD_DPAD_UP) || stick > 0 ? -1 :
+            key(VK_DOWN) || (padButtons & XINPUT_GAMEPAD_DPAD_DOWN) || stick < 0 ? 1 : 0;
+        if (host->holdRepeat.Step(held != 0, now, false) && held && window.Shown() &&
+            window.Slot() == (held > 0 ? window.Shown() - 1 : 0))
+        {
+            Move(host, held);
+            moved = true;
+        }
+        static bool homeDown = false, endDown = false;
+        const bool home = key(VK_HOME), end = key(VK_END);
+        if (home && !homeDown) moved |= window.Edge(-1);
+        if (end && !endDown) moved |= window.Edge(1);
+        homeDown = home; endDown = end;
+        // The mouse: the scroll arrows (held: repeated), the arrows around a value and the Back icon (clicked)
+        const auto& layout = host->layout;
+        const uintptr_t manager = InputManager;
+        const bool down = input && manager && (*reinterpret_cast<uint8_t*>(manager + 0x224 + 12) & 0x80);
+        const bool click = down && !host->mouseDown;
+        host->mouseDown = down;
+        const float x = At<float>(host->page.data(), 92), y = At<float>(host->page.data(), 96);
+        // A row's band is the game's own button height; the gaps between rows hit nothing, as with the game's rows
+        const float row = (y - layout.rowTop) / layout.rowStep;
+        const size_t rowSlot = row >= 0 && y - layout.rowTop - std::floor(row) * layout.rowStep < layout.rowHeight ? static_cast<size_t>(row) : SIZE_MAX;
+        int arrow = 0;
+        if (down && x >= layout.rightX + layout.arrowWidth && x < layout.scrollX + layout.arrowWidth * 2)
+        {
+            const float top = layout.rowTop, bottom = layout.rowTop + Slots * layout.rowStep;
+            if (window.Above() && y >= top - layout.rowStep * 0.5f && y < top + layout.rowStep) arrow = -1;
+            else if (window.Below() && y >= bottom - layout.rowStep && y < bottom + layout.rowStep * 0.5f) arrow = 1;
+        }
+        if (host->arrowRepeat.Step(arrow != 0, now) && arrow) moved |= window.Scroll(arrow);
+        Navigate(host, moved);
+        if (!click || !Active(host)) return;
+        if (rowSlot < host->items.size() && host->items[rowSlot].enabled && !host->items[rowSlot].value.empty())
+        {
+            // The arrows step the value; the value itself acts as accepting the row
+            for (auto [areaX, areaWidth, action] : { std::tuple{ layout.leftX, layout.arrowWidth, 4 }, std::tuple{ layout.rightX, layout.arrowWidth, 5 },
+                std::tuple{ layout.valueX, layout.valueWidth, 6 } })
+            {
+                if (x < areaX || x >= areaX + areaWidth) continue;
+                host->pending = action; host->pendingRow = rowSlot;
+                PlayMoveSound();
+                Action(host);
+                return;
+            }
+        }
+        const auto& icon = host->backIcon;
+        if (host->backIconShown && x >= icon[0] && x < icon[0] + icon[2] && y >= icon[1] && y < icon[1] + icon[3])
+        {
+            const size_t back = host->model.Back(host->modelPage);
+            if (back == SIZE_MAX) Close(host, true);
+            else
+            {
+                host->modelPage = back;
+                PlayMoveSound();
+                Populate(host);
+            }
+        }
+    }
     inline char __fastcall Process(void* self, void*, uint32_t* state)
     {
         auto found = hosts.find(self);
@@ -708,18 +981,20 @@ export namespace Driv3rMenu
         {
             auto selected = At<uint32_t>(host->root, 16664);
             bool parent = selected < host->originalScreens && At<void*>(host->root, 16460 + selected * 4) == host->parent;
-            if ((state[5] & 8) && parent && host->modelPage && At<int>(GuiService.get(), 33572) == host->menuId)
+            const size_t back = host->model.Back(host->modelPage);
+            if ((state[5] & 8) && parent && back != SIZE_MAX && At<int>(GuiService.get(), 33572) == host->menuId)
             {
-                // Native Back already popped exactly one page. Inner settings return to our root;
-                // pushing again preserves the native parent/selection for the final Back.
-                host->model.PageShown(host->modelPage - 1);
-                host->modelPage = host->rowStart = 0;
+                // Native Back already popped exactly one page. A category or plugin returns to its parent list,
+                // on the row it was opened from; pushing again preserves the native parent for the final Back.
+                host->modelPage = back;
                 Virtual<char(__thiscall*)(void*, const char*)>(host->root, 40)(host->root, "WFPMenu");
                 if (Active(host)) Populate(host); else Close(host, false);
             }
             else Close(host, false);
         }
         Action(host);
+        if (Active(host) && !host->help) Scrolling(host);
+        else MouseRead::MenuWheel = 0;
         if (Active(host) && !host->help && RWGTAMenu::Model::Changed()) Populate(host);
         if (Active(host))
         {
@@ -747,7 +1022,48 @@ export namespace Driv3rMenu
                 const auto row = host->items[selected].row;
                 auto description = host->model.Help(row);
                 if (host->model.RestartRequired()) description = host->model.Text("menu.restartwarning") + " " + description;
-                host->description->value = description.empty() ? L"" : (helpPrefix ? helpPrefix() : L"F1: ") + Wide(description);
+                const auto text = description.empty() ? L"" : (helpPrefix ? helpPrefix() : L"F1: ") + Wide(description);
+                const auto now = GetTickCount64();
+                bool show = text != host->describedText;
+                if (show)
+                {
+                    // Whole words in lines as wide as the help line
+                    auto style = Style(*host->description);
+                    host->describedLines.clear();
+                    std::wstring line;
+                    size_t position = 0;
+                    while (position < text.size())
+                    {
+                        const auto end = std::min(text.find(L' ', position), text.size());
+                        const auto word = text.substr(position, end - position);
+                        position = end + 1;
+                        if (word.empty()) continue;
+                        const auto candidate = line.empty() ? word : line + L" " + word;
+                        if (line.empty() || Measure(style, candidate, host->description->height + 0.00001f) <= host->description->width)
+                        {
+                            line = candidate;
+                            continue;
+                        }
+                        host->describedLines.push_back(std::move(line));
+                        line = word;
+                    }
+                    if (!line.empty()) host->describedLines.push_back(std::move(line));
+                    host->describedText = text;
+                    host->describedFirst = 0;
+                }
+                else if (host->describedLines.size() > 2 &&
+                    now - host->describedTick >= (host->describedFirst == 0 || host->describedFirst + 2 >= host->describedLines.size() ? 4000u : 2500u))
+                {
+                    host->describedFirst = host->describedFirst + 2 >= host->describedLines.size() ? 0 : host->describedFirst + 1;
+                    show = true;
+                }
+                if (show)
+                {
+                    const auto& lines = host->describedLines;
+                    host->description->value = host->describedFirst < lines.size() ? lines[host->describedFirst] : L"";
+                    host->description2->value = host->describedFirst + 1 < lines.size() ? lines[host->describedFirst + 1] : L"";
+                    host->describedTick = now;
+                }
             }
         }
         return result;
@@ -774,12 +1090,13 @@ export namespace Driv3rMenu
         if (keep && Active(keep) && (!name || _strnicmp(name, "WFPMenu", 7))) Close(keep, true);
         return switchHook.thiscall<char>(self, name);
     }
-    inline int __fastcall Activate(void* self, void*, int id)
+    // At the entry of the native activation, which also reads its caller's frame: the game's stack stays as it is
+    inline void Activate(SafetyHookContext& regs)
     {
+        const int id = *reinterpret_cast<int*>(regs.esp + 4);
         std::vector<std::shared_ptr<Host>> keep;
         for (const auto& [root, host] : hosts) if (Active(host) && host->menuId != id) keep.push_back(host);
         for (const auto& host : keep) if (Active(host)) Close(host, true);
-        return activateHook.thiscall<int>(self, id);
     }
     inline int __fastcall Deactivate(void* self, void*, int id)
     {
@@ -805,13 +1122,20 @@ export namespace Driv3rMenu
         FontService.SetAddress(operand("A1 ? ? ? ? 8B 08 52 8D 54 24 18", 1));
         LanguageService.SetAddress(operand("8B 0D ? ? ? ? 8B 45 28 8B 11 53", 2));
         buttonAction = reinterpret_cast<uintptr_t>(hook::get_pattern("8B 44 24 04 53 8B 5C 24 0C 55"));
+        menuSound = *hook::get_pattern<void**>("8B 0D ? ? ? ? 8B 01 6A 01 FF 50 08 8B 7C 24", 2);
         destroyHook = safetyhook::create_inline(hook::get_pattern("6A FF 68 ? ? ? ? 64 A1 00 00 00 00 50 64 89 25 00 00 00 00 51 56 8B F1 57"), &Destroy);
         releaseHook = safetyhook::create_inline(hook::get_pattern("8B 89 B4 42 00 00 A1 ? ? ? ?"), &Release);
         textHook = safetyhook::create_inline(hook::get_pattern("83 EC 58 53 8B D9 C7 44 24 08 00 00 80 3F"), &DrawText);
         processHook = safetyhook::create_inline(hook::get_pattern("53 55 56 8B 74 24 10 57 8B F9 8D 5F 10 8B CB"), &Process);
         switchHook = safetyhook::create_inline(hook::get_pattern("51 53 55 8B A9 14 41 00 00 56"), &Switch);
-        activateHook = safetyhook::create_inline(hook::get_pattern("83 EC 08 53 56 57 8B F9 8D 5F 08 8D 4C 24 18 8D 44 24 0C 8B D3 E8 ? ? ? ? 8B 74 24 0C 3B 74 24 10 75 06 8D B3 A4 82 00 00 8B 8F 1C 83 00 00"), &Activate);
+        activateEntry = safetyhook::create_mid(hook::get_pattern("83 EC 08 53 56 57 8B F9 8D 5F 08 8D 4C 24 18 8D 44 24 0C 8B D3 E8 ? ? ? ? 8B 74 24 0C 3B 74 24 10 75 06 8D B3 A4 82 00 00 8B 8F 1C 83 00 00"), Activate);
         deactivateHook = safetyhook::create_inline(hook::get_pattern("83 EC 08 53 56 57 8B F9 8D 5F 08 8D 4C 24 18 8D 44 24 0C 8B D3 E8 ? ? ? ? 8B 74 24 0C 3B 74 24 10 75 06 8D B3 A4 82 00 00 8B 44 24 18"), &Deactivate);
+        // Fusion Rain Droplets keeps its drops off the game's menus while one is shown
+        WFP::onGameProcessEvent() += []()
+        {
+            const auto gui = GuiService.is_initialized() ? GuiService.get() : nullptr;
+            RainDroplets::MenuOpen(gui && At<uintptr_t>(gui, 0) == guiClass && At<int>(gui, 33572) != 0);
+        };
         loadHook = safetyhook::create_inline(hook::get_pattern("6A FF 68 ? ? ? ? 64 A1 00 00 00 00 50 64 89 25 00 00 00 00 83 EC 24 8A 44 24 34"), &Load);
     }
 }

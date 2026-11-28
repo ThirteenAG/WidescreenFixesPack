@@ -6,10 +6,13 @@ module;
 #include <functional>
 #include "FixSettings.hpp"
 #include "Shared/RWGTA/FixMenu.hpp"
+#include "Shared/MenuList.hpp"
+#include "Shared/RainDroplets.hpp"
 
 export module NativeMenu;
 import NativeMenuText;
 import NativeMenuView;
+import Window;
 
 
 export namespace PsiOpsMenu
@@ -97,6 +100,8 @@ export namespace PsiOpsMenu
         std::array<bool, 6> colorValid{};
     };
     inline std::map<Node, std::unique_ptr<Screen>> screens;
+    inline MenuList::WheelNotches wheel;
+    inline MenuList::Repeat upRepeat;
     struct JoinedScreen
     {
         Node resource{}, root{}, container{}, stockChildren{}, help{};
@@ -402,15 +407,11 @@ export namespace PsiOpsMenu
                 SetNavigation(screen.rows[i], 1007, screen.rows[i + 1 < visibleRows ? i + 1 : 0]);
             }
         }
-        const auto page = screen.view.page;
-        screen.helpText = page < screen.model.Pages().size() ? screen.model.Pages()[page].title : Text("menu.plugins");
-        if (screen.view.count > 1)
-            screen.helpText += " (" + std::to_string(screen.view.physical + 1) + "/" + std::to_string(screen.view.count) + ")";
-        if (NeedsRestart())
-            screen.helpText = Text("menu.restartshort");
+        // The help line stays empty like on the game's own Options screens, but for the restart notice
+        screen.helpText = NeedsRestart() ? Text("menu.restartshort") : std::string{};
         SetFontText(screen.help, screen.helpText, screen.drawnHelp);
         SetVisible(screen.helpRoot, true);
-        SetVisible(screen.help, true);
+        SetVisible(screen.help, !screen.helpText.empty());
     }
     inline void Highlights(Node node, std::vector<Node>& result, size_t depth = 0);
     inline void Open(Screen& screen)
@@ -448,7 +449,7 @@ export namespace PsiOpsMenu
             screen.stockHelp = Convert(rawString(reinterpret_cast<GameString*>(screen.help[2] + 28)), 1252, CP_UTF8);
         screen.language = Language();
         current = &screen;
-        screen.model.OpenPlugins(host, screen.language, 32, {}, true);
+        screen.model.OpenMenu(host, screen.language, 32);
         screen.view = {};
         screen.page = -1;
         screen.start = screen.selected = 0;
@@ -939,7 +940,25 @@ export namespace PsiOpsMenu
                 if (message == 1011 || i >= current->view.items.size())
                     return 0;
                 if (message == 4000 || message == 4002)
+                {
+                    // The game moves the selection on the wheel too; the list scrolls by the wheel instead
+                    if (i != current->selected && GetTickCount64() - PsiOpsWindow::wheelTime.load() < 150)
+                    {
+                        Focus(*current, current->selected);
+                        return 0;
+                    }
+                    // Past the first or last line shown the list scrolls instead of the selection leaving it
+                    current->view.selected = current->selected;
+                    if (current->view.Follow(current->selected, i))
+                    {
+                        auto screen = current;
+                        screen->selected = screen->view.selected;
+                        Build(*screen);
+                        Focus(*screen, screen->selected);
+                        return 0;
+                    }
                     current->selected = i;
+                }
                 if (message == 1010)
                 {
                     Act(*current, i, 0);
@@ -1024,6 +1043,8 @@ export namespace PsiOpsMenu
     inline int __fastcall DrawText(void* self, void*, int transform)
     {
         Prune();
+        // The droplets stay off the game's menu screens while they show
+        RainDroplets::MenuOpen(!screens.empty() || !joinedScreens.empty());
         const bool refreshLanguage = languageChanged.exchange(false);
         const auto language = refreshLanguage ? Language() : std::string{};
         for (auto& [resource, screen] : screens)
@@ -1033,7 +1054,7 @@ export namespace PsiOpsMenu
                 screen->language = language;
                 if (screen->open)
                 {
-                    screen->model.OpenPlugins(host, language, 32, {}, true);
+                    screen->model.OpenMenu(host, language, 32);
                     screen->view = {};
                     screen->selected = 0;
                     Build(*screen);
@@ -1044,6 +1065,43 @@ export namespace PsiOpsMenu
             }
             if (screen->open && screen->helpRoot && !(screen->helpRoot[3] & 1))
                 screen->helpRoot[3] = screen->helpRoot[3] | 1;
+            // The wheel moves the list a line per notch; Up, which the game doesn't route to its menus, moves up
+            if (screen->open && screen.get() == current)
+            {
+                DWORD process = 0;
+                GetWindowThreadProcessId(GetForegroundWindow(), &process);
+                const bool up = process == GetCurrentProcessId() && (GetAsyncKeyState(VK_UP) & 0x8000);
+                if (upRepeat.Step(up, GetTickCount64()) && !screen->view.items.empty())
+                {
+                    auto& view = screen->view;
+                    view.selected = screen->selected;
+                    size_t target = screen->selected;
+                    for (size_t attempt = 0; attempt < view.items.size(); ++attempt)
+                    {
+                        target = (target + view.items.size() - 1) % view.items.size();
+                        if (view.items[target].enabled)
+                            break;
+                    }
+                    if (view.Follow(screen->selected, target))
+                    {
+                        screen->selected = view.selected;
+                        Build(*screen);
+                    }
+                    else
+                        screen->selected = target;
+                    Focus(*screen, screen->selected);
+                }
+                bool scrolled = false;
+                screen->view.selected = screen->selected;
+                for (int notches = wheel.Take(PsiOpsWindow::wheelDelta.exchange(0)); notches; notches += notches > 0 ? -1 : 1)
+                    scrolled |= screen->view.Scroll(notches > 0 ? -1 : 1);
+                screen->selected = screen->view.selected;
+                if (scrolled)
+                {
+                    Build(*screen);
+                    Focus(*screen, screen->selected);
+                }
+            }
             for (size_t i = 0; i < screen->texts.size(); ++i)
                 if (screen->texts[i][2] == reinterpret_cast<uint32_t>(self) && (screen->open || i == screen->stockRows))
                 {

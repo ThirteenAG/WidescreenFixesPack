@@ -22,6 +22,7 @@ namespace
     IDirect3DDevice9* CurrentDevice = nullptr;
     float FrameRate = 0.0f;
     std::atomic<HWND> CursorWindow{ nullptr };
+    std::atomic<int> WheelDelta{ 0 };      // wheel movement since the Plugins menu last read it
 
     BOOL WINAPI NativeClip(const RECT*)
     {
@@ -64,6 +65,8 @@ namespace
             if (WindowCursor::Window == window)
                 CursorWindow.store(window);
         }
+        if (message == WM_MOUSEWHEEL)
+            WheelDelta += GET_WHEEL_DELTA_WPARAM(wParam);
         if (message == WM_NCDESTROY && CursorWindow.load() == window)
             CursorWindow.store(nullptr);
         LRESULT result = 0;
@@ -165,6 +168,12 @@ export namespace Overlay
     bool BlocksInput()
     {
         return Instance.BlocksInput();
+    }
+
+    // The raw wheel movement of the game window since the last call
+    int TakeWheel()
+    {
+        return WheelDelta.exchange(0);
     }
 
     void Init()

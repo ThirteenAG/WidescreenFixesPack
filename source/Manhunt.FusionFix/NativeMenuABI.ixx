@@ -230,6 +230,8 @@ export namespace MHMenu::ABI
         inline uintptr_t Right() { static auto a = Code("8B 90 ? ? ? ? 81 FA FE 03 00 00", -0x60); return a; }
         inline uintptr_t Enter() { static auto a = Code("53 56 55 31 DB E8 ? ? ? ? 85 C0"); return a; }
         inline uintptr_t Escape() { static auto a = Code("53 55 31 ED 31 DB E8 ? ? ? ? 85 C0"); return a; }
+        // The DirectInput mouse state read of each frame (DIMOUSESTATE2 cut to 20 bytes, lZ at +8)
+        inline uintptr_t MouseState() { static auto a = Code("8B 15 ? ? ? ? 57 55 8B 4A 0C 83 79 24 00 8B 6C 24 0C 75 0B"); return a; }
         inline uintptr_t MouseMode() { static auto a = Code("A1 ? ? ? ? C3 90 90 90 90 90 90 90 90 90 90 83 3D ? ? ? ? 00 74 17"); return a; }
         inline uintptr_t HoverActive() { static auto a = Code("83 3D ? ? ? ? 00 74 17 E8 ? ? ? ?"); return a; }
         inline uintptr_t Hovered() { static auto a = Code("A1 ? ? ? ? C3 90 90 90 90 90 90 90 90 90 90 A1 ? ? ? ? C3 90 90 90 90 90 90 90 90 90 90 C7 05 ? ? ? ? 00 00 00 00"); return a; }
@@ -280,6 +282,7 @@ export namespace MHMenu::ABI
             Right();
             Enter();
             Escape();
+            MouseState();
             MouseMode();
             HoverActive();
             Hovered();
@@ -346,6 +349,13 @@ export namespace MHMenu::ABI
             text, X(), y, ScaleX(), ScaleY(), selected ? 1 : 0);
         Function<int(__cdecl*)(const wchar_t*, float, float, float, float)>(Address::RowHit())(
             text, X(), y, ScaleX(), ScaleY());
+    }
+
+    // A line in the rows' font and colour where the rows are, after the rows: the menu's input skips it (the mouse
+    // over it is past the rows shown)
+    inline void Mark(const wchar_t* text, float y)
+    {
+        Row(text, y, false);
     }
 
     inline void Footer(const wchar_t* extra = L"")

@@ -4,35 +4,39 @@
 
 namespace ScarfaceMenu
 {
+    // The plugins list, a plugin's settings or categories, or a category's settings, as the rows of the pause menu's
+    // Options page under its section header (the list's title). Rows are indented under it like the game's options and
+    // a setting's value is in the page's value column between its arrows. A label too long for the page continues on
+    // the next lines. Each list is one list: the page's own list scrolls through it. Back returns one level, to the
+    // row the list was opened from.
     struct View
     {
-        enum class Kind { Page, Row, Previous, Next, Details, Back, Text };
+        enum class Kind { Row, Text };
         struct Item
         {
             Kind kind = Kind::Text;
-            size_t index = 0;
-            RWGTAMenu::Row row{};
+            const RWGTAMenu::Row* row = nullptr;
             bool enabled = false;
             std::wstring text;
+            bool hasValue = false;          // the row's first line shows the setting's value
+            std::wstring value;
         };
 
-        size_t page = static_cast<size_t>(-1);
-        size_t physical = 0;
+        size_t page = RWGTAMenu::Model::RootPage;
         size_t selected = 0;
-        size_t count = 1;
-        bool details = false;
         std::string notice;
-        RWGTAMenu::Row helpRow{};
         std::vector<Item> items;
+        std::vector<size_t> selection;      // the line each list was left on, by page
 
         bool Build(RWGTAMenu::Model& model, bool paused)
         {
-            if (!model.IsOpen()) return false;
+            if (!model.IsOpen() || page >= model.Pages().size()) return false;
             std::vector<Item> complete;
-            auto add = [&](Item item, const std::string& value)
+            // Labels beside a value keep left of the page's value column
+            auto add = [&](Item item, const std::string& value, size_t width = 30)
             {
                 std::vector<std::wstring> lines;
-                if (!Text::Lines(value, lines)) return false;
+                if (!Text::Lines(value, lines, width)) return false;
                 for (auto& line : lines)
                 {
                     auto shown = item;
@@ -45,66 +49,28 @@ namespace ScarfaceMenu
             {
                 if (!add(Item{}, notice)) return false;
             }
-            else if (details)
-            {
-                if (!add(Item{}, model.Help(helpRow))) return false;
-            }
-            else if (page == static_cast<size_t>(-1))
-            {
-                const auto& pages = model.Pages();
-                for (size_t i = 0; i < pages.size(); ++i)
-                    if (!add(Item{ Kind::Page, i, {}, true }, pages[i].title)) return false;
-            }
             else
             {
-                if (page >= model.Pages().size()) return false;
-                auto rows = model.VisibleRows(page);
-                for (size_t i = 0; i < rows.size(); ++i)
+                for (auto row : model.VisibleRows(page))
                 {
-                    if (!rows[i]) return false;
-                    auto row = *rows[i];
-                    auto label = model.Label(row);
-                    auto value = model.Value(row);
-                    if (!value.empty()) label += ": " + value;
-                    if (row.kind == RWGTAMenu::RowKind::Preset)
+                    bool opens = RWGTAMenu::Model::Opens(*row);
+                    bool enabled = opens || model.Enabled(*row, paused);
+                    std::wstring value;
+                    if (!opens && !Text::Convert(model.Value(*row), value)) return false;
+                    const size_t first = complete.size();
+                    if (!add(Item{ Kind::Row, row, enabled }, model.Label(*row), value.empty() ? 30 : 22)) return false;
+                    if (!value.empty())
                     {
-                        std::wstring text;
-                        if (!Text::Convert(label, text) || !Text::Fits(text)) return false;
-                        complete.push_back(Item{ Kind::Row, i, row, model.Enabled(row, paused), std::move(text) });
+                        complete[first].hasValue = true;
+                        complete[first].value = std::move(value);
                     }
-                    else if (!add(Item{ Kind::Row, i, row, model.Enabled(row, paused) }, label)) return false;
                 }
             }
-            if (complete.size() > 768) return false;
-            const size_t capacity = details || !notice.empty() ? 5 : 4;
-            count = (std::max)(size_t(1), (complete.size() + capacity - 1) / capacity);
-            physical = (std::min)(physical, count - 1);
-            auto first = physical * capacity;
-            auto last = (std::min)(first + capacity, complete.size());
-            std::vector<Item> shown;
-            for (size_t i = first; i < last; ++i) shown.push_back(std::move(complete[i]));
-            auto navigation = [&](Kind kind, const char* key)
-            {
-                std::wstring text;
-                if (!Text::Convert(model.Text(key), text) || !Text::Fits(text)) return false;
-                shown.push_back(Item{ kind, 0, {}, true, std::move(text) });
-                return true;
-            };
-            if (physical && !navigation(Kind::Previous, "menu.previous")) return false;
-            if (physical + 1 < count && !navigation(Kind::Next, "menu.next")) return false;
-            if (!details && notice.empty() && page != static_cast<size_t>(-1) && !navigation(Kind::Details, "menu.details")) return false;
-            if (!navigation(Kind::Back, "menu.back") || shown.size() > 8) return false;
-            items = std::move(shown);
+            if (complete.empty() || complete.size() > 768) return false;
+            items = std::move(complete);
             selected = (std::min)(selected, items.size() - 1);
             if (!items[selected].enabled) Move(1);
-            Remember();
             return true;
-        }
-
-        void Remember()
-        {
-            if (selected < items.size() && items[selected].kind == Kind::Row)
-                helpRow = items[selected].row;
         }
 
         void Move(int direction)
@@ -115,24 +81,22 @@ namespace ScarfaceMenu
                 selected = (selected + items.size() + direction) % items.size();
                 if (items[selected].enabled) break;
             }
-            Remember();
+        }
+
+        // The line a list was left on, when it is shown again
+        void Keep()
+        {
+            if (selection.size() <= page) selection.resize(page + 1);
+            selection[page] = selected;
         }
 
         bool Back(RWGTAMenu::Model& model)
         {
             if (!notice.empty()) return false;
-            if (details)
-            {
-                details = false;
-                physical = 0;
-                selected = 0;
-            }
-            else if (page != static_cast<size_t>(-1))
-            {
-                model.PageShown(page);
-                *this = {};
-            }
-            else return false;
+            size_t parent = model.Back(page);
+            if (parent == SIZE_MAX) return false;
+            page = parent;
+            selected = page < selection.size() ? selection[page] : 0;
             return true;
         }
 
@@ -143,30 +107,20 @@ namespace ScarfaceMenu
             if (direction && item.kind != Kind::Row) return true;
             switch (item.kind)
             {
-                case Kind::Page:
-                    page = item.index;
-                    physical = selected = 0;
-                    helpRow = {};
-                    model.PageShown(page);
-                    break;
                 case Kind::Row:
-                    model.Change(item.row, direction, paused);
-                    helpRow = item.row;
-                    break;
-                case Kind::Previous:
-                    if (physical) --physical;
-                    selected = 0;
-                    break;
-                case Kind::Next:
-                    if (physical + 1 < count) ++physical;
-                    selected = 0;
-                    break;
-                case Kind::Details:
-                    details = true;
-                    physical = selected = 0;
-                    break;
-                case Kind::Back:
-                    if (!Back(model)) return false;
+                    if (RWGTAMenu::Model::Opens(*item.row))
+                    {
+                        if (direction) return true;
+                        size_t next = model.Enter(*item.row);
+                        if (next != SIZE_MAX)
+                        {
+                            Keep();
+                            page = next;
+                            selected = 0;
+                        }
+                        break;
+                    }
+                    model.Change(*item.row, direction, paused);
                     break;
                 default:
                     break;

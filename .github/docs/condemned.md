@@ -25,7 +25,7 @@
 - **Window mode** — Fullscreen, Windowed or Borderless, then restart. No `autoexec.cfg` edit is needed. Windowed gives a centred window whose picture area is exactly the chosen resolution; Borderless fills the current monitor.
 - **Field of view** — A multiplier (0.5–2.0, default 1.0) on the gameplay camera's field of view, limited to 150 degrees horizontally; it applies while the game runs. Scripted cameras and the scope zoom keep their own.
 - **HUD aspect ratio** — Auto spreads the HUD over the whole screen; a ratio such as 16:9 keeps it in a centred box of that shape. Applies at once.
-- **Cutscene borders** — For cinematic cameras that show the game's black bars: Letterbox keeps them, Pillarbox adds side bars that keep the picture at 16:9 on wider screens, Both does both, Off removes them. Animated cutscene borders keeps the game's fade of the bars.
+- **Cutscene borders** — For cinematic cameras that show the game's black bars: Letterbox keeps them, Pillarbox adds side bars that keep the picture at 16:9 on wider screens, Both does both, Off removes them. Animated borders keeps the game's fade of the bars.
 - **Movie display** — Movie screens show the whole video at its own aspect, never cut off or stretched: Original inside the game's centred 16:9 frame, Fill (default) as large as the screen allows. The extras and credits videos are shown at 16:9.
 - **Controller buttons** — Button prompts name the controller's buttons after the controller was used last, and keys after the keyboard or mouse: Auto (Xbox names), Xbox, PlayStation or Nintendo.
 - **Frame rate limit** — Off, the monitor's refresh rate (default) or a number of frames per second; applies at once.

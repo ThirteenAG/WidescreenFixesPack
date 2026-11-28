@@ -88,6 +88,9 @@ void Init()
     InitLocalSplitscreen();
     SCCMenu::Init();
     NativeMenuHelp = SCCMenu::RequestHelp;
+    NativeMenuWheel = SCCMenu::TakeWheel;
+    NativeMenuKey = SCCMenu::TakeKey;
+    NativeMenuInput = SCCMenu::Input;
     InitGraphics();
 
     InitMouse();

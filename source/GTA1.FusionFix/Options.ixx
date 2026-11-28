@@ -5,6 +5,7 @@ module;
 #include "Shared/GTAClassic/InputDevices.hpp"
 #include <functional>
 #include "Shared/RWGTA/FixMenu.hpp"
+#include "Shared/MenuList.hpp"
 
 export module Options;
 
@@ -23,8 +24,13 @@ import Log;
 // with the game's own font and highlight: the list of plugins, the fix first,
 // then the other plugins with settings. The fix's page has its preset, sections
 // that list every setting of this fix and those of the original setup program
-// (language and the native keyboard controls), and Restore defaults. Up and Down select, Enter, Left
-// and Right change a setting, Esc goes back; changes are saved at once and
+// (language and the native keyboard controls), and Restore defaults. Another
+// plugin opens its settings, or the list of its categories, each opening its
+// settings. Every list scrolls by a row through the rows the screen shows (Up
+// and Down wrap at its ends; Page Up/Page Down and the shoulder buttons move by
+// a screen, Home/End go to the ends), and the frontend's small arrows mark rows
+// above and below. Enter, Left and Right change a setting, Esc goes back to the
+// row a list was opened from; changes are saved at once and
 // applied immediately where the game allows it. During gameplay Esc (or the
 // controller's Back button) pauses the game and opens the same pages over the
 // dimmed paused frame, with Resume and Quit Game; Quit Game hands over to the
@@ -75,7 +81,8 @@ export namespace GTA1Options
     RWGTAMenu::Model Model;
     HMODULE HostModule = nullptr;
     size_t NativeSections = 0;
-    std::vector<size_t> ModelPages;
+    std::vector<size_t> ModelPages;         // the model's page of each section after the native ones
+    std::vector<int> PageSections;          // the section of each model page (-1: the fix's, shown by its own sections)
     std::vector<Entry> NativeRoot;
     bool NativeRestartRequired{};
     std::pair<int, int> HelpSelection{ -1, -1 };
@@ -403,6 +410,19 @@ export namespace GTA1Options
             return TextWidth(font, value.c_str());
         });
     }
+    // An entry that opens the section of a model page (a plugin or a category of it)
+    Entry OpenPage(const RWGTAMenu::Row* row)
+    {
+        return { Model.Label(*row), nullptr, [row](int step)
+        {
+            if (step != 0) return;
+            size_t page = Model.Enter(*row);
+            if (page >= PageSections.size() || PageSections[page] < 0) return;
+            int section = PageSections[page];
+            Parents.resize(std::max<size_t>(Parents.size(), section + 1));
+            Parents[section] = Section; Section = section;
+        } };
+    }
     void RefreshModelRows()
     {
         for (size_t i = 0; i < ModelPages.size(); ++i)
@@ -411,6 +431,11 @@ export namespace GTA1Options
             entries.clear();
             for (auto row : Model.VisibleRows(ModelPages[i]))
             {
+                if (RWGTAMenu::Model::Opens(*row))
+                {
+                    entries.push_back(OpenPage(row));
+                    continue;
+                }
                 entries.push_back({ Model.Label(*row), [row] { return Model.Enabled(*row, Overlay) ? Model.Value(*row) : Model.Text("menu.unavailable"); },
                     [row](int step) { Model.Change(*row, step, Overlay); }, false, {},
                     [row] { return Model.Help(*row); }, row });
@@ -418,29 +443,41 @@ export namespace GTA1Options
             entries.push_back(Back());
         }
     }
+    // The model's pages leave a section: its confirmations are dropped
+    void LeaveSection(int section)
+    {
+        for (size_t i = 0; i < ModelPages.size(); ++i)
+        {
+            if (int(NativeSections + i) == section)
+                Model.Back(ModelPages[i]);
+        }
+    }
     void OpenModel()
     {
         if (!HostModule)
             GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
                 reinterpret_cast<LPCWSTR>(&HostModule), &HostModule);
-        Model.OpenPlugins(HostModule, LanguageTag(), 8, {}, true);
+        Model.OpenMenu(HostModule, LanguageTag(), 8);
         Sections.resize(NativeSections); Titles.resize(NativeSections);
         Sections[0] = NativeRoot;
         ModelPages.clear();
         // The fix's own page keeps its native sections (resolution confirmation, keyboard capture); the shared model
-        // gives its preset and Restore defaults rows and every other plugin's pages.
+        // gives its preset and Restore defaults rows and every other plugin's pages and categories.
         auto row = [](const RWGTAMenu::Row* row) -> Entry
         {
             return { Model.Label(*row), [row] { return Model.Value(*row); }, [row](int step) { Model.Change(*row, step, Overlay); }, false, {},
                 [row] { return Model.Help(*row); }, row };
         };
+        auto& pages = Model.Pages();
+        PageSections.assign(pages.size(), -1);
         std::string fixName = Model.Text("plugin.name");
-        std::vector<Entry> plugins = { Open("", 0) };
-        for (size_t page = 0; page < Model.Pages().size(); ++page)
+        for (size_t page = 1; page < pages.size(); ++page)
         {
-            auto& described = Model.Pages()[page];
+            auto& described = pages[page];
             if (described.plugin->module == HostModule)
             {
+                if (described.parent != RWGTAMenu::Model::RootPage)
+                    continue;
                 fixName = OtherPlugins::Name(*described.plugin);
                 for (auto& model : described.rows)
                 {
@@ -449,16 +486,20 @@ export namespace GTA1Options
                 }
                 continue;
             }
-            int section = int(Sections.size());
+            PageSections[page] = int(Sections.size());
             ModelPages.push_back(page);
             Sections.emplace_back(); Titles.push_back(described.title);
-            plugins.push_back({ described.title, nullptr, [page, section](int step)
-                {
-                    if (step != 0) return;
-                    Parents.resize(Sections.size()); Parents[section] = Section;
-                    Model.PageShown(page); Section = section;
-                } });
         }
+        std::vector<Entry> plugins;
+        for (auto& plugin : pages[RWGTAMenu::Model::RootPage].rows)
+        {
+            if (plugin.plugin->module == HostModule)
+                plugins.push_back(Open("", 0));
+            else if (PageSections[plugin.target] >= 0)
+                plugins.push_back(OpenPage(&plugin));
+        }
+        if (plugins.empty() || plugins.front().label != "")
+            plugins.insert(plugins.begin(), Open("", 0));
         for (size_t section = 0; section < NativeSections; ++section)
         {
             for (auto& entry : Sections[section])
@@ -486,7 +527,7 @@ export namespace GTA1Options
                 }
                 for (auto& page : Model.Pages())
                 {
-                    if (page.plugin->module != HostModule)
+                    if (!page.plugin || page.plugin->module != HostModule)
                         continue;
                     for (auto& row : page.rows)
                     {
@@ -502,7 +543,7 @@ export namespace GTA1Options
                 }
             }
         }
-        const char* sectionKeys[] = { "", "page.display", "page.camera", "page.controls", "page.setup", "menu.modernkeys", "menu.morekeys", "menu.classickeys" };
+        const char* sectionKeys[] = { "", "page.display", "page.camera", "page.controls", "page.setup", "menu.modernkeys", "menu.classickeys" };
         for (size_t i = 1; i < std::size(sectionKeys) && i < Titles.size(); ++i)
             Titles[i] = Model.Text(sectionKeys[i]);
         size_t rootSection{};
@@ -511,10 +552,14 @@ export namespace GTA1Options
             if (!entry.modelRow && !entry.value && rootSection < 4)
                 entry.label = Titles[++rootSection];
         }
-        for (size_t i = 0; i < 3 && 5 + i < Sections[3].size(); ++i)
+        for (size_t i = 0; i < 2 && 5 + i < Sections[3].size(); ++i)
             Sections[3][5 + i].label = Titles[5 + i];
         HelpSelection = { -1, -1 };
-        plugins[0].label = fixName;
+        for (auto& entry : plugins)
+        {
+            if (entry.label.empty())
+                entry.label = fixName;
+        }
         plugins.push_back(Back());
         Sections[PluginsSection] = std::move(plugins);
         RefreshModelRows();
@@ -565,6 +610,7 @@ export namespace GTA1Options
         if (Section == -1)                         // Back
         {
             if (before == Opened) { Section = Opened; Close(); return; }
+            LeaveSection(before);
             Section = before < int(Parents.size()) ? Parents[before] : 0;
         }
         if (Section != before)
@@ -587,6 +633,10 @@ export namespace GTA1Options
         SaveInt("MAIN", "ResX", x, applied); SaveInt("MAIN", "ResY", y, applied);
     }
 
+    int Visible = 1;                        // rows the current page shows at once
+    MenuList::Repeat PageUpKey, PageDownKey;
+    bool HomeDown = false, EndDown = false;
+
     // Menu input, as frontend direction and action bits.
     void Handle(int input)
     {
@@ -601,12 +651,32 @@ export namespace GTA1Options
             Click(4);
             if (Section == Opened) { Close(); return; }
             Remembered[Section] = Selected;
+            LeaveSection(Section);
             Section = Section < int(Parents.size()) ? Parents[Section] : 0;
             Selected = Remembered[Section]; Scroll = 0;
             input = 0;
         }
         if (input & Up) { Selected = (Selected + count - 1) % count; Click(7); }
         if (input & Down) { Selected = (Selected + 1) % count; Click(8); }
+        // A screen of rows up or down (stopping at the ends), or to the ends
+        const auto now = GetTickCount64();
+        auto held = [](int key) { return InputDevices::Key(key); };
+        int target = -1;
+        if (PageUpKey.Step(held(VK_PRIOR) || InputDevices::Button(XINPUT_GAMEPAD_LEFT_SHOULDER), now))
+            target = std::max(0, Selected - std::max(1, Visible - 1));
+        if (PageDownKey.Step(held(VK_NEXT) || InputDevices::Button(XINPUT_GAMEPAD_RIGHT_SHOULDER), now))
+            target = std::min(count - 1, Selected + std::max(1, Visible - 1));
+        bool home = held(VK_HOME), end = held(VK_END);
+        if (home && !HomeDown) target = 0;
+        if (end && !EndDown) target = count - 1;
+        HomeDown = home; EndDown = end;
+        if (target >= 0 && target != Selected)
+        {
+            // The window moves with the selection, as far as the list goes
+            Click(target < Selected ? 7 : 8);
+            Scroll += target - Selected;
+            Selected = target;
+        }
         if (input & (Enter | Button)) { Click(2); Change(0); }
         else if (input & Left) { Click(3); Change(-1); }
         else if (input & Right) { Click(3); Change(1); }
@@ -646,6 +716,7 @@ export namespace GTA1Options
         const int helpTop = 480 - height * 3 - 10;
         const int bottom = description.empty() ? 480 - height * 2 : helpTop - 10;
         const int visible = std::max(1, (bottom - 224) / height);
+        Visible = visible;
         if (Selected < Scroll) Scroll = Selected;
         if (Selected >= Scroll + visible) Scroll = Selected - visible + 1;
         Scroll = std::clamp(Scroll, 0, std::max(0, int(shown.size()) - visible));
@@ -674,9 +745,14 @@ export namespace GTA1Options
         auto right = FontText(capture ? Model.Text("menu.presskeyhint") : Hint("menu.changehint", XINPUT_GAMEPAD_A));
         Text(font, 0, 480 - height, left.c_str());
         Text(font, 640 - TextWidth(font, right.c_str()), 480 - height, right.c_str());
-        if (pages > 1 || int(shown.size()) > visible)
+        // Rows above and below: the font's small arrows at the right of the first and last row shown
+        if (Scroll > 0)
+            Text(font, 620 - TextWidth(font, "^"), 224, "^");
+        if (Scroll + visible < int(shown.size()))
+            Text(font, 620 - TextWidth(font, "v"), 224 + (visible - 1) * height, "v");
+        if (pages > 1)
         {
-            auto counter = pages > 1 ? std::to_string(part + 1) + "/" + std::to_string(pages) : std::to_string(Selected + 1) + "/" + std::to_string(shown.size());
+            auto counter = std::to_string(part + 1) + "/" + std::to_string(pages);
             auto width = TextWidth(font, counter.c_str());
             auto begin = TextWidth(font, left.c_str()) + 10;
             auto end = 630 - TextWidth(font, right.c_str());
@@ -1044,9 +1120,9 @@ export namespace GTA1Options
         ResX = &resX; ResY = &resY;
         LoadSetup();
         Language = int(ReadDword(nullptr, "Language", 0));
-        enum { Root, Display, Camera, Controls, Game, ModernKeys, MoreKeys, ClassicKeys, Pause, Plugins, Count };
+        enum { Root, Display, Camera, Controls, Game, ModernKeys, ClassicKeys, Pause, Plugins, Count };
         Sections.assign(Count, {});
-        Titles = { "FUSION FIX", "DISPLAY", "CAMERA", "CONTROLS", "GAME", "MODERN KEYS", "MORE MODERN KEYS", "CLASSIC KEYS", "PAUSED", "PLUGINS" };
+        Titles = { "FUSION FIX", "DISPLAY", "CAMERA", "CONTROLS", "GAME", "MODERN KEYS", "CLASSIC KEYS", "PAUSED", "PLUGINS" };
         Sections[Root] = { Open("DISPLAY", Display), Open("CAMERA", Camera), Open("CONTROLS", Controls), Open("GAME", Game), Back() };
         PauseSection = Pause;
         PluginsSection = Plugins;
@@ -1101,7 +1177,7 @@ export namespace GTA1Options
             Toggle("STICK THROTTLE", "INPUT", "StickThrottle", StickThrottle),
             Toggle("MOUSE AIM", "INPUT", "MouseAim", GTA1Input::MouseAim),
             Choice("STICK DEADZONE", "INPUT", "StickDeadzone", Deadzone, { 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5 }),
-            Open("MODERN KEYS", ModernKeys), Open("MORE MODERN KEYS", MoreKeys), Open("CLASSIC KEYS", ClassicKeys),
+            Open("MODERN KEYS", ModernKeys), Open("CLASSIC KEYS", ClassicKeys),
             Setting("GAMEPAD BUTTONS", "MAIN.GamepadIcons", 4),
             Setting("VIBRATION", "MAIN.Vibration", 2),
             Back() };
@@ -1110,8 +1186,6 @@ export namespace GTA1Options
             Key("MOVE LEFT", "INPUT", "MoveLeftKey", MoveLeftKey), Key("MOVE RIGHT", "INPUT", "MoveRightKey", MoveRightKey),
             Key("FIRE", "INPUT", "FireKey", FireKey), Key("ENTER VEHICLE", "INPUT", "EnterVehicleKey", EnterVehicleKey),
             Key("JUMP", "INPUT", "JumpKey", JumpKey), Key("SPECIAL", "INPUT", "SpecialKey", SpecialKey),
-            Back() };
-        Sections[MoreKeys] = {
             Key("PREVIOUS WEAPON", "INPUT", "PreviousWeaponKey", PreviousWeaponKey),
             Key("NEXT WEAPON", "INPUT", "NextWeaponKey", NextWeaponKey),
             Key("PAUSE", "INPUT", "PauseKey", PauseKey),

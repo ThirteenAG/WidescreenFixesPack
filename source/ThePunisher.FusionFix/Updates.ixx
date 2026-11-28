@@ -38,7 +38,6 @@ export namespace PunisherUpdates
             if (!state.open)
                 return;
             state.notice = asi_settings::text::Narrow(text);
-            state.details = false;
             if (!PunMenu::Build())
                 PunMenu::Close();
         };

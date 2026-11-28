@@ -34,8 +34,9 @@ export namespace GTA2MenuText
                 out += L'\'';
             else if (c == L'“' || c == L'”')
                 out += L'"';
+            // The fonts have no dash: a space keeps the words apart
             else if (c == L'–' || c == L'—' || c == L'-' || c == L'_')
-                out += L'?';
+                out += L' ';
             else if (c == L'[' || c == L'{')
                 out += L'(';
             else if (c == L']' || c == L'}')

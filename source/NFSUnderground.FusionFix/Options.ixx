@@ -9,11 +9,11 @@ module;
 #include "Shared/NFS/Text.hpp"
 #include "Shared/NFS/LegacyText.hpp"
 #include "Shared/NFS/MenuLayout.hpp"
+#include "Shared/MenuList.hpp"
 
 export module Options;
 
 import ComVars;
-import StaticText;
 import UpdateNotice;
 
 import Input;
@@ -24,10 +24,12 @@ import Frontend;
 // (MU_Options_PC.fng, ten rows with a left/right/accept handler each) with a category of the fix; the pause menu gets
 // a "Plugins" entry below HUD that opens the pause options screen (MU_PauseOptions_PC.fng, eight rows) the same way.
 // The category first lists the plugins (the fix first, then every other plugin with settings in menus, and in the main
-// menu the game's credits); accepting one shows its page: a page selector in the first row when the page needs more
-// than one screen, then its rows (WFPPlugins: the Preset row, the settings, Restore Defaults). Back returns to the
-// list. Native rows below each plugin page show complete setting help and separate restart notes; long text continues
-// on timed pages at the original font size. The plugin list is paged when necessary.
+// menu the game's credits); accepting one shows its page: the Preset row, its settings or, when they come in several
+// categories (the description's pages), a row per category that opens its settings, Restore Defaults last. Back returns
+// one level, to the row it came from. Every list is one list: the screen's rows show a window of it that moves a row
+// when the selection goes past its first or last row (the screen's own wrap from the last row to the first, and back),
+// or a row per wheel notch.
+// While a change waits for a restart, the warning takes the screen's last two rows (on timed pages when longer).
 
 namespace
 {
@@ -401,50 +403,6 @@ namespace
         return float(FontWidth(0, nullptr, font, wide, 0)) * std::abs(data[14]);
     }
 
-    bool GlyphBounds(uint8_t* object, float& top, float& bottom)
-    {
-        auto data = ObjectData(object, 68);
-        auto font = static_cast<uint8_t*>(ObjectFont(object));
-        if (!data || !font || !std::isfinite(data[15]) || data[15] <= 0.0f)
-            return false;
-        auto header = *reinterpret_cast<uint8_t**>(font + 12);
-        if (!header || *reinterpret_cast<uint32_t*>(header) != 0x46544E46)
-            return false;
-        auto count = *reinterpret_cast<uint16_t*>(header + 10);
-        auto offset = *reinterpret_cast<uint32_t*>(header + 20);
-        if (!count || count > 4096 || offset > 0x100000)
-            return false;
-        auto stride = *reinterpret_cast<uint32_t*>(header + 12) & 0x40000 ? 16 : 12;
-        float minimum = std::numeric_limits<float>::max();
-        float maximum = std::numeric_limits<float>::lowest();
-        for (size_t i = 0; i < count; ++i)
-        {
-            auto glyph = header + offset + i * stride;
-            float y = *reinterpret_cast<int8_t*>(glyph + 10);
-            minimum = std::min(minimum, y);
-            maximum = std::max(maximum, y + glyph[3]);
-        }
-        auto origin = *reinterpret_cast<float*>(font + 40);
-        top = (minimum + origin) * data[15];
-        bottom = (maximum + origin) * data[15];
-        return std::isfinite(top) && std::isfinite(bottom) && bottom > top;
-    }
-
-    float BaseY(uint8_t* object, float* data)
-    {
-        float y = data[8];
-        bool found{};
-        PositionTracks(object, [&](float& base)
-        {
-            if (!found)
-            {
-                y = (&base)[1];
-                found = true;
-            }
-        });
-        return y;
-    }
-
     std::string SingleLine(std::string text)
     {
         for (auto& c : text)
@@ -499,7 +457,7 @@ namespace
     }
 
     // The category's screen: the list of plugins, or one plugin's page
-    enum class RowKind { None, Plugin, Credits, RootScreen, Screen, Item, Note };
+    enum class RowKind { None, Plugin, Credits, Item, Note };
     struct Row
     {
         RowKind kind = RowKind::None;
@@ -517,18 +475,17 @@ namespace
         size_t handlers;
         bool pause;
         bool page = false;              // a plugin's page is shown, not the list
+        bool category = false;          // one of its categories
         size_t plugin = 0;
-        size_t screen = 0;
-        size_t rootPage = 0;
+        size_t categoryIndex = 0;
+        MenuList::Window window;        // the open list's selection and its first row in the screen's rows
+        int shownRow = 0;               // the row the screen had highlighted
+        int focusRow = 0;               // Back: the row to highlight while the screen settles after the message
+        int focusFrames = 0;
+        int acceptFrames = 0;           // the accept that opened the screen reaches its rows too: ignored meanwhile
+        MenuList::Key selectAfter = 0;  // the row to select once the list it's in is shown
         std::vector<std::string> joinedSettings;
-        std::vector<uint32_t> helpIds;
-        float helpWidth{};
-        std::string helpText;
-        std::vector<std::string> helpLines;
-        uint64_t helpStarted{};
-        size_t helpPage{ std::numeric_limits<size_t>::max() };
-        std::vector<WFPPlugins::Screen> screens;
-        size_t reserved = 0;            // native rows kept free for complete help and restart notes
+        size_t reserved = 0;            // native rows kept free for the restart warning
         void* owner = nullptr;
     };
     Menu MainMenu = { RowCount, 0x40, false };
@@ -730,25 +687,8 @@ namespace
         PrintText(screen, valueName, singleValue);
     }
 
-    std::string SectionTitle(const WFPPlugins::Screen& screen)
-    {
-        // The screen's title is "Plugin: Section (1/2)"; the selector shows what follows the plugin's name
-        auto name = WFPPlugins::Name(*screen.plugin);
-        if (!screen.title.starts_with(name) || screen.title.size() == name.size())
-            return screen.title;
-        // "Plugin (1/2)": the screen's number without the parentheses
-        auto rest = screen.title.substr(name.size());
-        auto first = rest.find_first_not_of(": (");
-        rest = first == std::string::npos ? "" : rest.substr(first);
-        if (!rest.empty() && rest.back() == ')' && rest.find('(') == std::string::npos)
-            rest.pop_back();
-        return rest;
-    }
-
     constexpr size_t NoteRows = 2;
-    std::vector<std::string> NoteLines;
     std::vector<std::string> RestartLines;
-    size_t NoteOffset{};
     size_t RestartOffset{};
     std::string NoteText;
     uint64_t NoteStarted{};
@@ -776,24 +716,11 @@ namespace
             case RowKind::Credits:
                 DrawRow(screen, row, TitleCase(CreditsText()), "");   // already in the game's font
                 break;
-            case RowKind::RootScreen:
-            {
-                auto total = Plugins->plugins.size() + (!Active->pause && CreditsPackage ? 1 : 0);
-                auto slice = WFPMenuLayout::Root(total, Active->rowCount - Active->reserved, Active->rootPage);
-                DrawRow(screen, row, KeyText("WFP_SECTION"), std::to_string(slice.page + 1) + "/" + std::to_string(slice.pages));
-                break;
-            }
-            case RowKind::Screen:
-                DrawRow(screen, row, KeyText("WFP_SECTION"), GameText(SectionTitle(Active->screens[Active->screen])));
-                break;
             case RowKind::Note:
                 // The whole width of the row is the note's
             {
-                auto helpRows = Active->page ? NoteRows : 0;
-                auto help = entry.plugin < helpRows;
-                const auto& lines = help ? NoteLines : RestartLines;
-                auto index = help ? NoteOffset + entry.plugin : RestartOffset + entry.plugin - helpRows;
-                DrawRow(screen, row, index < lines.size() ? lines[index] : "", "", true);
+                auto index = RestartOffset + entry.plugin;
+                DrawRow(screen, row, index < RestartLines.size() ? RestartLines[index] : "", "", true);
                 break;
             }
             case RowKind::Item:
@@ -804,7 +731,7 @@ namespace
                     value = Preset.ValueText();
                 else if (item.kind == WFPPlugins::Row::Kind::RestoreDefaults)
                     value = Restore.ValueText();
-                else
+                else if (item.kind != WFPPlugins::Row::Kind::Category)
                     value = WFPPlugins::ValueText(item);
                 // In the game's categories the rows' names end with a colon, like the game's own
                 auto label = WFPPlugins::Label(item) + (GameRowsFrom && row >= GameRowsFrom ? ":" : "");
@@ -823,15 +750,13 @@ namespace
             case RowKind::Plugin:
             case RowKind::Credits:
                 return Style::Plain;
-            case RowKind::RootScreen:
-            case RowKind::Screen:
-                return Style::Arrows;
             case RowKind::Note:
                 return Style::Note;
             case RowKind::Item:
                 switch (row.item.kind)
                 {
                     case WFPPlugins::Row::Kind::Action:
+                    case WFPPlugins::Row::Kind::Category:
                         return Style::Plain;
                     case WFPPlugins::Row::Kind::RestoreDefaults:
                         return Style::Data;
@@ -845,75 +770,84 @@ namespace
         }
     }
 
-    // The plugin's page in screens of the rows below the page selector, less the rows of the restart warning
-    void BuildScreens(Menu& menu)
+    // The rows kept free below the list for the restart warning while a change waits for a restart (the game's
+    // options screens have no help line, so the rows' help isn't shown)
+    void Reserve(Menu& menu)
     {
-        auto& plugin = Plugins->plugins[menu.plugin];
-        menu.reserved = NoteRows + (WFPPlugins::RestartNeeded() ? NoteRows : 0);
-        menu.screens = WFPPlugins::Screens(plugin, size_t(std::max(1, menu.rowCount - 1 - int(menu.reserved))), true, Excluded(plugin));
-        if (menu.screen >= menu.screens.size())
-            menu.screen = 0;
+        menu.reserved = WFPPlugins::RestartNeeded() ? NoteRows : 0;
     }
 
-    // Shows the list or the page: the rows, the title and the restart warning
+    // The open list's rows: the plugins (and the game's credits), a plugin's page or one of its categories
+    std::vector<Row> ListRows(const Menu& menu)
+    {
+        std::vector<Row> rows;
+        if (!menu.page)
+        {
+            for (size_t i = 0; i < Plugins->plugins.size(); ++i)
+                rows.push_back({ RowKind::Plugin, i });
+            if (!menu.pause && CreditsPackage)
+                rows.push_back({ RowKind::Credits });
+            return rows;
+        }
+        auto& plugin = Plugins->plugins[menu.plugin];
+        auto items = menu.category ? WFPPlugins::CategoryRows(plugin, menu.categoryIndex, Excluded(plugin)) :
+            WFPPlugins::TopRows(plugin, Excluded(plugin));
+        // Rows hidden now (visibleIf, or the plugin has no usable value) leave no gap
+        for (auto& item : items)
+        {
+            bool shown = item.kind == WFPPlugins::Row::Kind::Category ? WFPPlugins::AnyVisible(plugin, item.category, Excluded(plugin)) :
+                WFPPlugins::Visible(item);
+            if (shown)
+                rows.push_back({ RowKind::Item, menu.plugin, item });
+        }
+        return rows;
+    }
+
+    // A row's key while it exists
+    MenuList::Key RowKey(const Row& row)
+    {
+        if (row.kind == RowKind::Plugin)
+            return MenuList::Key(row.plugin * 2 + 1);
+        if (row.kind == RowKind::Credits)
+            return 2;
+        if (row.item.setting)
+            return reinterpret_cast<MenuList::Key>(row.item.setting);
+        return MenuList::Key(0x10000 + row.item.category * 16 + size_t(row.item.kind) * 2);
+    }
+
+    // The title: "Plugins", the plugin's name or the category's
+    std::string MenuTitle(const Menu& menu)
+    {
+        if (!menu.page)
+            return KeyText("WFP_PLUGINS", !menu.pause);
+        auto& plugin = Plugins->plugins[menu.plugin];
+        auto title = WFPPlugins::Name(plugin);
+        if (menu.category)
+        {
+            auto categories = WFPPlugins::Categories(plugin, Excluded(plugin));
+            if (menu.categoryIndex < categories.size())
+                title = categories[menu.categoryIndex].title;
+        }
+        return GameText(title, !menu.pause);
+    }
+
+    // Shows the window of the open list, the title and the restart warning; the window's selected row is highlighted
     void Layout(void* screen)
     {
         auto& menu = *Active;
-        WFPPlugins::Row selected{};
-        bool keepSelection{};
-        if (menu.page && menu.reserved != NoteRows + (WFPPlugins::RestartNeeded() ? NoteRows : 0))
-        {
-            auto row = SelectedRow(screen);
-            if (row > 0 && Rows[row].kind == RowKind::Item)
-            {
-                selected = Rows[row].item;
-                keepSelection = true;
-            }
-            BuildScreens(menu);
-            if (keepSelection)
-            {
-                for (size_t i = 0; i < menu.screens.size(); ++i)
-                {
-                    for (const auto& item : menu.screens[i].rows)
-                    {
-                        if (item.kind == selected.kind && item.plugin == selected.plugin && item.setting == selected.setting)
-                            menu.screen = i;
-                    }
-                }
-            }
-        }
+        Reserve(menu);
+        auto all = ListRows(menu);
+        std::vector<MenuList::Key> keys;
+        for (auto& row : all)
+            keys.push_back(RowKey(row));
+        menu.window.SetSlots(size_t(std::max(1, menu.rowCount - int(menu.reserved))));
+        menu.window.Update(keys);
+        if (auto key = std::exchange(menu.selectAfter, 0))
+            menu.window.SelectKey(key);
         std::vector<Row> rows;
-        std::string title;
-        if (!menu.page)
-        {
-            title = KeyText("WFP_PLUGINS", !menu.pause);
-            menu.reserved = WFPPlugins::RestartNeeded() ? NoteRows : 0;
-            auto count = Plugins->plugins.size() + (!menu.pause && CreditsPackage ? 1 : 0);
-            auto slice = WFPMenuLayout::Root(count, menu.rowCount - menu.reserved, menu.rootPage);
-            menu.rootPage = slice.page;
-            if (slice.selector)
-                rows.push_back({ RowKind::RootScreen });
-            for (size_t i = slice.start; i < slice.start + slice.count; ++i)
-                rows.push_back(i < Plugins->plugins.size() ? Row{ RowKind::Plugin, i } : Row{ RowKind::Credits });
-        }
-        else
-        {
-            auto& plugin = Plugins->plugins[menu.plugin];
-            title = GameText(WFPPlugins::Name(plugin), !menu.pause);
-            if (menu.screen >= menu.screens.size())
-                menu.screen = 0;
-            if (menu.screens.size() > 1)
-                rows.push_back({ RowKind::Screen });
-            if (!menu.screens.empty())
-            {
-                // Rows hidden now (visibleIf, or the plugin has no usable value) leave no gap
-                for (auto& item : menu.screens[menu.screen].rows)
-                {
-                    if (WFPPlugins::Visible(item))
-                        rows.push_back({ RowKind::Item, 0, item });
-                }
-            }
-        }
+        for (size_t slot = 0; slot < menu.window.Shown(); ++slot)
+            rows.push_back(all[menu.window.RowAt(slot)]);
+        auto title = MenuTitle(menu);
         if (menu.reserved)
         {
             // Notes use fixed native rows; longer descriptions continue without shrinking the font.
@@ -933,18 +867,10 @@ namespace
             SetStyle(screen, row, StyleOf(Rows[row]));
             DrawItem(screen, row);
         }
-        if (keepSelection)
+        if (menu.window.Count())
         {
-            for (int row = 1; row <= menu.rowCount; ++row)
-            {
-                const auto& item = Rows[row].item;
-                if (Rows[row].kind == RowKind::Item && item.kind == selected.kind &&
-                    item.plugin == selected.plugin && item.setting == selected.setting)
-                {
-                    Focus(screen, row);
-                    break;
-                }
-            }
+            menu.shownRow = int(menu.window.Slot()) + 1;
+            Focus(screen, menu.shownRow);
         }
         NotePage = std::numeric_limits<size_t>::max();
         RefreshNotes(screen, true);
@@ -969,49 +895,29 @@ namespace
     {
         if (GameRowsFrom || !Active->reserved)
             return;
-        std::string text;
-        auto selected = SelectedRow(screen);
-        if (selected > 0 && Rows[selected].kind == RowKind::Item)
-        {
-            const auto& item = Rows[selected].item;
-            auto value = item.kind == WFPPlugins::Row::Kind::Preset ? Preset.ValueText() :
-                item.kind == WFPPlugins::Row::Kind::RestoreDefaults ? Restore.ValueText() : WFPPlugins::ValueText(item);
-            text = WFPPlugins::Label(item);
-            if (!value.empty())
-                text += ": " + value;
-            auto help = WFPPlugins::Help(item);
-            if (!help.empty())
-                text += "\n" + help;
-        }
         auto warning = WFPPlugins::RestartNeeded() ? GameText(WFPText::Get("WFP_RESTART_WARNING")) : "";
-        text = GameText(text);
-        auto key = text + (warning.empty() ? "" : "\n" + warning);
         auto now = GetTickCount64();
-        bool changed = key != NoteText;
+        bool changed = warning != NoteText;
         if (changed || reflow)
         {
-            NoteText = key;
+            NoteText = warning;
             if (changed)
                 NoteStarted = now;
             auto width = std::numeric_limits<float>::max();
             for (int i = 0; i < int(Active->reserved); ++i)
                 width = std::min(width, NoteWidth(screen, Active->rowCount - i));
             auto object = "OptionNametext_" + std::to_string(Active->rowCount);
-            auto measure = [&](const std::string& candidate)
+            RestartLines = WFPMenuLayout::Wrap(warning, width, [&](const std::string& candidate)
             {
                 return MeasureText(screen, object, candidate);
-            };
-            NoteLines = Active->page ? WFPMenuLayout::Wrap(text, width, measure) : std::vector<std::string>{};
-            RestartLines = WFPMenuLayout::Wrap(warning, width, measure);
+            });
         }
         auto page = size_t((now - NoteStarted) / 12000);
         if (!changed && page == NotePage)
             return;
         NotePage = page;
-        auto pages = std::max<size_t>(1, (NoteLines.size() + NoteRows - 1) / NoteRows);
-        auto warningPages = std::max<size_t>(1, (RestartLines.size() + NoteRows - 1) / NoteRows);
-        NoteOffset = (page % pages) * NoteRows;
-        RestartOffset = (page % warningPages) * NoteRows;
+        auto pages = std::max<size_t>(1, (RestartLines.size() + NoteRows - 1) / NoteRows);
+        RestartOffset = (page % pages) * NoteRows;
         for (int row = Active->rowCount - int(Active->reserved) + 1; row <= Active->rowCount; ++row)
             DrawItem(screen, row);
     }
@@ -1035,33 +941,63 @@ namespace
         }
     }
 
-    void ShowList(void* screen, size_t plugin)
+    // The screen's highlight moves within its rows and wraps from its last row to its first and back. In a list longer
+    // than the rows a step past the last or first row (the screen's wrap) moves the window instead.
+    void FollowSelection(void* screen)
     {
-        Active->page = false;
+        auto& menu = *Active;
+        int row = SelectedRow(screen);
+        if (row <= 0 || row == menu.shownRow || GameRowsFrom)
+            return;
+        int previous = std::exchange(menu.shownRow, row);
+        int last = int(menu.window.Shown());
+        if (row > last || previous <= 0 || previous > last)
+            return;
+        bool longer = menu.window.Count() > menu.window.Shown();
+        if (longer && last > 1 && ((previous == last && row == 1) || (previous == 1 && row == last)))
+        {
+            menu.window.Select(menu.window.First() + size_t(previous - 1));
+            menu.window.Move(previous == last ? 1 : -1);
+            Preset.Cancel();
+            Restore.Cancel();
+            Layout(screen);
+            return;
+        }
+        menu.window.Select(menu.window.First() + size_t(row - 1));
+    }
+
+    void OpenList(void* screen, MenuList::Key select)
+    {
+        auto& menu = *Active;
+        menu.page = menu.category = false;
         Preset.Cancel();
         Restore.Cancel();
-        auto count = Plugins->plugins.size() + (!Active->pause && CreditsPackage ? 1 : 0);
-        auto capacity = Active->rowCount - (WFPPlugins::RestartNeeded() ? NoteRows : 0);
-        auto slice = WFPMenuLayout::Root(count, capacity, 0);
-        if (slice.pages > 1)
-            Active->rootPage = plugin / std::max<size_t>(1, capacity - 1);
+        menu.window.Reset();
+        menu.selectAfter = select;
         Layout(screen);
-        slice = WFPMenuLayout::Root(count, capacity, Active->rootPage);
-        Focus(screen, int(plugin - slice.start) + 1 + (slice.selector ? 1 : 0));
     }
 
     void ShowPage(void* screen, size_t plugin)
     {
         auto& menu = *Active;
         menu.page = true;
+        menu.category = false;
         menu.plugin = plugin;
-        menu.screen = 0;
-        auto& entry = Plugins->plugins[plugin];
-        BuildScreens(menu);
-        Preset.Reset(entry);
+        menu.window.Reset();
+        Preset.Reset(Plugins->plugins[plugin]);
         Restore.Cancel();
         Layout(screen);
-        Focus(screen, 1);
+    }
+
+    void ShowCategory(void* screen, size_t category)
+    {
+        auto& menu = *Active;
+        menu.category = true;
+        menu.categoryIndex = category;
+        menu.window.Reset();
+        Preset.Cancel();
+        Restore.Cancel();
+        Layout(screen);
     }
 
     // The rows show the values in effect: the page again (its rows can depend on them), or the fix's rows of a game
@@ -1086,11 +1022,43 @@ namespace
     // Values changed elsewhere (an editor, a preset, the plugin itself): the rows show them
     void Refresh(void* screen)
     {
+        if (Active->acceptFrames > 0)
+            --Active->acceptFrames;
+        if (Active->focusFrames > 0 && !GameRowsFrom)
+        {
+            --Active->focusFrames;
+            if (SelectedRow(screen) != Active->focusRow)
+                Focus(screen, Active->focusRow);
+            Active->shownRow = Active->focusRow;
+        }
+        if (!GameRowsFrom)
+            FollowSelection(screen);
         bool own = OwnSettingsChanged.exchange(false);
         bool other = WFPPlugins::Changed().exchange(false);
         bool metrics = std::exchange(FontMetricsPending, false);
         if (metrics || ((own || other) && (Active->page || GameRowsFrom)))
             Update(screen);
+    }
+
+    // The wheel: the window moves a row per notch, the selection stays on its row while it is shown
+    MenuList::WheelNotches Wheel;
+    void ScrollWheel(void* screen)
+    {
+        auto delta = Input::MenuWheel.exchange(0);
+        auto& menu = *Active;
+        if (!screen || GameRowsFrom || menu.window.Count() <= menu.window.Shown())
+        {
+            Wheel.Clear();
+            return;
+        }
+        bool moved{};
+        for (auto notches = Wheel.Take(delta); notches; notches -= notches > 0 ? 1 : -1)
+            moved |= menu.window.Scroll(notches > 0 ? -1 : 1);
+        if (!moved)
+            return;
+        Preset.Cancel();
+        Restore.Cancel();
+        Layout(screen);
     }
 
     // The confirmations of the Preset and Restore Defaults rows end with any other input
@@ -1116,6 +1084,8 @@ namespace
         CancelConfirmations(screen, entry);
         int direction = message == MessageLeft ? -1 : message == MessageRight ? 1 : 0;
         bool accept = message == MessageAccept;
+        if (accept && Active->acceptFrames > 0)
+            return;
         switch (entry.kind)
         {
             case RowKind::Credits:
@@ -1133,30 +1103,6 @@ namespace
                     Sound(screen, 11);
                 }
                 return;
-            case RowKind::RootScreen:
-            {
-                if (!direction)
-                    return;
-                auto count = Plugins->plugins.size() + (!Active->pause && CreditsPackage ? 1 : 0);
-                auto slice = WFPMenuLayout::Root(count, Active->rowCount - Active->reserved, Active->rootPage);
-                Active->rootPage = (slice.page + slice.pages + direction) % slice.pages;
-                Layout(screen);
-                Focus(screen, 1);
-                Sound(screen, direction < 0 ? 10 : 11);
-                return;
-            }
-            case RowKind::Screen:
-            {
-                if (!direction || Active->screens.empty())
-                    return;
-                size_t count = Active->screens.size();
-                Active->screen = (Active->screen + count + direction) % count;
-                Preset.Cancel();
-                Restore.Cancel();
-                Layout(screen);
-                Sound(screen, direction < 0 ? 10 : 11);
-                return;
-            }
             case RowKind::Item:
                 break;
             default:
@@ -1167,6 +1113,13 @@ namespace
         auto& plugin = *item.plugin;
         switch (item.kind)
         {
+            case WFPPlugins::Row::Kind::Category:
+                if (accept)
+                {
+                    ShowCategory(screen, item.category);
+                    Sound(screen, 11);
+                }
+                return;
             case WFPPlugins::Row::Kind::Preset:
                 if (direction)
                 {
@@ -1241,13 +1194,13 @@ namespace
         // The page stays as it was when the screen comes back (from the credits, after the pause menu)
         if (menu.page && menu.plugin < Plugins->plugins.size())
         {
-            auto& plugin = Plugins->plugins[menu.plugin];
-            BuildScreens(menu);
-            Preset.Reset(plugin);
+            Preset.Reset(Plugins->plugins[menu.plugin]);
             Restore.Cancel();
         }
         else
-            menu.page = false;
+            menu.page = menu.category = false;
+        menu.shownRow = 0;
+        menu.acceptFrames = menu.pause ? 3 : 0;
         Layout(screen);
     }
 
@@ -1297,182 +1250,6 @@ namespace
             return;
         GameRowsFrom = first;
         Update(screen);
-    }
-
-    const std::array<std::string, 2> JoinedHelpNames{ "WFP_DisplayHelp_0", "WFP_DisplayHelp_1" };
-
-    uint8_t* JoinedCaption(void* screen, const Menu& menu, size_t index)
-    {
-        if (index >= menu.helpIds.size())
-            return nullptr;
-        auto object = TextObject(screen, JoinedHelpNames[index]);
-        return object && *reinterpret_cast<uint32_t*>(object + 0x0C) == menu.helpIds[index] &&
-            *reinterpret_cast<uint32_t*>(object + 0x18) == 2 ? object : nullptr;
-    }
-
-    void HideJoinedHelp(void* screen, Menu& menu)
-    {
-        for (size_t i = 0; i < menu.helpIds.size(); ++i)
-        {
-            if (auto object = JoinedCaption(screen, menu, i))
-            {
-                auto& flags = *reinterpret_cast<uint32_t*>(object + 0x1C);
-                if (!(flags & 1))
-                    flags |= 0x400001;
-            }
-        }
-        menu.helpText.clear();
-        menu.helpPage = std::numeric_limits<size_t>::max();
-    }
-
-    bool EnsureJoinedHelp(void* screen, Menu& menu)
-    {
-        auto package = FindPackageByName(PackageName(screen));
-        if (!package)
-            return false;
-        bool any{};
-        bool complete = !menu.helpIds.empty();
-        for (size_t i = 0; i < JoinedHelpNames.size(); ++i)
-        {
-            auto object = TextObject(screen, JoinedHelpNames[i]);
-            any |= object != nullptr;
-            if (i < menu.helpIds.size() && !JoinedCaption(screen, menu, i))
-                complete = false;
-            if (object && i >= menu.helpIds.size())
-                complete = false;
-        }
-        if (complete)
-            return true;
-        if (any)
-            return false;
-        menu.helpIds.clear();
-        auto suffix = std::to_string(menu.rowCount);
-        auto original = TextObject(screen, "OptionData_" + suffix);
-        auto label = TextObject(screen, "OptionNametext_" + suffix);
-        auto button = TextObject(screen, "OptionName_" + suffix);
-        auto state = ObjectData(original, 68);
-        auto labelState = ObjectData(label, 68);
-        auto buttonState = ObjectData(button, 68);
-        float top{}, bottom{}, labelTop{}, labelBottom{};
-        if (!state || !labelState || !buttonState || !GlyphBounds(original, top, bottom) ||
-            !GlyphBounds(label, labelTop, labelBottom))
-        {
-            FontMetricsPending = true;
-            return false;
-        }
-        auto x = BaseX(label, labelState);
-        auto y = BaseY(label, labelState) + labelBottom + 2.0f - top;
-        auto pitch = bottom - top + 2.0f;
-        auto width = BaseX(button, buttonState) + std::abs(buttonState[14]) * 0.5f - 8.0f - x;
-        size_t count{};
-        // Keep the game's bottom input hints clear; the main screen fits one native-size line, pause fits two.
-        while (count < JoinedHelpNames.size() && y + count * pitch + bottom <= 190.0f)
-            ++count;
-        if (!count || !std::isfinite(width) || width <= 0.0f)
-            return false;
-        std::array<uint8_t*, 2> staged{};
-        for (size_t i = 0; i < count; ++i)
-        {
-            staged[i] = NFSUStaticText::Clone(original);
-            if (!staged[i])
-            {
-                for (auto object : staged)
-                    NFSUStaticText::Destroy(object);
-                return false;
-            }
-            auto data = ObjectData(staged[i], 68);
-            // The scripts' position keys are relative to their base keys, which move with the caption
-            auto dx = x - BaseX(staged[i], data);
-            auto dy = y + i * pitch - BaseY(staged[i], data);
-            PositionTracks(staged[i], [dx, dy](float& base)
-            {
-                base += dx;
-                (&base)[1] += dy;
-            });
-            data[7] = x;
-            data[8] = y + i * pitch;
-            reinterpret_cast<uint32_t*>(data)[3] = 255;
-            *reinterpret_cast<uint32_t*>(staged[i] + 0x10) = HashUpper(JoinedHelpNames[i]);
-            *reinterpret_cast<uint32_t*>(staged[i] + 0x68) &= ~3u;
-            *reinterpret_cast<uint32_t*>(staged[i] + 0x1C) |= 0x4400001;
-        }
-        // Publish only complete, noninteractive captions. The native package owns and retires them.
-        auto tail = *reinterpret_cast<uint8_t**>(package + 0x44);
-        for (size_t i = 0; i < count; ++i)
-        {
-            auto object = staged[i];
-            *reinterpret_cast<uint8_t**>(object + 4) = nullptr;
-            *reinterpret_cast<uint8_t**>(object + 8) = tail;
-            if (tail)
-                *reinterpret_cast<uint8_t**>(tail + 4) = object;
-            else
-                *reinterpret_cast<uint8_t**>(package + 0x40) = object;
-            tail = object;
-            ++*reinterpret_cast<uint32_t*>(package + 0x3C);
-            menu.helpIds.push_back(*reinterpret_cast<uint32_t*>(object + 0x0C));
-            AddHudLayoutCopy(BaseX(original, state), BaseY(original, state), x, y + i * pitch);
-        }
-        *reinterpret_cast<uint8_t**>(package + 0x44) = tail;
-        menu.helpWidth = width;
-        menu.helpText.clear();
-        menu.helpPage = std::numeric_limits<size_t>::max();
-        return true;
-    }
-
-    void RefreshJoinedHelp(void* screen)
-    {
-        auto& menu = *Active;
-        auto selected = SelectedRow(screen);
-        if (!GameRowsFrom || selected < GameRowsFrom || selected > menu.rowCount || Rows[selected].kind != RowKind::Item)
-        {
-            HideJoinedHelp(screen, menu);
-            return;
-        }
-        if (!EnsureJoinedHelp(screen, menu))
-        {
-            // The Plugins page retains full help if the native layout cannot host a caption.
-            menu.joinedSettings.clear();
-            HideJoinedHelp(screen, menu);
-            return;
-        }
-        menu.joinedSettings.clear();
-        for (int row = GameRowsFrom; row <= menu.rowCount; ++row)
-        {
-            if (Rows[row].kind == RowKind::Item && Rows[row].item.setting)
-                menu.joinedSettings.push_back(Rows[row].item.setting->id);
-        }
-        const auto& item = Rows[selected].item;
-        auto text = WFPPlugins::Label(item) + ": " + WFPPlugins::ValueText(item) + "\n" + WFPPlugins::Help(item);
-        if (WFPPlugins::RestartNeeded())
-            text = WFPText::Get("WFP_RESTART_WARNING") + "\n" + text;
-        text = GameText(text);
-        auto now = GetTickCount64();
-        bool changed = text != menu.helpText;
-        if (changed)
-        {
-            menu.helpText = text;
-            menu.helpStarted = now;
-            menu.helpLines = WFPMenuLayout::Wrap(text, menu.helpWidth, [&](const std::string& candidate)
-            {
-                return MeasureText(screen, JoinedHelpNames[0], candidate);
-            });
-        }
-        auto pages = std::max<size_t>(1, (menu.helpLines.size() + menu.helpIds.size() - 1) / menu.helpIds.size());
-        auto page = size_t((now - menu.helpStarted) / 12000) % pages;
-        if (changed || page != menu.helpPage)
-        {
-            menu.helpPage = page;
-            for (size_t i = 0; i < menu.helpIds.size(); ++i)
-            {
-                auto line = page * menu.helpIds.size() + i;
-                PrintText(screen, JoinedHelpNames[i], line < menu.helpLines.size() ? menu.helpLines[line] : "");
-            }
-        }
-        for (size_t i = 0; i < menu.helpIds.size(); ++i)
-        {
-            if (auto object = JoinedCaption(screen, menu, i))
-                *reinterpret_cast<uint32_t*>(object + 0x1C) &= ~1u;
-        }
     }
 
     // The main menu's options screen is set up (the game's own categories are left alone)
@@ -1548,13 +1325,25 @@ namespace
         return *category == (menu.pause ? PauseCategoryAdvanced : CategoryAdvanced) || (gameRows && GameRowsFrom && *category == CategoryDisplay);
     }
 
-    // Back on a plugin's page returns to the list, at the plugin's row; on the list it leaves as the game's back does
+    // Back returns one level, to the row it came from; on the list it leaves as the game's back does
     bool Back(void* screen, Menu& menu)
     {
         if (!IsShown(screen, menu) || !menu.page)
             return false;
-        Restore.Cancel();
-        ShowList(screen, menu.plugin);
+        if (menu.category)
+        {
+            menu.category = false;
+            menu.window.Reset();
+            Preset.Reset(Plugins->plugins[menu.plugin]);
+            Restore.Cancel();
+            menu.selectAfter = RowKey({ RowKind::Item, menu.plugin, { WFPPlugins::Row::Kind::Category, nullptr, nullptr, menu.categoryIndex } });
+            Layout(screen);
+        }
+        else
+            OpenList(screen, RowKey({ RowKind::Plugin, menu.plugin }));
+        // The game highlights the first row after its back message: the row it came from follows
+        menu.focusRow = int(menu.window.Slot()) + 1;
+        menu.focusFrames = 10;
         Sound(screen, 10);
         return true;
     }
@@ -2166,12 +1955,14 @@ public:
             {
                 auto screen = Active ? Active->owner : nullptr;
                 if (!screen || !Plugins || !IsShown(screen, *Active, true))
+                {
+                    Input::MenuWheel = 0;
                     return;
+                }
                 // The controller stays valid until its native destructor clears the owner.
                 Refresh(screen);
+                ScrollWheel(screen);
                 RefreshNotes(screen);
-                if (GameRowsFrom)
-                    RefreshJoinedHelp(screen);
             };
 
             FixSettings().Api()->Subscribe([](void*, const char*) { OwnSettingsChanged = true; }, nullptr);
@@ -2183,15 +1974,7 @@ public:
                 {
                     Refresh(screen);
                     RefreshNotes(screen);
-                    if (GameRowsFrom)
-                        RefreshJoinedHelp(screen);
-                    else
-                        HideJoinedHelp(screen, *Active);
                 }
-                else if (screen && screen->PackageFilename && _stricmp(screen->PackageFilename, "MU_Options_PC.fng") == 0)
-                    HideJoinedHelp(screen, MainMenu);
-                else if (screen && screen->PackageFilename && _stricmp(screen->PackageFilename, "MU_PauseOptions_PC.fng") == 0)
-                    HideJoinedHelp(screen, PauseMenu);
             };
 
             // The menu entry

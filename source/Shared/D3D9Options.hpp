@@ -16,6 +16,10 @@
 // - frame: called before every Present, on the game's render thread (overlays, per-frame window work).
 // - beforeReset: called before every Reset, to release what the fix created on the device.
 // - afterReset: called after a successful Reset, before the game resumes drawing.
+// - waitForDevice: nothing runs on a lost device (the display is off, asleep or locked, or another program took it in
+//   full screen): CreateDevice and Reset wait until it can be reset and try again, a new device lost before the game
+//   used it is reset at once, and a Present that finds it lost returns only once it can be reset, so the game resets it
+//   before it draws or creates anything again. The window stays responsive while it waits.
 // Set them before installing: a method is hooked only when its option is on. The hooks are on the methods' code, not
 // on a device's method table, which the runtime keeps per device and may replace; they stay for later devices.
 // - HookCreation(): before the game creates its device; the devices created afterwards get the options.
@@ -29,6 +33,7 @@ namespace D3D9Options
     inline void (*frame)(IDirect3DDevice9*) = nullptr;
     inline void (*beforeReset)(IDirect3DDevice9*) = nullptr;
     inline void (*afterReset)(IDirect3DDevice9*) = nullptr;
+    inline bool waitForDevice = false;
 
     namespace detail
     {
@@ -103,13 +108,48 @@ namespace D3D9Options
             next = ready + period;
         }
 
+        inline bool WaitForDevice();
+
         inline HRESULT STDMETHODCALLTYPE Present(IDirect3DDevice9* device, const RECT* source, const RECT* dest, HWND window, const RGNDATA* dirty)
         {
             if (frame)
                 frame(device);
             if (!limitDevice || limitDevice(device))
                 Limit();
-            return present.unsafe_stdcall<HRESULT>(device, source, dest, window, dirty);
+            const HRESULT hr = present.unsafe_stdcall<HRESULT>(device, source, dest, window, dirty);
+            if (waitForDevice && hr == D3DERR_DEVICELOST)
+            {
+                while (device->TestCooperativeLevel() == D3DERR_DEVICELOST && WaitForDevice())
+                {
+                }
+            }
+            return hr;
+        }
+
+        // One wait step while the device is lost: handles the thread's window messages, then sleeps. False when the
+        // game is quitting (the quit message stays queued for it).
+        inline bool WaitForDevice()
+        {
+            thread_local bool waiting = false;
+            if (!waiting)
+            {
+                waiting = true;
+                MSG message;
+                while (PeekMessageW(&message, nullptr, 0, 0, PM_REMOVE))
+                {
+                    if (message.message == WM_QUIT)
+                    {
+                        PostQuitMessage(static_cast<int>(message.wParam));
+                        waiting = false;
+                        return false;
+                    }
+                    TranslateMessage(&message);
+                    DispatchMessageW(&message);
+                }
+                waiting = false;
+            }
+            Sleep(100);
+            return true;
         }
 
         inline HRESULT STDMETHODCALLTYPE Reset(IDirect3DDevice9* device, D3DPRESENT_PARAMETERS* params)
@@ -118,7 +158,13 @@ namespace D3D9Options
                 beforeReset(device);
             if (presentParameters && params)
                 presentParameters(params, nullptr);
-            const HRESULT hr = reset.unsafe_stdcall<HRESULT>(device, params);
+            HRESULT hr = reset.unsafe_stdcall<HRESULT>(device, params);
+            // Lost again before or during the reset: wait until the device can be reset
+            while (waitForDevice && hr == D3DERR_DEVICELOST && WaitForDevice())
+            {
+                if (device->TestCooperativeLevel() != D3DERR_DEVICELOST)
+                    hr = reset.unsafe_stdcall<HRESULT>(device, params);
+            }
             if (SUCCEEDED(hr) && afterReset)
                 afterReset(device);
             return hr;
@@ -152,9 +198,9 @@ namespace D3D9Options
         if (!device)
             return;
         auto methods = *reinterpret_cast<void***>(device);
-        if (presentParameters || beforeReset || afterReset)
+        if (presentParameters || beforeReset || afterReset || waitForDevice)
             detail::Hook(detail::reset, methods[IDirect3DDevice9VTBL::Reset], reinterpret_cast<void*>(&detail::Reset));
-        if (frameLimit > 0 || frame)
+        if (frameLimit > 0 || frame || waitForDevice)
             detail::Hook(detail::present, methods[IDirect3DDevice9VTBL::Present], reinterpret_cast<void*>(&detail::Present));
         if (anisotropy > 1)
         {
@@ -175,8 +221,24 @@ namespace D3D9Options
             if (presentParameters && params)
                 presentParameters(params, window);
             HRESULT hr = createDevice.unsafe_stdcall<HRESULT>(d3d, adapter, type, window, flags, params, device);
+            while (waitForDevice && hr == D3DERR_DEVICELOST && WaitForDevice())
+                hr = createDevice.unsafe_stdcall<HRESULT>(d3d, adapter, type, window, flags, params, device);
             if (SUCCEEDED(hr) && device)
                 HookDevice(*device);
+            // Lost before the game created anything on it: reset now, while that needs nothing released
+            if (waitForDevice && SUCCEEDED(hr) && device && *device && params)
+            {
+                auto created = *device;
+                HRESULT state;
+                while ((state = created->TestCooperativeLevel()) == D3DERR_DEVICELOST && WaitForDevice())
+                {
+                }
+                if (state == D3DERR_DEVICENOTRESET)
+                {
+                    auto copy = *params;
+                    created->Reset(&copy);
+                }
+            }
             return hr;
         }
 
@@ -200,7 +262,7 @@ namespace D3D9Options
     // Loads the d3d9.dll the game will use if it isn't loaded yet; does nothing when no option is on
     inline void HookCreation()
     {
-        if (frameLimit <= 0 && anisotropy <= 1 && !presentParameters && !frame && !beforeReset && !afterReset)
+        if (frameLimit <= 0 && anisotropy <= 1 && !presentParameters && !frame && !beforeReset && !afterReset && !waitForDevice)
             return;
         auto module = GetModuleHandleW(L"d3d9.dll");
         if (!module)

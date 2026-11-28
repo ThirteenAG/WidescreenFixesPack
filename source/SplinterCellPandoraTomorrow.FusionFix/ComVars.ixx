@@ -87,6 +87,8 @@ export std::vector<std::pair<const std::wstring, std::wstring>> ResList =
 export namespace UWindowsViewport
 {
     std::queue<std::function<void()>> deferredCauseInputEvent;
+    // Set by the native menu: takes the wheel's raw delta while its list is open (true: the game doesn't get it)
+    bool (__cdecl* MenuWheel)(int delta) = nullptr;
     // Feeds the raw mouse movement of an engine tick to the viewport; set while gameplay has the mouse
     std::function<void(int dx, int dy)> RawMouseFeed;
 }

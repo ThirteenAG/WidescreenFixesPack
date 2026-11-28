@@ -5,6 +5,7 @@ module;
 #include <array>
 #include <cstring>
 #include <limits>
+#include <string>
 #include <string_view>
 
 export module EngineText;
@@ -80,8 +81,12 @@ export namespace REText
         if (!node || value.size() > static_cast<size_t>(std::numeric_limits<int>::max())) return;
         using SetText = void (__thiscall*)(void*, const char*, int, int);
         // Slot 23 is the four-argument format overload; slot 22 owns a UTF-8 copy.
+        // The renderer reads < > as markup tags and runs past the text on an unclosed one: show them as brackets
+        std::string text(value);
+        std::replace(text.begin(), text.end(), '<', '(');
+        std::replace(text.begin(), text.end(), '>', ')');
         reinterpret_cast<SetText>(Read<uintptr_t*>(node, 0)[22])(
-            node, value.data(), static_cast<int>(value.size()), -1);
+            node, text.c_str(), static_cast<int>(text.size()), -1);
     }
 
     inline void Place(void* node, float x, float y, int size, uint32_t color = 0xFFFFFFFF)

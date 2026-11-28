@@ -4,6 +4,8 @@ module;
 #include "FixSettings.hpp"
 #include "Shared/RWGTA/FixMenu.hpp"
 #include "Shared/RWGTA/UpdateCheck.hpp"
+#include "Shared/MenuList.hpp"
+#include "Shared/PadInput.hpp"
 #include <intrin.h>
 #include <set>
 #include <deque>
@@ -212,6 +214,15 @@ namespace KongMenu::Native
 
 namespace KongMenu
 {
+    // A text in capitals, as the menus' headings and entries are
+    inline std::string Upper(const std::string& utf8)
+    {
+        auto wide = asi_settings::text::Widen(utf8);
+        if (!wide.empty())
+            CharUpperBuffW(wide.data(), DWORD(wide.size()));
+        return asi_settings::text::Narrow(wide);
+    }
+
     struct Context
     {
         void* world = nullptr;
@@ -229,6 +240,12 @@ namespace KongMenu
         uint8_t slotCount = 0;
         uint16_t width = 0, height = 0;
         Native::TextSlot style{};
+        Native::TextSlot titleStyle{};      // the page's title ("OPTIONS")
+        uint32_t fontPage = 0;              // the font page of the page's rows
+        uint32_t titleColor = 0xFFFFFFFF;
+
+        // The right edge is at x (the page's labels are right-justified)
+        static bool RightJustified(uint32_t flags) { return (flags & 16) != 0; }
 
         static bool ScratchReady()
         {
@@ -253,7 +270,8 @@ namespace KongMenu
                 auto count = Native::Read<uint32_t>(resource, 8);
                 auto table = Native::Read<void*>(resource, 12);
                 if (!count || count > 4096 || !table) return nullptr;
-                auto index = nLocale == 12 ? 22U : 0U;
+                // The font page's material; the Japanese ones of the first two pages follow at 22
+                auto index = fontPage + (nLocale == 12 && fontPage < 2 ? 22U : 0U);
                 if (index >= count) index = 0;
                 resource = Native::Read<void*>(table, index * 4);
                 if (!resource) return nullptr;
@@ -398,6 +416,14 @@ namespace KongMenu
                 return false;
             auto slot = static_cast<Native::TextSlot*>(next.descriptors) + next.first + 5;
             std::memcpy(&next.style, slot, sizeof(next.style));
+            std::memcpy(&next.titleStyle, static_cast<Native::TextSlot*>(next.descriptors) + next.first, sizeof(next.titleStyle));
+            if (next.style.count && next.style.start < next.glyphCapacity)
+                next.fontPage = (Native::Read<Native::Glyph>(static_cast<Native::Glyph*>(next.glyphs) + next.style.start, 0).symbol >> 12) & 63;
+            if (next.titleStyle.count && next.titleStyle.start < next.glyphCapacity)
+                next.titleColor = Native::Read<Native::Glyph>(static_cast<Native::Glyph*>(next.glyphs) + next.titleStyle.start, 0).color;
+            if (!next.titleStyle.count || !std::isfinite(next.titleStyle.x) || !std::isfinite(next.titleStyle.y) ||
+                next.titleStyle.x <= 0.0f || next.titleStyle.x > 1.0f || next.titleStyle.y < 0.0f || next.titleStyle.y > 1.0f)
+                next.titleStyle = next.style;
             if (!std::isfinite(next.style.x) || !std::isfinite(next.style.y) ||
                 !std::isfinite(next.style.z) || next.style.x < 0.0f || next.style.x > 1.0f ||
                 next.style.y < 0.0f || next.style.y > 1.0f || !next.Current())
@@ -456,6 +482,9 @@ namespace KongMenu
             if (!count || count > 4096 || !width || !height || !uv ||
                 !Native::Literal(ascii, count, encoded))
                 return false;
+            // In the font page of the page's own rows
+            if (context.fontPage)
+                encoded = "\\P" + std::to_string(context.fontPage) + "\\" + encoded;
             for (unsigned char c : ascii)
             {
                 const auto index = aGlyphMap[c] - 32;
@@ -515,7 +544,7 @@ namespace KongMenu
             pieces.clear();
             // Measured where the aligned text fits on screen; the extent doesn't depend on the position
             const auto align = context.style.flags & 3;
-            const float measureX = align == 2 ? maxWidth : align == 1 ? maxWidth / 2 : 0.0f;
+            const float measureX = Context::RightJustified(context.style.flags) || align == 2 ? maxWidth : align == 1 ? maxWidth / 2 : 0.0f;
             auto tokens = Tokens(utf8);
             if (tokens.empty() && !utf8.empty()) return false;
             if (tokens.empty()) { pieces.emplace_back(); return true; }
@@ -555,16 +584,17 @@ namespace KongMenu
         }
 
         bool Put(int slot, const std::string& utf8, float x, float y,
-                 float maxWidth, float maxHeight, uint32_t color)
+                 float maxWidth, float maxHeight, uint32_t color, int64_t look = -1)
         {
+            const uint32_t flags = look >= 0 ? uint32_t(look) : context.style.flags;
             std::string ascii, encoded;
             if (!NativeText(utf8, ascii) || !Capacity(slot, ascii.size()) || !Encode(ascii, encoded) ||
                 !std::isfinite(x) || !std::isfinite(y) || !std::isfinite(maxWidth) ||
                 !std::isfinite(maxHeight) || x < 0 || y < 0 || maxWidth <= 0 ||
                 maxHeight <= 0 || y + maxHeight > 1)
                 return false;
-            const auto align = context.style.flags & 3;
-            const float left = align == 2 ? x - maxWidth : align == 1 ? x - maxWidth / 2 : x;
+            const auto align = flags & 3;
+            const float left = Context::RightJustified(flags) || align == 2 ? x - maxWidth : align == 1 ? x - maxWidth / 2 : x;
             if (left < 0 || left + maxWidth > 1)
                 return false;
             Native::ClearEffects(context.text, slot);
@@ -576,7 +606,7 @@ namespace KongMenu
             if (descriptor.count != ascii.size() || descriptor.start >= context.glyphCapacity ||
                 uint32_t(descriptor.count) > context.glyphCapacity - descriptor.start)
                 return false;
-            Native::Flags(context.text, slot, int16_t(context.style.flags));
+            Native::Flags(context.text, slot, int16_t(flags));
             if (!Valid()) return false;
             const float size[3]{ -1.0f, 0.0f, 0.0f };
             Native::Size(context.text, slot, size);
@@ -592,7 +622,7 @@ namespace KongMenu
                 for (size_t i = 0; i < ascii.size(); ++i)
                 {
                     const auto glyph = Native::Read<Native::Glyph>(glyphs + i, 0);
-                    if (((glyph.symbol >> 12) & 63) || (glyph.symbol & 0xFFF) < 32 ||
+                    if (((glyph.symbol >> 12) & 63) != context.fontPage || (glyph.symbol & 0xFFF) < 32 ||
                         (glyph.symbol & 0xFFF) > 255 || glyph.x < 0 || glyph.y < 0 ||
                         uint32_t(glyph.x) + glyph.width > uint32_t(context.width * maxWidth) ||
                         uint32_t(glyph.y) + glyph.height > uint32_t(context.height * maxHeight))
@@ -622,7 +652,7 @@ namespace KongMenu
 
 namespace KongMenu
 {
-    enum class Kind { Link, Row, Info, Previous, Next, Back };
+    enum class Kind { Link, Row, Info, Back };
     struct Item
     {
         Kind kind = Kind::Back;
@@ -632,17 +662,25 @@ namespace KongMenu
         bool enabled = true;
     };
 
+    // The plugins list, a plugin's settings or categories, a category's settings, or the selected setting's details,
+    // as the five items of the Options page. A row too long for the page continues on the next lines. Each list is one
+    // list, Back last, that scrolls by a line through the five items (physical: the first line shown).
     struct View
     {
-        static constexpr size_t ContentRows = 2;
-        int page = -1;
+        static constexpr size_t Slots = 5;
+        int page = int(RWGTAMenu::Model::RootPage);
         size_t physical = 0;
+        size_t total = 0;                   // lines of the whole list
         bool details = false;
         size_t originPhysical = 0;
         RWGTAMenu::Row detailRow{};
         std::string notice;
         std::string title;
         std::vector<Item> items;
+        std::map<int, std::pair<size_t, size_t>> kept;  // the first line and item a list was left on, by page
+
+        bool Above() const { return physical > 0; }
+        bool Below() const { return physical + items.size() < total; }
 
         bool Prepare(RWGTAMenu::Model& model, Text& font, bool pause,
                      const std::function<bool()>& current, float width, HMODULE hostModule)
@@ -667,24 +705,17 @@ namespace KongMenu
                 }
                 return true;
             };
-            if (!current() || !model.IsOpen() || model.Pages().empty()) return false;
+            if (!current() || !model.IsOpen() || model.Pages().empty() || page < 0 || size_t(page) >= model.Pages().size()) return false;
             if (details)
             {
                 title = model.Text(notice.empty() ? "menu.details" : "menu.updatetitle");
                 const auto help = notice.empty() ? model.Help(detailRow) : notice;
                 if (!current() || !append(Item{ Kind::Info, {}, {}, 0, false }, help)) return false;
             }
-            else if (page < 0)
-            {
-                title = model.Text("menu.title");
-                const auto pages = model.Pages();
-                for (size_t i = 0; i < pages.size(); ++i)
-                    if (!append(Item{ Kind::Link, {}, {}, i, true }, pageTitle(pages[i]))) return false;
-            }
             else
             {
-                if (size_t(page) >= model.Pages().size()) return false;
-                title = pageTitle(model.Pages()[size_t(page)]);
+                const auto& source = model.Pages()[size_t(page)];
+                title = size_t(page) == RWGTAMenu::Model::RootPage ? model.Text("menu.title") : pageTitle(source);
                 auto rows = model.VisibleRows(size_t(page));
                 if (!current()) return false;
                 // Copy before any further plugin call can rebuild Model pages.
@@ -692,6 +723,12 @@ namespace KongMenu
                 for (auto row : rows) copied.push_back(*row);
                 for (auto row : copied)
                 {
+                    if (RWGTAMenu::Model::Opens(row))
+                    {
+                        if (row.target >= model.Pages().size()) return false;
+                        if (!append(Item{ Kind::Link, {}, row, row.target, true }, pageTitle(model.Pages()[row.target]))) return false;
+                        continue;
+                    }
                     auto label = model.Label(row);
                     if (!current()) return false;
                     auto value = model.Value(row);
@@ -704,20 +741,15 @@ namespace KongMenu
                 }
             }
             if (!current()) return false;
-            const size_t pages = std::max(size_t(1), (content.size() + ContentRows - 1) / ContentRows);
-            physical = std::min(physical, pages - 1);
-            items.clear();
-            const auto begin = physical * ContentRows;
-            for (size_t i = begin; i < content.size() && i < begin + ContentRows; ++i)
-                items.push_back(std::move(content[i]));
-            if (physical) items.push_back(Item{ Kind::Previous, model.Text("menu.previous"), {}, 0, true });
-            if (physical + 1 < pages) items.push_back(Item{ Kind::Next, model.Text("menu.next"), {}, 0, true });
-            items.push_back(Item{ Kind::Back, model.Text("menu.back"), {}, 0, true });
+            content.push_back(Item{ Kind::Back, model.Text("menu.back"), {}, 0, true });
+            total = content.size();
+            physical = std::min(physical, total > Slots ? total - Slots : 0);
+            items.assign(content.begin() + physical, content.begin() + std::min(total, physical + Slots));
             // Title itself also uses complete physical lines, never truncation.
             std::vector<std::string> headings;
             if (!font.Split(title, width, 0.065f, headings) || headings.size() != 1 || !current()) return false;
             title = std::move(headings[0]);
-            return !items.empty() && items.size() <= 5;
+            return !items.empty() && items.size() <= Slots;
         }
     };
 }
@@ -734,6 +766,7 @@ namespace KongMenu
         bool pause = true, invalid = false, open = false;
         bool busy = false, opening = false, ready = false, entryReady = false, restore = false, repaint = true;
         size_t selected = 0;
+        size_t originSelected = 0;          // the item a setting's details were opened from
         std::map<std::pair<HMODULE, std::string>, std::string> restartBaseline;
 
         struct Pending
@@ -766,6 +799,8 @@ namespace KongMenu
         float Width() const
         {
             const float x = context.style.x;
+            if (Context::RightJustified(context.style.flags))
+                return std::min(x - 0.05f, 0.6f);
             switch (Align())
             {
                 case 1: return std::min(2.0f * std::min(x, 1.0f - x) - 0.05f, 0.6f);
@@ -773,7 +808,7 @@ namespace KongMenu
                 default: return std::min(1.0f - x - 0.025f, 0.5f);
             }
         }
-        float Left() const { return Align() == 2 ? context.style.x - Width() : Align() == 1 ? context.style.x - Width() / 2 : context.style.x; }
+        float Left() const { return Context::RightJustified(context.style.flags) || Align() == 2 ? context.style.x - Width() : Align() == 1 ? context.style.x - Width() / 2 : context.style.x; }
         float Right() const { return Left() + Width(); }
 
         void Retire()
@@ -841,17 +876,30 @@ namespace KongMenu
             // cursor is a separate native object managed by the original VM.
             for (int i = 0; i < 29; ++i)
                 if (!text.Hide(context.first + i)) return false;
-            if (!text.Put(context.first, candidate.title, context.style.x, 0.25f,
-                          Width(), 0.065f, 0xFFFFFFFF)) return false;
+            // The title where the Options page has its own, in capitals like it
+            const auto& title = context.titleStyle;
+            const float titleWidth = Context::RightJustified(title.flags) ? std::min(title.x - 0.05f, 0.6f) : std::min(1.0f - title.x - 0.025f, 0.6f);
+            if (!text.Put(context.first, Upper(candidate.title), title.x, title.y,
+                          titleWidth, 0.065f, context.titleColor, title.flags)) return false;
             for (size_t i = 0; i < candidate.items.size(); ++i)
             {
                 const auto color = !candidate.items[i].enabled ? 0xFF606060 :
                     (i == focus ? 0xFFFFFFFF : 0xFFB0B0B0);
-                if (!text.Put(context.first + 5 + int(i), candidate.items[i].text,
+                // Plugins and categories in capitals like the Options page's entries; settings as the Video page's
+                const auto& item = candidate.items[i];
+                if (!text.Put(context.first + 5 + int(i), item.kind == Kind::Link ? Upper(item.text) : item.text,
                               context.style.x, 0.40f + 0.08f * float(i),
                               Width(), 0.065f, color)) return false;
             }
-            if (!candidate.details && candidate.page >= 0 &&
+            // Lines above or below the five shown: the font's dots right of the first and last item (the page's
+            // font has no arrows)
+            const float markX = std::min(context.style.x + 0.035f, 0.97f);
+            if (candidate.Above() && !text.Put(context.first + 1, "...", markX, 0.40f, 0.03f, 0.065f, 0xFFB0B0B0))
+                return false;
+            if (candidate.Below() && !text.Put(context.first + 2, "...", markX,
+                0.40f + 0.08f * float(candidate.items.size() - 1), 0.03f, 0.065f, 0xFFB0B0B0))
+                return false;
+            if (!candidate.details && std::any_of(candidate.items.begin(), candidate.items.end(), [](const Item& item) { return item.kind == Kind::Row; }) &&
                 !text.Put(context.first + 11, model.Text("menu.detailskey"), context.style.x, 0.80f,
                     Width(), 0.065f, 0xFFB0B0B0)) return false;
             if (RestartRequired(current))
@@ -921,6 +969,7 @@ namespace KongMenu
             auto lease = shared_from_this();
             if (!Current() || open || !entryReady ||
                 Native::Read<int>(context.parameters, 60) != 4) return false;
+            nMenuWheel.exchange(0);
             ++generation;
             open = true;
             ready = false;
@@ -936,7 +985,7 @@ namespace KongMenu
             auto current = Snapshot(true);
             {
                 Foreign foreign(*this);
-                model.OpenPlugins(module, language, 5, {}, true);
+                model.OpenMenu(module, language, View::Slots);
                 auto pages = model.Pages();
                 for (const auto& page : pages)
                     for (const auto& row : page.rows)
@@ -1014,6 +1063,7 @@ namespace KongMenu
                 }
             }
             View candidate = view;
+            size_t focus = selected;
             if ((event.help || (event.direction == 0 && event.item.row.kind == RWGTAMenu::RowKind::Setting)) &&
                 event.item.kind == Kind::Row)
             {
@@ -1021,41 +1071,44 @@ namespace KongMenu
                 candidate.notice.clear();
                 candidate.detailRow = event.item.row;
                 candidate.originPhysical = candidate.physical;
+                originSelected = selected;
                 candidate.physical = 0;
+                focus = 0;
             }
             else switch (event.item.kind)
             {
                 case Kind::Info:
                     return true;
                 case Kind::Link:
+                {
                     if (event.direction) return true;
-                    if (event.item.target >= model.Pages().size()) return false;
-                    candidate.page = int(event.item.target);
+                    size_t target = model.Enter(event.item.row);
+                    if (target >= model.Pages().size()) return false;
+                    candidate.kept[candidate.page] = { candidate.physical, selected };
+                    candidate.page = int(target);
                     candidate.physical = 0;
-                    model.PageShown(event.item.target);
+                    focus = 0;
                     break;
-                case Kind::Previous:
-                    if (event.direction || !candidate.physical) return true;
-                    --candidate.physical;
-                    break;
-                case Kind::Next:
-                    if (event.direction) return true;
-                    ++candidate.physical;
-                    break;
+                }
                 case Kind::Back:
+                {
                     if (event.direction) return true;
                     if (candidate.details)
                     {
                         candidate.details = false;
                         candidate.notice.clear();
                         candidate.physical = candidate.originPhysical;
+                        focus = originSelected;
                         break;
                     }
-                    if (candidate.page < 0) { Close(); return true; }
-                    model.PageShown(size_t(candidate.page));
-                    candidate.page = -1;
-                    candidate.physical = 0;
+                    size_t parent = model.Back(size_t(candidate.page));
+                    if (parent == SIZE_MAX) { Close(); return true; }
+                    candidate.page = int(parent);
+                    const auto kept = candidate.kept.find(candidate.page);
+                    candidate.physical = kept != candidate.kept.end() ? kept->second.first : 0;
+                    focus = kept != candidate.kept.end() ? kept->second.second : 0;
                     break;
+                }
                 case Kind::Row:
                 {
                     Foreign foreign(*this);
@@ -1065,8 +1118,7 @@ namespace KongMenu
                     break;
                 }
             }
-            const bool samePage = candidate.page == view.page && candidate.physical == view.physical && candidate.details == view.details;
-            return current() && Populate(std::move(candidate), samePage ? selected : 0);
+            return current() && Populate(std::move(candidate), focus);
         }
 
         void Frame()
@@ -1239,6 +1291,8 @@ namespace KongMenu
         }
     }
 
+    bool backHeld = false, acceptHeld = false;
+
     void PrivateInput(const std::shared_ptr<Host>& lease)
     {
         if (!Global(lease) || !lease->open) return;
@@ -1247,7 +1301,12 @@ namespace KongMenu
         const auto common = reinterpret_cast<int (__cdecl*)()>(Native::Address().common)();
         reinterpret_cast<int (__cdecl*)()>(Native::Address().commonInput)();
         if (!common || !Global(lease)) return;
-        if (BackPressed() && Once(1)) { lease->Queue(0, true); return; }
+        // Back and accept once per press (the game reports them while they are held)
+        const bool backDown = BackPressed(), back = backDown && !backHeld;
+        backHeld = backDown;
+        if (back && Once(1)) { lease->Queue(0, true); return; }
+        const bool acceptDown = AcceptPressed(), accept = acceptDown && !acceptHeld;
+        acceptHeld = acceptDown;
         static bool previousHelp = false;
         const bool help = GetForegroundWindow() == GetActiveWindow() && (GetAsyncKeyState(VK_F1) & 0x8000);
         const bool showHelp = help && !previousHelp;
@@ -1265,15 +1324,74 @@ namespace KongMenu
             Native::Read<int>(lease->context.parameters, 60) != int(lease->selected)) return;
         const auto count = lease->view.items.size();
         auto previous = lease->selected;
-        if (Native::Read<int>(lease->context.parameters, 76) == 1 && Once(4))
+        const auto previousFirst = lease->view.physical;
+        // Up/Down: the next item that can be chosen, the list scrolling a line at the first or last item and wrapping
+        // at its ends; Page Up/Page Down five lines, Home/End the ends
+        auto move = [&](int direction)
         {
-            do { lease->selected = (lease->selected + 1) % count; }
-            while (lease->view.items[lease->selected].kind == Kind::Info);
+            auto& view = lease->view;
+            const size_t total = view.total;
+            size_t line = view.physical + lease->selected;
+            if (!view.details)
+                line = (line + total + size_t(direction)) % total;
+            else
+                line = std::clamp<size_t>(line + size_t(direction), 0, total ? total - 1 : 0);
+            if (line < view.physical) view.physical = line;
+            else if (line >= view.physical + View::Slots) view.physical = line - View::Slots + 1;
+            lease->selected = line - view.physical;
+        };
+        // Held Up/Down (keys, d-pad, stick) repeat; the page takes the first press itself
+        static MenuList::Repeat downHeld, upHeld;
+        static MenuList::StickAxis stick;
+        const bool front = GetForegroundWindow() == GetActiveWindow();
+        XINPUT_STATE pad{};
+        DWORD padSlot = 0;
+        const bool padRead = front && PadInput::Read(pad, padSlot);
+        const int stickY = padRead ? stick.Direction(pad.Gamepad.sThumbLY) : 0;
+        const WORD buttons = padRead ? pad.Gamepad.wButtons : 0;
+        const auto now = GetTickCount64();
+        const bool downRepeat = downHeld.Step(front && ((GetAsyncKeyState(VK_DOWN) & 0x8000) || (buttons & XINPUT_GAMEPAD_DPAD_DOWN) || stickY < 0), now, false);
+        const bool upRepeat = upHeld.Step(front && ((GetAsyncKeyState(VK_UP) & 0x8000) || (buttons & XINPUT_GAMEPAD_DPAD_UP) || stickY > 0), now, false);
+        if ((Native::Read<int>(lease->context.parameters, 76) == 1 && Once(4)) || downRepeat)
+        {
+            if (lease->view.details && lease->view.Below()) ++lease->view.physical;
+            else if (!lease->view.details) move(1);
         }
-        if (Native::Read<int>(lease->context.parameters, 80) == 1 && Once(8))
+        if ((Native::Read<int>(lease->context.parameters, 80) == 1 && Once(8)) || upRepeat)
         {
-            do { lease->selected = (lease->selected + count - 1) % count; }
-            while (lease->view.items[lease->selected].kind == Kind::Info);
+            if (lease->view.details && lease->view.Above()) --lease->view.physical;
+            else if (!lease->view.details) move(-1);
+        }
+        // The wheel scrolls the list a line per notch; the selection stays on its line while it is shown
+        static MenuList::WheelNotches wheel;
+        for (int notches = wheel.Take(nMenuWheel.exchange(0)); notches; notches += notches > 0 ? -1 : 1)
+        {
+            auto& view = lease->view;
+            const size_t line = view.physical + lease->selected;
+            const size_t last = view.total > View::Slots ? view.total - View::Slots : 0;
+            if (notches > 0 && view.physical > 0) --view.physical;
+            else if (notches < 0 && view.physical < last) ++view.physical;
+            else continue;
+            lease->selected = std::clamp(line, view.physical, view.physical + View::Slots - 1) - view.physical;
+        }
+        static bool pageUpHeld = false, pageDownHeld = false, homeHeld = false, endHeld = false;
+        auto key = [](int vk) { return GetForegroundWindow() == GetActiveWindow() && (GetAsyncKeyState(vk) & 0x8000) != 0; };
+        const bool pageUp = key(VK_PRIOR), pageDown = key(VK_NEXT), home = key(VK_HOME), end = key(VK_END);
+        if (!lease->view.details)
+        {
+            for (int i = 0; pageUp && !pageUpHeld && i < int(View::Slots) - 1 && lease->view.physical + lease->selected > 0; ++i) move(-1);
+            for (int i = 0; pageDown && !pageDownHeld && i < int(View::Slots) - 1 &&
+                lease->view.physical + lease->selected + 1 < lease->view.total; ++i) move(1);
+            while (home && !homeHeld && lease->view.physical + lease->selected > 0) move(-1);
+            while (end && !endHeld && lease->view.physical + lease->selected + 1 < lease->view.total) move(1);
+        }
+        pageUpHeld = pageUp; pageDownHeld = pageDown; homeHeld = home; endHeld = end;
+        if (lease->view.physical != previousFirst)
+        {
+            // The list scrolled: its items are painted again with the selection in its slot
+            lease->repaint = true;
+            Host::Write<int>(lease->context.parameters, 60, int(lease->selected));
+            return;
         }
         const auto x = Native::Read<float>(lease->context.parameters, 468);
         const auto y = Native::Read<float>(lease->context.parameters, 472);
@@ -1291,7 +1409,7 @@ namespace KongMenu
         }
         if (Native::Read<int>(lease->context.parameters, 84) == 1 && Once(16)) lease->Queue(-1);
         else if (Native::Read<int>(lease->context.parameters, 88) == 1 && Once(32)) lease->Queue(1);
-        else if (AcceptPressed() && Once(2)) lease->Queue(0);
+        else if (accept && Once(2)) lease->Queue(0);
     }
 
     int __cdecl Options()
@@ -1347,6 +1465,8 @@ namespace KongMenu
         {
             requestedOpen = lease;
             requestedGeneration = lease->generation;
+            // The press that opens the list doesn't also choose its first row
+            acceptHeld = true;
         }
         return result;
         }
@@ -1376,7 +1496,7 @@ namespace KongMenu
         Text text(lease->context, current);
         auto texts = FixSettings().GetTexts();
         texts.Select(MenuLanguage());
-        const auto label = texts.Resolve("@menu.title");
+        const auto label = Upper(texts.Resolve("@menu.title"));
         const auto color = Native::Read<int>(lease->context.parameters, 60) == 4 ? 0xFFFFFFFF : 0xFF606060;
         if (text.Put(lease->context.first + 9, label, lease->context.style.x, 0.72f,
                      lease->Width(), 0.065f, color))
@@ -1518,6 +1638,7 @@ namespace KongMenu
             view.details = true;
             view.notice = asi_settings::text::Narrow(message);
             view.originPhysical = view.physical;
+            owner->originSelected = owner->selected;
             view.physical = 0;
             if (!owner->Populate(std::move(view), 0) && owner->Current()) owner->Close();
         };

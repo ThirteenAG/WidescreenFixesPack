@@ -1,5 +1,6 @@
 module;
 #include <stdafx.h>
+#include <atomic>
 #include "FixSettings.hpp"
 #include "Shared/CursorConfinement.hpp"
 #include <d3d9.h>
@@ -29,6 +30,9 @@ export namespace PsiOpsWindow
     inline std::function<void()> beforeReset;
     inline std::function<bool()> blocksInput;
     inline std::function<bool(HWND, UINT, WPARAM, LPARAM, LRESULT&)> message;
+    // Wheel deltas of the game window, for the fix's menu
+    inline std::atomic<int> wheelDelta{ 0 };
+    inline std::atomic<uint64_t> wheelTime{ 0 };
     inline GameRef<uint8_t> cursorVisible;
 
     struct PlacementScope
@@ -111,6 +115,11 @@ export namespace PsiOpsWindow
             ConstrainSize(target, reinterpret_cast<WINDOWPOS*>(lParam));
         }
         CursorConfinement::Message(id, wParam);
+        if (id == WM_MOUSEWHEEL)
+        {
+            wheelDelta += GET_WHEEL_DELTA_WPARAM(wParam);
+            wheelTime = GetTickCount64();
+        }
         LRESULT result = 0;
         if (message && message(target, id, wParam, lParam, result))
             return result;

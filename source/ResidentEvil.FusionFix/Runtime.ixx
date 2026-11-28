@@ -13,6 +13,7 @@ import DeveloperOverlay;
 import Focus;
 import MenuBindings;
 import NativeMenu;
+import OptionWord;
 import InputDrain;
 import WindowBindings;
 import Window;
@@ -35,6 +36,7 @@ export namespace RERuntime
         GetWindowThreadProcessId(window, &process);
         if (process != GetCurrentProcessId()) return;
         REVideo::Frame();
+        REWord::Frame(device);
         REOverlay::AttachWindow(window);
         REOverlay::Keyboard(window);
         REWindow::Frame(native, window, REOverlay::BlocksInput());
@@ -51,6 +53,7 @@ export namespace RERuntime
         RESkipStart::Install();
         REFocus::Install();
         REMenu::blocksInput = []() { return REOverlay::BlocksInput() || REWindow::BlocksInput(); };
+        REWord::Install();
         REMenu::Install(REOverlay::ThisModule());
         REUpdates::Install();
         REIcons::Install(REOverlay::ThisModule());

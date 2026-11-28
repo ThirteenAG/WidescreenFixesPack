@@ -33,6 +33,9 @@ namespace UWindowsViewport
             NativeWindowsMenuHelp && NativeWindowsMenuHelp(Msg == WM_KEYDOWN && !(lParam & (1u << 30))))
             return 0;
 
+        if (Msg == WM_MOUSEWHEEL && NativeWindowsMenuWheel && NativeWindowsMenuWheel(GET_WHEEL_DELTA_WPARAM(wParam)))
+            return 0;
+
         // Handle Alt+F4 to close the window
         if (Msg == WM_SYSKEYDOWN && wParam == VK_F4)
         {

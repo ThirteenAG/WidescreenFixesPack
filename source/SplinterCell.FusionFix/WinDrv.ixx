@@ -102,6 +102,9 @@ namespace UWindowsViewport
             }
         }
 
+        if (Msg == WM_MOUSEWHEEL && MenuWheel && MenuWheel(GET_WHEEL_DELTA_WPARAM(wParam)))
+            return 0;
+
         // Preserve the console's native focus events when enabled, and pause the level explicitly. When disabled,
         // hide the console from those events so the game continues running in the background.
         static bool bKeptRunning = false;

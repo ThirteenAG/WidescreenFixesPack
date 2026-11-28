@@ -2,6 +2,7 @@ module;
 
 #include <stdafx.h>
 #include "Shared/RWGTA/FixMenu.hpp"
+#include "Shared/MenuList.hpp"
 
 export module NativeMenuView;
 
@@ -10,39 +11,46 @@ import NativeMenuText;
 
 export namespace MHMenu
 {
+    // The plugins list, a plugin's settings or categories, or a category's settings, as the rows of the Settings screen. A row too long for the screen continues on the next lines. Every list is one
+    // list that scrolls by a line through the rows the screen shows; the footer's Back returns one level.
     struct View
     {
-        enum class Kind { Page, Row, Previous, Next, Details, Back, Text };
+        static constexpr size_t Slots = 8;  // lines shown at once
+
+        enum class Kind { Row, Text };
         struct Item
         {
             Kind kind = Kind::Text;
-            size_t index = 0;
-            RWGTAMenu::Row row{};
+            const RWGTAMenu::Row* row = nullptr;
             bool enabled = false;
             std::wstring text;
         };
 
-        size_t page = static_cast<size_t>(-1);
-        size_t physical = 0;
-        size_t selected = 0;
-        size_t count = 1;
-        bool details = false;
+        size_t page = RWGTAMenu::Model::RootPage;
         std::string notice;
-        RWGTAMenu::Row helpRow{};
-        std::vector<Item> items;
+        std::vector<Item> all;              // every line of the list
+        std::vector<Item> items;            // the lines shown
+        MenuList::Window* list = nullptr;   // the page's window (the model keeps one per page)
+        MenuList::Window text;              // the notice
+
+        MenuList::Window& Current() { return !notice.empty() || !list ? text : *list; }
 
         bool Build(RWGTAMenu::Model& model, bool paused)
         {
-            if (!model.IsOpen()) return false;
+            if (!model.IsOpen() || page >= model.Pages().size()) return false;
+            list = &model.Window(page);
             std::vector<Item> complete;
+            std::vector<MenuList::Key> keys;
             auto add = [&](Item item, const std::string& value)
             {
                 std::vector<std::wstring> lines;
                 if (!Text::Lines(value, lines)) return false;
-                for (auto& line : lines)
+                for (size_t i = 0; i < lines.size(); ++i)
                 {
                     auto shown = item;
-                    shown.text = std::move(line);
+                    shown.text = std::move(lines[i]);
+                    // Every line of a row selects that row; the lines after the first carry it along
+                    keys.push_back(MenuList::Key(item.row ? reinterpret_cast<uintptr_t>(item.row) : complete.size() + 1) * 8 + i);
                     complete.push_back(std::move(shown));
                 }
                 return true;
@@ -51,124 +59,88 @@ export namespace MHMenu
             {
                 if (!add(Item{}, notice)) return false;
             }
-            else if (details)
-            {
-                if (!add(Item{}, model.Help(helpRow))) return false;
-            }
-            else if (page == static_cast<size_t>(-1))
-            {
-                const auto& pages = model.Pages();
-                for (size_t i = 0; i < pages.size(); ++i)
-                    if (!add(Item{ Kind::Page, i, {}, true }, pages[i].title)) return false;
-            }
             else
             {
-                if (page >= model.Pages().size()) return false;
-                auto rows = model.VisibleRows(page);
-                for (size_t i = 0; i < rows.size(); ++i)
+                for (auto row : model.VisibleRows(page))
                 {
-                    if (!rows[i]) return false;
-                    auto row = *rows[i];
-                    auto label = model.Label(row);
-                    if (row.kind == RWGTAMenu::RowKind::Preset && row.plugin)
-                        label = OtherPlugins::Name(*row.plugin) + ": " + label;
-                    auto value = model.Value(row);
-                    if (!value.empty()) label += ": " + value;
-                    if (!add(Item{ Kind::Row, i, row, model.Enabled(row, paused) }, label)) return false;
+                    auto label = model.Label(*row);
+                    if (!RWGTAMenu::Model::Opens(*row))
+                    {
+                        auto value = model.Value(*row);
+                        if (!value.empty()) label += ": " + value;
+                    }
+                    bool enabled = RWGTAMenu::Model::Opens(*row) || model.Enabled(*row, paused);
+                    if (!add(Item{ Kind::Row, row, enabled }, label)) return false;
                 }
             }
             if (complete.size() > 768) return false;
-            const size_t capacity = details || !notice.empty() ? 5 : 4;
-            count = (std::max)(size_t(1), (complete.size() + capacity - 1) / capacity);
-            physical = (std::min)(physical, count - 1);
-            auto first = physical * capacity;
-            auto last = (std::min)(first + capacity, complete.size());
-            std::vector<Item> shown;
-            for (size_t i = first; i < last; ++i) shown.push_back(std::move(complete[i]));
-            auto navigation = [&](Kind kind, const char* key)
-            {
-                std::wstring text;
-                if (!Text::Convert(model.Text(key), text) || !Text::Fits(text)) return false;
-                shown.push_back(Item{ kind, 0, {}, true, std::move(text) });
-                return true;
-            };
-            if (physical && !navigation(Kind::Previous, "menu.previous")) return false;
-            if (physical + 1 < count && !navigation(Kind::Next, "menu.next")) return false;
-            if (!details && notice.empty() && page != static_cast<size_t>(-1) && !navigation(Kind::Details, "menu.details")) return false;
-            if (!navigation(Kind::Back, "menu.back") || shown.size() > 8) return false;
-            items = std::move(shown);
-            selected = (std::min)(selected, items.size() - 1);
-            if (!items[selected].enabled) Move(1);
-            Remember();
+            auto& current = Current();
+            current.SetSlots(Slots);
+            current.Update(keys);
+            items.assign(complete.begin() + current.First(), complete.begin() + current.First() + current.Shown());
+            all = std::move(complete);
+            if (!items.empty() && !items[current.Slot()].enabled) Move(1);
             return true;
         }
 
-        void Remember()
+        size_t Selected() { return Current().Slot(); }
+
+        // The mouse over a shown line (while it moves): its row
+        void Point(size_t slot)
         {
-            if (selected < items.size() && items[selected].kind == Kind::Row)
-                helpRow = items[selected].row;
+            auto& current = Current();
+            if (current.First() + slot < all.size() && all[current.First() + slot].enabled)
+                current.Point(slot);
         }
 
+        // Page Up/Page Down, Home/End and the wheel
+        void Page(int direction) { Current().Page(direction); }
+        void Edge(int direction) { Current().Edge(direction); }
+        void Scroll(int direction) { Current().Scroll(direction); }
+
+        // Up/Down: the next row that can be changed, the list following it; wrapping at the ends
         void Move(int direction)
         {
-            if (items.empty()) return;
-            for (size_t attempt = 0; attempt < items.size(); ++attempt)
+            auto& current = Current();
+            if (all.empty()) return;
+            for (size_t attempt = 0; attempt < all.size(); ++attempt)
             {
-                selected = (selected + items.size() + direction) % items.size();
-                if (items[selected].enabled) break;
+                current.Move(direction, true);
+                if (all[current.Selected()].enabled) break;
             }
-            Remember();
         }
 
         bool Back(RWGTAMenu::Model& model)
         {
             if (!notice.empty()) return false;
-            if (details)
-            {
-                details = false;
-                physical = 0;
-                selected = 0;
-            }
-            else if (page != static_cast<size_t>(-1))
-            {
-                model.PageShown(page);
-                *this = {};
-            }
-            else return false;
+            size_t parent = model.Back(page);
+            if (parent == SIZE_MAX) return false;
+            page = parent;
+            list = &model.Window(page);
             return true;
         }
 
         bool Activate(RWGTAMenu::Model& model, bool paused, int direction)
         {
-            if (selected >= items.size() || !items[selected].enabled) return true;
-            auto item = items[selected];
+            auto& current = Current();
+            if (current.Selected() >= all.size() || !all[current.Selected()].enabled) return true;
+            auto item = all[current.Selected()];
             if (direction && item.kind != Kind::Row) return true;
             switch (item.kind)
             {
-                case Kind::Page:
-                    page = item.index;
-                    physical = selected = 0;
-                    helpRow = {};
-                    model.PageShown(page);
-                    break;
                 case Kind::Row:
-                    model.Change(item.row, direction, paused);
-                    helpRow = item.row;
-                    break;
-                case Kind::Previous:
-                    if (physical) --physical;
-                    selected = 0;
-                    break;
-                case Kind::Next:
-                    if (physical + 1 < count) ++physical;
-                    selected = 0;
-                    break;
-                case Kind::Details:
-                    details = true;
-                    physical = selected = 0;
-                    break;
-                case Kind::Back:
-                    if (!Back(model)) return false;
+                    if (RWGTAMenu::Model::Opens(*item.row))
+                    {
+                        if (direction) return true;
+                        size_t next = model.Enter(*item.row);
+                        if (next != SIZE_MAX)
+                        {
+                            page = next;
+                            list = &model.Window(page);
+                        }
+                        break;
+                    }
+                    model.Change(*item.row, direction, paused);
                     break;
                 default:
                     break;

@@ -4,6 +4,7 @@ module;
 #include <d3d9.h>
 #include "FixSettings.hpp"
 #include "Shared/CursorConfinement.hpp"
+#include "Shared/RainDroplets.hpp"
 
 export module Misc;
 
@@ -726,6 +727,14 @@ namespace Menu
             shRight.unsafe_fastcall(pPage, edx);
     }
 
+    // Back (Escape, the pad's back button) on a page
+    SafetyHookInline shCancel = {};
+    void __fastcall Cancel(uint8_t* pPage, void* edx)
+    {
+        if (!ColdFearMenu::Cancel(pPage))
+            shCancel.unsafe_fastcall(pPage, edx);
+    }
+
     SafetyHookInline shCommitPage = {};
     int __fastcall CommitPage(uint8_t* menu, void* edx)
     {
@@ -742,6 +751,8 @@ namespace Menu
         const auto state = shFrontend.unsafe_fastcall<int>(menu, edx, time);
         if (state == 2)
             ColdFearMenu::Get().frontend = false;
+        // The droplets stay off the front end's menus while they show
+        RainDroplets::MenuOpen(ColdFearMenu::Get().frontend);
         return state;
     }
 
@@ -758,6 +769,7 @@ namespace Menu
         auto left = hook::pattern("56 8B F1 8B 86 8C C5 00 00 85 C0 7D 05 E8 ? ? ? ? 8B 86 8C C5 00 00 8D 0C 80 C1 E1 04 2B C8 C1 E1 04 8B 44 31 20 83 E8 04 74 ? 83 E8 02 8B CE 74 ? 6A 02");
         auto right = hook::pattern("56 8B F1 8B 86 8C C5 00 00 85 C0 7D 05 E8 ? ? ? ? 8B 86 8C C5 00 00 8D 0C 80 C1 E1 04 2B C8 C1 E1 04 8B 44 31 20 83 E8 04 74 ? 83 E8 02 8B CE 74 ? 6A 01");
         auto start = hook::pattern("8B 8B 00 D4 00 00 6A 01 6A 04 E8 ? ? ? ? 8B 83 94 C5 00 00 8B 8B 00 D4 00 00 50 6A 04 E8");
+        auto cancel = hook::pattern("53 8B D9 83 BB 98 C5 00 00 FF 0F 84 ? ? ? ? 83 BB 94 C5 00 00 0D 75 0A");
         auto commit = hook::pattern("55 8B EC 51 53 8B D9 56 57 8B B3 C0 69 0C 00 83 FE 0D 89 75 FC");
         auto frontend = hook::pattern("55 8B EC 81 EC 88 01 00 00 53 8B D9 8B 43 04 89 45 E8 A0 ? ? ? ? 84 C0 74 0C B8 02 00 00 00");
 
@@ -800,7 +812,181 @@ namespace Menu
         shLeft = safetyhook::create_inline(left.get_first(), Left); //0x40C360
         shRight = safetyhook::create_inline(right.get_first(), Right); //0x40C490
         shCommitPage = safetyhook::create_inline(commit.get_first(), CommitPage); //0x40F680
+        shCancel = safetyhook::create_inline(cancel.get_first(), Cancel); //0x40C5D0
         shFrontend = safetyhook::create_inline(frontend.get_first(), Frontend); //0x40E6D0
+    }
+}
+
+// The renderer's pool of dynamic vertex buffers (sub_643DD0): before a Reset the game releases every buffer and leaves
+// the pool's entries without one; when the Reset fails (the display is off or another program holds it) the game goes
+// on and later reuses such an entry: it released or handed out a null buffer and crashed, and its vertex streams locked
+// a buffer that couldn't be created. The pool's and the streams' functions again, with entries without a buffer never
+// handed out or released and a stream without a buffer skipping its draw.
+namespace VertexPool
+{
+    struct Entry
+    {
+        uint32_t size;
+        uint32_t used;
+        IDirect3DVertexBuffer9* buffer;
+        IDirect3DVertexBuffer9** owner;
+        Entry* next;
+    };
+
+    Entry** pList = nullptr;
+    void** pHeap = nullptr;
+    uint8_t** pMemory = nullptr;
+    uint32_t* pFlags = nullptr;
+    IDirect3DDevice9** pDevice = nullptr;
+    uint32_t* pCurrent = nullptr;     // the stream in use, of four (only the first without the flag 0x10000)
+    uint32_t* pUsed = nullptr;        // per stream: bytes used, then its size, then its buffer
+    SafetyHookInline shTake = {};
+    SafetyHookInline shLock = {};
+
+    int __cdecl Take(uint32_t size, IDirect3DVertexBuffer9** out)
+    {
+        Entry* victim = nullptr;
+        for (auto entry = *pList; entry; entry = entry->next)
+        {
+            if (entry->used)
+                continue;
+            if (entry->size == size && entry->buffer)
+            {
+                entry->used = 1;
+                *out = entry->buffer;
+                entry->owner = out;
+                return 1;
+            }
+            if (!victim || victim->size < entry->size)
+                victim = entry;
+        }
+        if (victim)
+        {
+            if (victim->buffer)
+                victim->buffer->Release();
+            victim->buffer = nullptr;
+        }
+        else
+        {
+            auto allocate = *reinterpret_cast<Entry* (__cdecl**)(void*, uint32_t)>(*pMemory + 280);
+            victim = allocate(*pHeap, 0x40411);
+            if (!victim)
+                return 0;
+            victim->buffer = nullptr;
+            victim->used = 0;
+            victim->next = *pList;
+            *pList = victim;
+        }
+        const D3DPOOL pool = D3DPOOL((~*pFlags >> 15) & 2);
+        if ((*pDevice)->CreateVertexBuffer(size, D3DUSAGE_DYNAMIC | D3DUSAGE_WRITEONLY, 0, pool, out, nullptr) != D3D_OK)
+            return 0;
+        victim->size = size;
+        victim->used = 1;
+        victim->owner = out;
+        victim->buffer = *out;
+        return 1;
+    }
+
+    // The vertex range for count vertices of stride bytes in one of the streams (sub_643EE0); false and no buffer when the
+    // stream has no buffer (it couldn't be created again yet), so the draw is skipped instead of locking nothing
+    BOOL __cdecl Lock(uint32_t stride, uint32_t count, IDirect3DVertexBuffer9** buffer, void** data, uint32_t* first)
+    {
+        auto size = pUsed + 4;
+        auto streams = reinterpret_cast<IDirect3DVertexBuffer9**>(pUsed + 8);
+        uint32_t stream = *pCurrent;
+        const uint32_t bytes = stride * count;
+        uint32_t offset = 0, end = bytes;
+        bool append = false;
+        if (*pFlags & 0x10000)
+        {
+            const auto fits = [&](uint32_t i)
+            {
+                offset = stride * ((pUsed[i] + stride - 1) / stride);
+                end = offset + bytes;
+                return end <= size[i];
+            };
+            append = fits(stream);
+            for (uint32_t i = 0; !append && i < 4; ++i)
+            {
+                if (i != stream && fits(i))
+                {
+                    stream = *pCurrent = i;
+                    append = true;
+                }
+            }
+            if (!append)
+            {
+                stream = *pCurrent = (stream + 1) % 4;
+                offset = 0;
+                end = bytes;
+            }
+        }
+        if (bytes > size[stream])
+        {
+            for (auto entry = *pList; entry; entry = entry->next)
+            {
+                if (entry->buffer == streams[stream])
+                {
+                    entry->used = 0;
+                    entry->owner = nullptr;
+                    break;
+                }
+            }
+            size[stream] = bytes;
+            Take(bytes, &streams[stream]);
+            stream = *pCurrent;
+        }
+        auto target = streams[stream];
+        if (!target)
+        {
+            size[stream] = 0;
+            *buffer = nullptr;
+            *first = 0;
+            return FALSE;
+        }
+        HRESULT result;
+        if (append && offset)
+        {
+            result = target->Lock(offset, bytes, data, D3DLOCK_NOOVERWRITE | D3DLOCK_NOSYSLOCK);
+            pUsed[*pCurrent] = end;
+            *first = offset / stride;
+        }
+        else
+        {
+            result = target->Lock(0, bytes, data, D3DLOCK_DISCARD | D3DLOCK_NOSYSLOCK);
+            pUsed[*pCurrent] = bytes;
+            *first = 0;
+        }
+        *buffer = streams[*pCurrent];
+        return SUCCEEDED(result);
+    }
+
+    void Init()
+    {
+        auto lock = hook::pattern("8B 4C 24 04 A1 ? ? ? ? 53 55 8B 2D ? ? ? ? 56 57 8B F9 0F AF 7C 24 18 A9 00 00 01 00"); //0x643EE0
+        pCurrent = *lock.get_first<uint32_t*>(13);
+        pUsed = *lock.get_first<uint32_t*>(0x24);
+        auto take = hook::pattern("A1 ? ? ? ? 53 8B 5C 24 08 56 33 F6 57 85 C0 74 52 8B 48 04 8B 50 10 85 C9 75 10"); //0x643DD0
+        auto start = take.get_first<uint8_t>();
+        pList = *reinterpret_cast<Entry***>(start + 1);
+        pHeap = *reinterpret_cast<void***>(start + 0x66);
+        pMemory = *reinterpret_cast<uint8_t***>(start + 0x6B);
+        pFlags = *reinterpret_cast<uint32_t**>(start + 0x90);
+        pDevice = *reinterpret_cast<IDirect3DDevice9***>(start + 0x9A);
+        shTake = safetyhook::create_inline(start, Take);
+        shLock = safetyhook::create_inline(lock.get_first(), Lock);
+
+        // Clearing a camera texture raster (sub_647510) whose texture couldn't be created: the clear fails like an
+        // unknown raster instead of reading the missing texture
+        auto clear = hook::pattern("8B 15 ? ? ? ? 8A 44 11 09 8B 0C 11 A8 0F 74 18 8B 11 8D 74 24 18"); //0x64796B
+        auto site = clear.get_first<uint8_t>();
+        static auto failed = hook::range_pattern(reinterpret_cast<uintptr_t>(site), reinterpret_cast<uintptr_t>(site) + 0x200,
+            "68 0D 00 00 80 C7 44 24 2C 01 00 00 00 E8 ? ? ? ? 89 44 24 30 8D 44 24 2C 50").get_first<uint8_t>(); //0x647A97
+        static auto shClear = safetyhook::create_mid(site + 13, [](SafetyHookContext& regs)
+        {
+            if (!regs.ecx)
+                regs.eip = reinterpret_cast<uintptr_t>(failed);
+        });
     }
 }
 
@@ -842,6 +1028,7 @@ public:
             Resolution::Init();
             Windowed::Init();
             Menu::Init();
+            VertexPool::Init();
             ColdFearRuntime::Init(bGOG);
 
             if (bGOG)

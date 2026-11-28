@@ -178,6 +178,13 @@ int __fastcall WndProc(HDC _this, void* edx, UINT Msg, int wparam, unsigned int 
     if ((Msg == WM_KEYDOWN || Msg == WM_KEYUP) && wparam == VK_F1 && NativeMenuHelp &&
         NativeMenuHelp(Msg == WM_KEYDOWN && !(lparam & (1u << 30))))
         return 0;
+    if ((Msg == WM_MOUSEMOVE || Msg == WM_KEYDOWN) && NativeMenuInput)
+        NativeMenuInput(Msg);
+    if (Msg == WM_MOUSEWHEEL && NativeMenuWheel && NativeMenuWheel(GET_WHEEL_DELTA_WPARAM(wparam)))
+        return 0;
+    if (Msg == WM_KEYDOWN && (wparam == VK_PRIOR || wparam == VK_NEXT || wparam == VK_HOME || wparam == VK_END) && NativeMenuKey &&
+        NativeMenuKey(int(wparam)))
+        return 0;
 
     switch (Msg)
     {

@@ -4,8 +4,11 @@ module;
 #include "FixSettings.hpp"
 #include "Shared/RWGTA/FixMenu.hpp"
 #include "Shared/RWGTA/UpdateCheck.hpp"
+#include "Shared/MenuList.hpp"
+#include "Shared/RainDroplets.hpp"
 #include <unordered_map>
 #include <cmath>
+#include <span>
 
 export module NativeMenu;
 
@@ -54,20 +57,59 @@ export namespace RE0Menu
         return false;
     }
 
+    // A line of the page: a row of the model, or Back (none)
     struct Item
     {
         std::string label, value;
-        RWGTAMenu::Row row;
-        int link = -1;
+        const RWGTAMenu::Row* row = nullptr;
         bool enabled = true;
     };
+
+    // The look of the game's own settings pages (Video): names on the left, values centred on the right, eight lines
+    enum class Align { Left, Centre, Right };
+    namespace Look
+    {
+        // Text node colours are stored as A B G R
+        constexpr uint32_t Rgb(uint32_t r, uint32_t g, uint32_t b, uint32_t a = 255)
+        {
+            return (a << 24) | (b << 16) | (g << 8) | r;
+        }
+        constexpr float Top = 176.0f;
+        constexpr float Pitch = 44.0f;
+        constexpr float LabelLeft = 295.0f;
+        constexpr float ValueCentre = 815.0f;
+        constexpr float LeftArrow = 650.0f;
+        constexpr float RightArrow = 978.0f;
+        constexpr float UpArrow = 138.0f;
+        constexpr float DownArrow = 509.0f;
+        constexpr float Centre = 640.0f;
+        constexpr float HelpLine = 586.0f;
+        constexpr int Size = 34;
+        constexpr int HelpSize = 24;
+        constexpr uint32_t Selected = Rgb(224, 224, 224);
+        constexpr uint32_t Normal = Rgb(118, 118, 118);
+        constexpr uint32_t Dim = Rgb(60, 60, 60);
+        constexpr uint32_t Arrow = Rgb(195, 195, 195);
+        constexpr uint32_t Title = Rgb(170, 170, 170);
+        constexpr uint32_t Help = Rgb(247, 247, 247);
+    }
+
+    // Lines of the page: the title, then the rows (Back among them) scrolling through the rest
+    constexpr size_t Places = 8;
+    constexpr size_t Slots = Places - 1;
+
+    inline float Line(size_t place)
+    {
+        return Look::Top + Look::Pitch * place;
+    }
 
     struct Text
     {
         void* node = nullptr;
         std::string value;
-        std::array<float, 4> geometry{};
+        std::array<float, 5> geometry{};
         uint32_t tint = 0;
+        float width = 0;
         bool fitted = false;
 
         void Set(const std::string& text)
@@ -78,22 +120,29 @@ export namespace RE0Menu
             RE0Text::Set(node, value);
         }
 
-        void Fit(const std::string& text, float x, float y, int height, float width, uint32_t color)
+        // x is the left edge or the centre of the text by the alignment; y is the centre of the line
+        void Fit(const std::string& text, float x, float y, int height, float limit, uint32_t color, Align align = Align::Left)
         {
-            const std::array<float, 4> style{ x, y, static_cast<float>(height), width };
+            const std::array<float, 5> style{ x, y, static_cast<float>(height), limit, static_cast<float>(align) };
             if (fitted && text == value && geometry == style && tint == color) return;
-            RE0Text::Place(node, x, y, height, color);
+            RE0Text::Place(node, x, y - height * 0.5f, height, color);
             RE0Text::Set(node, text);
-            const auto measured = Read<float>(node, 216);
-            if (std::isfinite(measured) && measured > width)
+            auto size = height;
+            auto measured = Read<float>(node, 216);
+            if (std::isfinite(measured) && measured > limit)
             {
-                const auto smaller = std::max(12, static_cast<int>(std::floor(height * width / measured)));
-                RE0Text::Place(node, x, y + (height - smaller) * 0.5f, smaller, color);
+                size = std::max(12, static_cast<int>(std::floor(height * limit / measured)));
+                RE0Text::Place(node, x, y - size * 0.5f, size, color);
                 RE0Text::Set(node, text);
+                measured = Read<float>(node, 216);
             }
+            if (!std::isfinite(measured)) measured = 0;
+            const float left = align == Align::Centre ? x - measured * 0.5f : align == Align::Right ? x - measured : x;
+            RE0Text::Place(node, left, y - size * 0.5f, size, color);
             value = text;
             geometry = style;
             tint = color;
+            width = measured;
             fitted = true;
         }
     };
@@ -104,17 +153,19 @@ export namespace RE0Menu
         void* root = nullptr;
         void* layer = nullptr;
         std::vector<std::pair<void*, uint32_t>> stockVisibility;
-        std::array<Text, 8> labels, values;
+        std::array<Text, Slots> labels, values;
         std::array<Text, 9> helpLines;
-        Text entry, heading, footer, restart, notice;
+        Text entry, heading, footer, restart, notice, left, right;
         std::vector<std::pair<void*, uint32_t>> entryLayers;
         RWGTAMenu::Model model;
         std::vector<Item> items;
         std::vector<std::string> help;
-        size_t page = 0, rowStart = 0, selection = 0, helpStart = 0;
+        size_t page = 0, helpStart = 0;
         uint32_t entryIndex = 0;
-        bool open = false, inHelp = false, busy = false, hidden = false;
-        uint64_t nextRepeat = 0;
+        bool open = false, inHelp = false, busy = false, hidden = false, noticeShown = false;
+        MenuList::Repeat pageUp, pageDown;
+        MenuList::WheelNotches wheel;
+        bool homeHeld = false, endHeld = false;
         POINT mousePosition{};
         bool mouseSeen = false;
     };
@@ -236,27 +287,44 @@ export namespace RE0Menu
         const bool hasUpdate = !updateNotice.empty() && FixSettings().Get("MAIN.CheckForUpdates") == "1";
         auto texts = FixSettings().GetTexts();
         texts.Select(Language());
-        host->notice.Fit(hasUpdate ? texts.Resolve("@update.short") : "", 280, 610, 18, 760, 0xFFFFFFFF);
+        host->notice.Fit(hasUpdate ? texts.Resolve("@update.short") : "", Look::Centre, 616, 18, 760, Look::Help, Align::Centre);
         RE0Text::Show(host->notice.node, hasUpdate && !host->open);
         RE0Text::Show(host->heading.node, host->open);
         if (!host->open)
-            host->footer.Fit(entrySelected ? texts.Resolve("@menu.pluginshelp") : "", 280, 556, 20, 760, 0xFFFFFFFF);
+            host->footer.Fit(entrySelected ? texts.Resolve("@menu.pluginshelp") : "", Look::Centre, Look::HelpLine,
+                Look::HelpSize, 760, Look::Help, Align::Centre);
         RE0Text::Show(host->footer.node, host->open || entrySelected);
         RE0Text::Show(host->restart.node, restart);
+        const bool list = host->open && !host->inHelp;
         for (size_t i = 0; i < host->labels.size(); ++i)
         {
-            const bool shown = host->open && !host->inHelp && i < host->items.size();
+            const bool shown = list && i < host->items.size();
             RE0Text::Show(host->labels[i].node, shown);
-            RE0Text::Show(host->values[i].node, shown);
+            RE0Text::Show(host->values[i].node, shown && !host->values[i].value.empty());
+        }
+        auto& window = host->model.Window(host->page);
+        const auto slot = window.Slot();
+        const bool arrows = list && slot < host->items.size() && host->items[slot].row && host->items[slot].enabled &&
+            !RWGTAMenu::Model::Opens(*host->items[slot].row) && !host->items[slot].value.empty();
+        RE0Text::Show(host->left.node, arrows);
+        RE0Text::Show(host->right.node, arrows);
+        // Rows above or below the window: the Options list's own scroll arrows
+        for (auto offset : { 0x2B8, 0x2BC })
+        {
+            auto arrow = Read<void*>(host->gui, offset);
+            auto other = Read<void*>(host->gui, offset == 0x2B8 ? 0x2BC : 0x2B8);
+            if (!arrow || !other || !host->open) continue;
+            const bool up = Read<float>(arrow, 164) < Read<float>(other, 164);
+            RE0Text::Show(arrow, list && (up ? window.Above() : window.Below()));
         }
         for (size_t i = 0; i < host->helpLines.size(); ++i)
             RE0Text::Show(host->helpLines[i].node, host->open && host->inHelp && host->helpStart + i < host->help.size());
     }
 
-    inline Text MakeText(const std::shared_ptr<Host>& host, float x, float y, int size, uint32_t priority)
+    inline Text MakeText(const std::shared_ptr<Host>& host, int size)
     {
-        Text text{ RE0Text::Append(host->gui, host->layer, priority), {} };
-        RE0Text::Place(text.node, x, y, size);
+        Text text{ RE0Text::Append(host->gui, host->layer, 1000), {} };
+        RE0Text::Place(text.node, 0, 0, size);
         RE0Text::Show(text.node, false);
         return text;
     }
@@ -266,56 +334,46 @@ export namespace RE0Menu
         if (!Current(host) || !host->open) return;
         auto& model = host->model;
         model.SelectLanguage(Language());
-        const auto pages = model.Pages();
+        if (host->page >= model.Pages().size()) host->page = RWGTAMenu::Model::RootPage;
         std::vector<Item> items;
-        std::string title = model.Text("menu.plugins");
-        if (!host->page)
+        const std::string title = model.Pages()[host->page].title;
+        for (auto row : model.Shown(host->page, true))
         {
-            const auto pageRows = !updateNotice.empty() && FixSettings().Get("MAIN.CheckForUpdates") == "1" ? 4u : 5u;
-            if (host->rowStart >= pages.size()) host->rowStart = 0;
-            for (size_t i = host->rowStart; i < pages.size() && i < host->rowStart + pageRows; ++i)
-                items.push_back({ pages[i].title, "", {}, static_cast<int>(i + 1) });
-            if (host->rowStart) items.push_back({ model.Text("menu.previous"), "", {}, -2 });
-            if (host->rowStart + pageRows < pages.size()) items.push_back({ model.Text("menu.next"), "", {}, -3 });
-            if (pageRows == 4) items.push_back({ model.Text("update.title"), "", {}, -5 });
-        }
-        else if (host->page <= pages.size())
-        {
-            const auto page = host->page - 1;
-            title = pages[page].title;
-            auto rows = model.VisibleRows(page);
-            if (!Current(host)) return;
-            if (host->rowStart >= rows.size()) host->rowStart = 0;
-            for (size_t i = host->rowStart; i < rows.size() && i < host->rowStart + 5; ++i)
+            if (!row)
             {
-                auto row = *rows[i];
-                auto label = model.Label(row);
-                auto value = model.Value(row);
-                auto enabled = model.Enabled(row, InGame(host->gui));
-                if (!Current(host)) return;
-                items.push_back({ std::move(label), std::move(value), row, -1, enabled });
+                items.push_back({ model.Text("menu.back"), "", nullptr });
+                continue;
             }
-            if (host->rowStart) items.push_back({ model.Text("menu.previous"), "", {}, -2 });
-            if (host->rowStart + 5 < rows.size()) items.push_back({ model.Text("menu.next"), "", {}, -3 });
+            auto label = model.Label(*row);
+            auto value = model.Value(*row);
+            auto enabled = model.Enabled(*row, InGame(host->gui));
+            if (!Current(host)) return;
+            items.push_back({ std::move(label), std::move(value), row, enabled });
         }
-        items.push_back({ model.Text("menu.back"), "", {}, -4 });
         host->items = std::move(items);
-        host->selection = std::min(host->selection, host->items.size() - 1);
-        host->heading.Fit(title, 280, 205, 24, 760, 0xFFFFFFFF);
+        const size_t selection = model.Window(host->page).Slot();
+        host->heading.Fit(title, Look::Centre, Line(0), Look::Size, 760, Look::Title, Align::Centre);
         for (size_t i = 0; i < host->items.size(); ++i)
         {
             const auto& item = host->items[i];
-            const auto color = i == host->selection ? 0xFFFFFFFFu : item.enabled ? 0xFFB8B09Cu : 0xFF888888u;
-            host->labels[i].Fit(item.label, 280, 250 + 30.0f * i, 22, 500, color);
-            host->values[i].Fit(item.enabled ? item.value : model.Text("menu.unavailable"),
-                820, 250 + 30.0f * i, 22, 220, color);
+            const auto color = !item.enabled ? Look::Dim : i == selection ? Look::Selected : Look::Normal;
+            const auto value = item.enabled ? item.value : model.Text("menu.unavailable");
+            host->labels[i].Fit(item.label, Look::LabelLeft, Line(i + 1), Look::Size, value.empty() ? 690.0f : 330.0f, color);
+            host->values[i].Fit(value, Look::ValueCentre, Line(i + 1), Look::Size, 280, color, Align::Centre);
         }
-        const auto& selected = host->items[host->selection];
-        const bool hasHelp = selected.link == -5 || (selected.link == -1 && !model.Help(selected.row).empty());
+        if (selection < host->items.size())
+        {
+            host->left.Fit("\xC2\xAB", Look::LeftArrow, Line(selection + 1), 30, 40, Look::Arrow, Align::Centre);
+            host->right.Fit("\xC2\xBB", Look::RightArrow, Line(selection + 1), 30, 40, Look::Arrow, Align::Centre);
+        }
+        const auto* selected = selection < host->items.size() ? host->items[selection].row : nullptr;
+        const bool hasHelp = selected && !RWGTAMenu::Model::Opens(*selected) && !model.Help(*selected).empty();
         const bool restart = RestartRequired(model);
         if (!Current(host)) return;
-        host->footer.Set(hasHelp ? model.Text("menu.helphint") : "");
-        host->restart.Fit(restart ? model.Text("menu.restartwarning") : "", 280, 590, 20, 760, 0xFFFFFFFF);
+        host->footer.Fit(hasHelp ? model.Text("menu.helphint") : "", Look::Centre, Look::HelpLine, Look::HelpSize, 760,
+            Look::Help, Align::Centre);
+        host->restart.Fit(restart ? model.Text("menu.restartwarning") : "", Look::Centre, Look::HelpLine + 30,
+            Look::HelpSize, 760, Look::Help, Align::Centre);
         ShowPage(host);
     }
 
@@ -326,48 +384,62 @@ export namespace RE0Menu
         ShowPage(host);
     }
 
+    // Back: the help page closes, a page returns to the list it was opened from (that row selected), the plugins list
+    // closes the menu
     inline void Back(const std::shared_ptr<Host>& host)
     {
-        if (host->inHelp) { host->inHelp = false; Populate(host); }
-        else if (host->page) { host->page = host->rowStart = host->selection = 0; Populate(host); }
-        else Close(host);
-    }
-
-    inline void Help(const std::shared_ptr<Host>& host);
-
-    inline void Change(const std::shared_ptr<Host>& host, int direction)
-    {
-        if (!Current(host) || host->selection >= host->items.size()) return;
-        const auto item = host->items[host->selection];
-        if (item.link == -1)
-            host->model.Change(item.row, direction, InGame(host->gui));
-        else if (!direction)
-        {
-            if (item.link == -4) { Back(host); return; }
-            if (item.link == -5) { Help(host); return; }
-            const auto pageRows = !host->page && !updateNotice.empty() && FixSettings().Get("MAIN.CheckForUpdates") == "1" ? 4u : 5u;
-            if (item.link == -2) host->rowStart = host->rowStart >= pageRows ? host->rowStart - pageRows : 0;
-            else if (item.link == -3) host->rowStart += pageRows;
-            else if (item.link > 0)
-            {
-                host->page = item.link;
-                host->rowStart = 0;
-                host->model.PageShown(host->page - 1);
-            }
-            host->selection = 0;
-        }
+        if (host->inHelp) { host->inHelp = false; Populate(host); return; }
+        const auto parent = host->model.Back(host->page);
+        if (parent == SIZE_MAX) { Close(host); return; }
+        host->page = parent;
         Populate(host);
     }
 
-    inline void Help(const std::shared_ptr<Host>& host)
+    inline const RWGTAMenu::Row* SelectedRow(const std::shared_ptr<Host>& host)
     {
-        if (host->selection >= host->items.size()) return;
-        const auto& item = host->items[host->selection];
-        if (item.link != -1 && item.link != -5) return;
-        auto content = item.link == -5 ? updateNotice : host->model.Help(item.row);
+        const auto slot = host->model.Window(host->page).Slot();
+        return slot < host->items.size() ? host->items[slot].row : nullptr;
+    }
+
+    // The selected line: left (-1), right (+1) or accept (0)
+    inline void Change(const std::shared_ptr<Host>& host, int direction)
+    {
+        if (!Current(host)) return;
+        const auto slot = host->model.Window(host->page).Slot();
+        if (slot >= host->items.size()) return;
+        const auto item = host->items[slot];
+        if (!item.row)
+        {
+            if (!direction) Back(host);
+            return;
+        }
+        if (RWGTAMenu::Model::Opens(*item.row))
+        {
+            const auto page = direction ? SIZE_MAX : host->model.Enter(*item.row);
+            if (page != SIZE_MAX) host->page = page;
+        }
+        else
+            host->model.Change(*item.row, direction, InGame(host->gui));
+        Populate(host);
+    }
+
+    // The lines of the help page from helpStart, centred like the game's help line
+    inline void HelpLines(const std::shared_ptr<Host>& host)
+    {
+        for (size_t i = 0; i < host->helpLines.size(); ++i)
+            host->helpLines[i].Fit(host->helpStart + i < host->help.size() ? host->help[host->helpStart + i] : "",
+                Look::Centre, Line(1) + 34.0f * i, Look::HelpSize, 760, Look::Help, Align::Centre);
+    }
+
+    inline void Help(const std::shared_ptr<Host>& host, const std::string* message = nullptr, const std::string* title = nullptr)
+    {
+        const auto* row = SelectedRow(host);
+        if (!message && (!row || RWGTAMenu::Model::Opens(*row))) return;
+        auto content = message ? *message : host->model.Help(*row);
         if (content.empty() || !Current(host)) return;
         host->help.clear();
         std::string line;
+        RE0Text::Place(host->helpLines[0].node, 0, 0, Look::HelpSize);
         // Measure complete UTF-8 words with the same native font used to draw the help page.
         for (size_t first = 0; first < content.size();)
         {
@@ -388,17 +460,16 @@ export namespace RE0Menu
         if (!line.empty()) host->help.push_back(line);
         host->helpStart = 0;
         host->inHelp = true;
-        host->heading.Fit(host->items[host->selection].label, 280, 205, 24, 760, 0xFFFFFFFF);
-        for (size_t i = 0; i < host->helpLines.size(); ++i)
-        {
-            // Measuring used this node directly, so invalidate its previous cached value.
-            host->helpLines[i].value.clear();
-            host->helpLines[i].Set(i < host->help.size() ? host->help[i] : "");
-        }
-        host->footer.Set(host->model.Text("menu.back"));
+        host->heading.Fit(title ? *title : host->model.Label(*row), Look::Centre, Line(0), Look::Size, 760, Look::Title,
+            Align::Centre);
+        // Measuring used the first node directly, so its cached text is stale
+        host->helpLines[0].fitted = false;
+        host->helpLines[0].value.clear();
+        HelpLines(host);
+        host->footer.Fit(host->model.Text("menu.back"), Look::Centre, Look::HelpLine, Look::HelpSize, 760, Look::Help,
+            Align::Centre);
         ShowPage(host);
     }
-
 
     inline bool MouseClick(const void* device)
     {
@@ -418,6 +489,8 @@ export namespace RE0Menu
         return std::isfinite(x) && std::isfinite(y);
     }
 
+    // The mouse: the key guide's buttons, the line under it while it moves (the window's slot plus its scroll), a click
+    // on a value's arrow changes it, a click on a scroll arrow scrolls
     inline bool MouseActions(const std::shared_ptr<Host>& host, HWND window, bool navigation)
     {
         auto device = mouse.get();
@@ -441,27 +514,29 @@ export namespace RE0Menu
         }
         if (host->inHelp)
         {
-            if (click && x >= 280 && x <= 1040 && y >= 535 && y <= 580)
+            if (click && x >= 280 && x <= 1040 && std::abs(y - Look::HelpLine) < 20)
             {
                 Back(host);
                 return true;
             }
             return false;
         }
-        if ((click || (moved && !navigation)) && x >= 280 && x <= 1040 &&
-            y >= 245 && y < 245 + 30.0f * host->items.size())
+        auto& list = host->model.Window(host->page);
+        if (click && std::abs(x - Look::Centre) < 30)
         {
-            const auto row = static_cast<size_t>((y - 245) / 30);
-            if (row < host->items.size())
-            {
-                host->selection = row;
-                if (click)
-                {
-                    const auto& item = host->items[row];
-                    Change(host, item.link == -1 && x >= 820 ? (x < 930 ? -1 : 1) : 0);
-                    return true;
-                }
-            }
+            if (std::abs(y - Look::UpArrow) < 16) { list.Scroll(-1); return true; }
+            if (std::abs(y - Look::DownArrow) < 16) { list.Scroll(1); return true; }
+        }
+        if (!(click || (moved && !navigation)) || x < 280 || x >= 1000) return false;
+        for (size_t i = 0; i < host->items.size(); ++i)
+        {
+            if (std::abs(y - Line(i + 1)) >= Look::Pitch * 0.5f) continue;
+            list.Point(i);
+            if (!click) return false;
+            const bool arrows = host->items[i].row && !RWGTAMenu::Model::Opens(*host->items[i].row) &&
+                !host->items[i].value.empty();
+            Change(host, !arrows ? 0 : std::abs(x - Look::LeftArrow) < 30 ? -1 : std::abs(x - Look::RightArrow) < 30 ? 1 : 0);
+            return true;
         }
         return false;
     }
@@ -491,28 +566,32 @@ export namespace RE0Menu
         if (!host->layer)
             host->layer = root;
         host->entryIndex = count - 1;
-        host->entry = MakeText(host, 0, 0, 40, 1000);
-        host->heading = MakeText(host, 280, 205, 24, 1000);
-        host->footer = MakeText(host, 280, 550, 20, 1000);
-        host->restart = MakeText(host, 280, 590, 20, 1000);
-        host->notice = MakeText(host, 280, 610, 18, 1000);
+        host->entry = MakeText(host, 40);
+        host->heading = MakeText(host, Look::Size);
+        host->footer = MakeText(host, Look::HelpSize);
+        host->restart = MakeText(host, Look::HelpSize);
+        host->notice = MakeText(host, 18);
         for (size_t i = 0; i < host->labels.size(); ++i)
         {
-            host->labels[i] = MakeText(host, 280, 250 + 30.0f * i, 22, 1000);
-            host->values[i] = MakeText(host, 820, 250 + 30.0f * i, 22, 1000);
+            host->labels[i] = MakeText(host, Look::Size);
+            host->values[i] = MakeText(host, Look::Size);
         }
-        for (size_t i = 0; i < host->helpLines.size(); ++i)
-            host->helpLines[i] = MakeText(host, 280, 250 + 26.0f * i, 20, 1000);
-        if (!host->entry.node || !host->heading.node || !host->footer.node || !host->restart.node || !host->notice.node ||
-            std::any_of(host->labels.begin(), host->labels.end(), [](const auto& t) { return !t.node; }) ||
-            std::any_of(host->values.begin(), host->values.end(), [](const auto& t) { return !t.node; }) ||
-            std::any_of(host->helpLines.begin(), host->helpLines.end(), [](const auto& t) { return !t.node; }))
+        host->left = MakeText(host, 30);
+        host->right = MakeText(host, 30);
+        for (auto& line : host->helpLines) line = MakeText(host, Look::HelpSize);
+        bool made = true;
+        for (const auto* text : { &host->entry, &host->heading, &host->footer, &host->restart, &host->notice, &host->left,
+            &host->right }) made = made && text->node;
+        for (const auto& group : { std::span<const Text>(host->labels), std::span<const Text>(host->values),
+            std::span<const Text>(host->helpLines) })
+            made = made && std::none_of(group.begin(), group.end(), [](const Text& t) { return !t.node; });
+        if (!made)
         {
             failedRoots[gui] = root;
             return false;
         }
         hosts.emplace(gui, host);
-        host->model.OpenPlugins(module, Language(), 4096);
+        host->model.OpenMenu(module, Language(), Slots);
         RememberRestartValues(host->model);
         if (!Current(host)) return false;
         host->entry.Set(host->model.Text("menu.plugins"));
@@ -540,6 +619,7 @@ export namespace RE0Menu
     {
         hosts.erase(gui);
         failedRoots.erase(gui);
+        RainDroplets::MenuOpen(false);
         return destroyHook.thiscall<void*>(gui, flags);
     }
 
@@ -554,6 +634,8 @@ export namespace RE0Menu
     {
         if (hosts.count(gui) && !Current(hosts.at(gui))) hosts.erase(gui);
         const auto result = execHook.thiscall<uintptr_t>(gui);
+        // The Options menu is on the screen while it is active, from its opening to its closing
+        RainDroplets::MenuOpen(Read<uint8_t>(gui, 0x254) != 0);
         RWGTA::UpdateCheck::Tick();
         if (Read<uint8_t>(gui, 0x254) && Read<uint32_t>(gui, 0x268) == 3 && PrepareHost(gui))
             ShowPage(hosts.at(gui));
@@ -575,33 +657,49 @@ export namespace RE0Menu
         auto keys = keyboard.get();
         auto context = Read<void*>(gui, 0x260);
         if (!controller || !keys || !context) return 0;
-        auto buttons = pressed();
-        auto repeat = held();
-        remap(context, &repeat, &buttons);
+        // The presses of this frame, and the directions with the game's own menu repeat (keys, d-pad and stick), as the
+        // Options list reads them
+        auto buttons = held();
+        auto repeat = pressed();
+        remap(context, &buttons, &repeat);
         const auto now = GetTickCount64();
-        if (buttons & 0xF0) host->nextRepeat = now + 350;
-        else if (now < host->nextRepeat) repeat = 0;
-        else if (repeat & 0xF0) host->nextRepeat = now + 80;
         const bool accept = (buttons & Read<uint32_t>(controller, 0xB6C)) != 0;
         const bool back = (buttons & Read<uint32_t>(controller, 0xB70)) != 0;
         if (back) { Back(host); return 0; }
-        if (MouseActions(host, GetForegroundWindow(), buttons != 0)) return 0;
+        auto device = mouse.get();
+        // The game's wheel delta of this frame. The game also turns the wheel into Up/Down; here it scrolls the list.
+        const int wheelDelta = device ? Read<int32_t>(device, 0x34) / 2 : 0;
+        if (wheelDelta) repeat &= ~0x50050u;
+        if (MouseActions(host, GetForegroundWindow(), buttons != 0)) { if (!host->inHelp) Populate(host); return 0; }
         if (!Current(host)) return 0;
         if (host->inHelp)
         {
-            if ((repeat & 0x40) && host->helpStart + host->helpLines.size() < host->help.size()) ++host->helpStart;
-            if ((repeat & 0x10) && host->helpStart) --host->helpStart;
-            for (size_t i = 0; i < host->helpLines.size(); ++i)
-                host->helpLines[i].Set(host->helpStart + i < host->help.size() ? host->help[host->helpStart + i] : "");
+            if ((repeat & 0x40040) && host->helpStart + host->helpLines.size() < host->help.size()) ++host->helpStart;
+            if ((repeat & 0x10010) && host->helpStart) --host->helpStart;
+            HelpLines(host);
             ShowPage(host);
             return 0;
         }
-        if (repeat & 0x40) host->selection = (host->selection + 1) % host->items.size();
-        if (repeat & 0x10) host->selection = (host->selection + host->items.size() - 1) % host->items.size();
-        if (repeat & 0x80) Change(host, -1);
-        if (repeat & 0x20) Change(host, 1);
+        auto& window = host->model.Window(host->page);
+        for (int notches = host->wheel.Take(wheelDelta); notches; notches += notches > 0 ? -1 : 1)
+            window.Scroll(notches > 0 ? -1 : 1);
+        if (repeat & 0x40040) window.Move(1);
+        if (repeat & 0x10010) window.Move(-1);
+        // Page Up/Page Down a window, Home/End the ends
+        const auto down = [&](int key)
+        {
+            return (Read<uint32_t>(keys, 0x1C0 + (key >> 5) * 4) & (1u << (key & 31))) != 0;
+        };
+        if (host->pageUp.Step(down(VK_PRIOR), now)) window.Page(-1);
+        if (host->pageDown.Step(down(VK_NEXT), now)) window.Page(1);
+        if (down(VK_HOME) && !host->homeHeld) window.Edge(-1);
+        if (down(VK_END) && !host->endHeld) window.Edge(1);
+        host->homeHeld = down(VK_HOME);
+        host->endHeld = down(VK_END);
+        if (repeat & 0x80080) Change(host, -1);
+        if (repeat & 0x20020) Change(host, 1);
         if (accept) Change(host, 0);
-        if ((buttons & 0x8000) || (Read<uint32_t>(keys, 0x1C0 + (VK_F1 >> 5) * 4) & (1u << (VK_F1 & 31)))) Help(host);
+        if ((buttons & 0x8000) || down(VK_F1)) Help(host);
         if (!host->inHelp) Populate(host);
         return 0;
     }
@@ -626,13 +724,22 @@ export namespace RE0Menu
             if (selected != host->entryIndex) return;
             regs.eip = reinterpret_cast<uintptr_t>(inputReturn);
             host->busy = true;
-            host->model.OpenPlugins(module, Language(), 4096);
+            host->model.OpenMenu(module, Language(), Slots);
             RememberRestartValues(host->model);
             host->busy = false;
             if (!Current(host)) return;
             host->open = true;
-            host->page = host->rowStart = host->selection = 0;
+            host->page = RWGTAMenu::Model::RootPage;
+            host->model.Window(host->page).Reset();
+            host->wheel.Clear();
             Populate(host);
+            // A newer version found by the update check is told once, on the first opening
+            if (!host->noticeShown && !updateNotice.empty() && FixSettings().Get("MAIN.CheckForUpdates") == "1")
+            {
+                host->noticeShown = true;
+                const auto title = host->model.Text("update.title");
+                Help(host, &updateNotice, &title);
+            }
         });
         RWGTA::UpdateCheck::Config updates;
         updates.pluginId = "ResidentEvil0.FusionFix";

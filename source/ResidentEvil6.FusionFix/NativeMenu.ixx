@@ -3,6 +3,8 @@ module;
 #include <stdafx.h>
 #include "FixSettings.hpp"
 #include "Shared/RWGTA/FixMenu.hpp"
+#include "Shared/MenuList.hpp"
+#include "Shared/RainDroplets.hpp"
 #include "Shared/RWGTA/UpdateCheck.hpp"
 #include <algorithm>
 #include <array>
@@ -177,20 +179,25 @@ export namespace RE6Menu
         return lines;
     }
 
+    // A line of the page: a row of the model, Back (no row) or the update notice (notice)
     struct Item
     {
         std::string label;
-        RWGTAMenu::Row row;
-        int link = -1;
+        const RWGTAMenu::Row* row = nullptr;
+        bool notice = false;
     };
+
+    // Lines the Options list shows at once; every list (plugins, categories, settings) scrolls through them
+    constexpr size_t Slots = 9;
 
     struct Host
     {
         RWGTAMenu::Model model;
         std::vector<Item> items;
         std::vector<std::string> help;
+        std::string helpTitle;
         int count = 0;
-        size_t page = 0, first = 0, selected = 0, helpFirst = 0;
+        size_t page = 0, helpFirst = 0;
         uint32_t language = 0;
         bool open = false, details = false, helpKey = false;
     };
@@ -238,13 +245,17 @@ export namespace RE6Menu
         return messageHook.unsafe_thiscall<const char*>(object, group, id);
     }
 
-    inline void Text(void* owner, const std::string& value, int x, int y, int size, uint32_t color = 0xFFFFFFFF)
+    inline void Text(void* owner, const std::string& value, int x, int y, int size, uint32_t color = 0xFFFFFFFF,
+        uint32_t spacing = 0, int width = 0)
     {
         if (value.empty() || !pTextManager.get()) return;
         std::array<uint32_t, 14> style{};
         style[0] = 16;
         style[1] = color;
-        style[2] = style[3] = size;
+        style[2] = width ? width : size;
+        style[3] = size;
+        // Extra space between letters
+        style[8] = spacing;
         style[6] = 1;
         style[7] = 16 * (96 ^ 0xFFF) + 1;
         style[10] = 0xF;
@@ -281,6 +292,13 @@ export namespace RE6Menu
     }
 
 
+    // The game's entries are narrower letters with more space between them than its font gives at their height
+    // (measured: DISPLAY matches the game's letter for letter at 17 wide, 4 apart)
+    constexpr uint32_t RowSpacing = 4;
+    constexpr int RowWidth = 17;
+    constexpr uint32_t GlowColor = 0x40D04008;
+    constexpr int GlowOffsets[8][2]{ { -3, 0 }, { 3, 0 }, { 0, -3 }, { 0, 3 }, { -2, -2 }, { 2, -2 }, { -2, 2 }, { 2, 2 } };
+
     inline int __fastcall RenderLabel(void* object, void*, int row, unsigned part, float* position, int transform, int color)
     {
         if (row >= 0 && row < 13)
@@ -288,11 +306,15 @@ export namespace RE6Menu
             const auto id = Read<int>(object, 612 + row * 24);
             if (id >= MessageBase && id < MessageBase + static_cast<int>(messages.size()))
             {
-                // The Plugins row of the Options list reads like its neighbours (capitals, their grey); the fix's own
-                // pages keep plain text
-                const bool caption = id == MessageBase + 12;
-                Text(object, caption ? Caption(messages[12], false) : messages[id - MessageBase], 207, 187 + row * 40,
-                    caption ? 19 : 20, Read<int>(object, 556) == row ? 0xFFFFFFFF : caption ? 0xFF757575 : 0xFFAAAAAA);
+                // The Plugins row and the fix's pages read like the game's own entries: spaced capitals in its size,
+                // white when selected and its grey otherwise
+                const auto label = Caption(messages[id - MessageBase], false);
+                const bool selected = Read<int>(object, 556) == row;
+                // The selected entry glows blue around its white letters, like the game's
+                if (selected)
+                    for (int i = 0; i < 8; ++i)
+                        Text(object, label, 207 + GlowOffsets[i][0], 187 + row * 40 + GlowOffsets[i][1], 21, GlowColor, RowSpacing, RowWidth);
+                Text(object, label, 207, 187 + row * 40, 21, selected ? 0xFFFFFFFF : 0xFF757575, RowSpacing, RowWidth);
                 return 0;
             }
         }
@@ -341,82 +363,93 @@ export namespace RE6Menu
         if (ui && Read<int>(ui, 552) != count) setCount(pMenuManager.get(), count);
     }
 
+    inline MenuList::Window& Window(Host& host)
+    {
+        return host.model.Window(host.page);
+    }
+
     inline void Populate(Host& host)
     {
         host.items.clear();
-        if (!host.page)
+        if (host.page >= host.model.Pages().size()) host.page = RWGTAMenu::Model::RootPage;
+        for (auto row : host.model.Shown(host.page, true))
         {
-            const auto& pages = host.model.Pages();
-            for (size_t i = host.first; i < pages.size() && i < host.first + 6; ++i)
-                host.items.push_back({ pages[i].title, {}, static_cast<int>(i + 1) });
-            if (host.first) host.items.push_back({ host.model.Text("menu.previous"), {}, -2 });
-            if (host.first + 6 < pages.size()) host.items.push_back({ host.model.Text("menu.next"), {}, -3 });
-            if (!updateNotice.empty() && FixSettings().Bool("MAIN.CheckForUpdates"))
-                host.items.push_back({ host.model.Text("update.title"), {}, -5 });
-        }
-        else
-        {
-            const auto rows = host.model.VisibleRows(host.page - 1);
-            if (host.first >= rows.size()) host.first = 0;
-            for (size_t i = host.first; i < rows.size() && i < host.first + 6; ++i)
+            if (!row)
             {
-                const auto row = *rows[i];
-                auto label = host.model.Label(row);
-                auto value = host.model.Value(row);
-                if (!value.empty()) label += "  " + value;
-                host.items.push_back({ std::move(label), row });
+                host.items.push_back({ host.model.Text("menu.back") });
+                continue;
             }
-            if (host.first) host.items.push_back({ host.model.Text("menu.previous"), {}, -2 });
-            if (host.first + 6 < rows.size()) host.items.push_back({ host.model.Text("menu.next"), {}, -3 });
+            auto label = host.model.Label(*row);
+            auto value = host.model.Value(*row);
+            if (!value.empty()) label += "  " + value;
+            host.items.push_back({ std::move(label), row });
         }
-        host.items.push_back({ host.model.Text("menu.back"), {}, -4 });
-        host.selected = (std::min)(host.selected, host.items.size() - 1);
+        // The update notice opens from a line above Back at the end of the plugins list
+        if (host.page == RWGTAMenu::Model::RootPage && !updateNotice.empty() && FixSettings().Bool("MAIN.CheckForUpdates") &&
+            !Window(host).Below() && !host.items.empty())
+            host.items.insert(host.items.end() - 1, { host.model.Text("update.title"), nullptr, true });
         for (size_t i = 0; i < host.items.size(); ++i)
         {
             messages[i] = host.items[i].label;
             setLabel(pMenuManager.get(), static_cast<int>(i), MessageBase + static_cast<int>(i), -1, -1, 0);
         }
         Count(static_cast<int>(host.items.size()));
-        setSelection(pMenuManager.get(), static_cast<int>(host.selected), 0);
+        setSelection(pMenuManager.get(), static_cast<int>(std::min(Window(host).Slot(), host.items.size() - 1)), 0);
     }
 
+    inline const Item* Selected(Host& host)
+    {
+        const auto slot = Window(host).Slot();
+        return slot < host.items.size() ? &host.items[slot] : nullptr;
+    }
+
+    // Back: a page returns to the list it was opened from (that row selected), the plugins list closes the menu
     inline void Back(Host& host)
     {
         if (host.details) host.details = false;
-        else if (host.page) host.page = host.first = host.selected = 0;
         else
         {
-            host.open = false;
-            host.model.Close();
-            return;
+            const auto parent = host.model.Back(host.page);
+            if (parent == SIZE_MAX)
+            {
+                host.open = false;
+                host.model.Close();
+                return;
+            }
+            host.page = parent;
         }
         Populate(host);
     }
 
+    inline void ShowHelp(Host& host, const std::string& title, const std::string& text)
+    {
+        host.help = Wrap(text);
+        host.details = !host.help.empty();
+        host.helpFirst = 0;
+        host.helpTitle = title;
+    }
+
+    // The selected line: left (-1), right (+1) or accept (0)
     inline void Change(Host& host, int direction)
     {
-        const auto item = host.items[host.selected];
-        if (item.link == -1) host.model.Change(item.row, direction, false);
-        else if (!direction)
+        const auto* item = Selected(host);
+        if (!item) return;
+        if (item->notice)
         {
-            if (item.link == -5)
-            {
-                host.help = Wrap(updateNotice);
-                host.details = !host.help.empty();
-                host.helpFirst = 0;
-                return;
-            }
-            if (item.link == -4) { Back(host); return; }
-            if (item.link == -2) host.first = host.first >= 6 ? host.first - 6 : 0;
-            else if (item.link == -3) host.first += 6;
-            else if (item.link > 0)
-            {
-                host.page = item.link;
-                host.first = 0;
-                host.model.PageShown(host.page - 1);
-            }
-            host.selected = 0;
+            if (!direction) ShowHelp(host, item->label, updateNotice);
+            return;
         }
+        if (!item->row)
+        {
+            if (!direction) Back(host);
+            return;
+        }
+        if (RWGTAMenu::Model::Opens(*item->row))
+        {
+            const auto page = direction ? SIZE_MAX : host.model.Enter(*item->row);
+            if (page != SIZE_MAX) host.page = page;
+        }
+        else host.model.Change(*item->row, direction, false);
         Populate(host);
     }
 
@@ -444,7 +477,7 @@ export namespace RE6Menu
         if (count < 1 || count > 9) return;
         auto& host = hosts[object];
         host.count = count;
-        host.model.OpenPlugins(module, Language(), 6, joinedIds, true);
+        host.model.OpenMenu(module, Language(), Slots, joinedIds);
         host.language = languageGeneration.load();
         RememberRestartValues(host.model);
         Labels(object, nullptr);
@@ -455,15 +488,17 @@ export namespace RE6Menu
         RWGTA::UpdateCheck::Tick();
         const auto found = hosts.find(object);
         if (found == hosts.end() || !pMenuManager.get()) return executeHook.unsafe_thiscall<int>(object);
+        // The Options screen is on the screen: no rain drops over it
+        RainDroplets::MenuOpen(true);
         auto& host = found->second;
         if (host.language != languageGeneration.load())
         {
-            host.model.OpenPlugins(module, Language(), 6, joinedIds, true);
+            host.model.OpenMenu(module, Language(), Slots, joinedIds);
             RememberRestartValues(host.model);
             host.language = languageGeneration.load();
             host.details = false;
             if (!updateVersion.empty()) updateNotice = asi_settings::text::Narrow(FormatUpdate(updateVersion, updateHub));
-            if (host.page > host.model.Pages().size()) host.page = host.first = host.selected = 0;
+            if (host.page >= host.model.Pages().size()) host.page = RWGTAMenu::Model::RootPage;
             if (host.open) Populate(host);
         }
         if (Read<uint8_t>(object, 56) != 2)
@@ -483,10 +518,11 @@ export namespace RE6Menu
         }
         if (!host.open && Read<int>(object, 72) == host.count && accept(-1, 1))
         {
-            host.model.OpenPlugins(module, Language(), 6, joinedIds, true);
+            host.model.OpenMenu(module, Language(), Slots, joinedIds);
             RememberRestartValues(host.model);
             host.open = true;
-            host.page = host.first = host.selected = 0;
+            host.page = RWGTAMenu::Model::RootPage;
+            Window(host).Reset();
             Populate(host);
             return 0;
         }
@@ -509,19 +545,18 @@ export namespace RE6Menu
                 const auto pages = (host.help.size() + 8) / 9;
                 host.helpFirst = navigate(static_cast<unsigned>(host.helpFirst / 9), static_cast<int>(pages), -1, 0, 0, 0) * 9;
                 Count(0);
-                Title(object, host.items[host.selected].label);
+                Title(object, host.helpTitle);
                 for (size_t i = host.helpFirst; i < host.help.size() && i < host.helpFirst + 9; ++i)
                     Text(object, host.help[i], 104, 180 + static_cast<int>(i - host.helpFirst) * 40, 16);
                 Text(object, host.model.Text("menu.back"), 104, 650, 16);
                 return 0;
             }
-            if (detailsPressed && (host.items[host.selected].link == -1 || host.items[host.selected].link == -5))
+            const auto* selected = Selected(host);
+            if (detailsPressed && selected && (selected->notice || (selected->row && !RWGTAMenu::Model::Opens(*selected->row))))
             {
-                host.help = Wrap(host.items[host.selected].link == -5 ? updateNotice : host.model.Help(host.items[host.selected].row));
-                if (!host.help.empty())
+                ShowHelp(host, selected->label, selected->notice ? updateNotice : host.model.Help(*selected->row));
+                if (host.details)
                 {
-                    host.details = true;
-                    host.helpFirst = 0;
                     Count(0);
                     return 0;
                 }
@@ -530,8 +565,23 @@ export namespace RE6Menu
             else if (accept(-1, 1)) Change(host, 0);
             else
             {
-                host.selected = navigate(static_cast<unsigned>(host.selected), static_cast<int>(host.items.size()), -1, 0, 0, 0);
-                if (host.selected >= host.items.size()) host.selected = 0;
+                // The game's list navigation (keys, pad, mouse) moves its selection inside the shown lines: a step past
+                // the first or last line scrolls the list by one, wrapping at its ends; a jump (the mouse) selects that line
+                auto& window = Window(host);
+                const auto shown = host.items.size();
+                const auto slot = window.Slot();
+                const auto next = static_cast<size_t>(navigate(static_cast<unsigned>(slot), static_cast<int>(shown), -1, 0, 0, 0));
+                if (next != slot && next < shown)
+                {
+                    if (slot + 1 == shown && next == 0)
+                        window.Move(1);
+                    else if (slot == 0 && next + 1 == shown)
+                        window.Move(-1);
+                    else if (next == slot + 1 || next + 1 == slot)
+                        window.Move(next > slot ? 1 : -1);
+                    else
+                        window.Point(next);
+                }
                 int value = 1;
                 change(&value, 3, -1, 0);
                 if (value != 1) Change(host, value > 1 ? 1 : -1);
@@ -539,12 +589,11 @@ export namespace RE6Menu
             if (host.open)
             {
                 Populate(host);
-                const auto title = host.page ? host.model.Pages()[host.page - 1].title : host.model.Text("menu.plugins");
-                Title(object, title);
-                const auto& item = host.items[host.selected];
-                if (item.link == -1)
+                Title(object, host.model.Pages()[host.page].title);
+                const auto* item = Selected(host);
+                if (item && item->row && !RWGTAMenu::Model::Opens(*item->row))
                 {
-                    const auto help = Wrap(host.model.Help(item.row));
+                    const auto help = Wrap(host.model.Help(*item->row));
                     if (!help.empty()) Text(object, help.front(), 104, 585, 16);
                     Text(object, host.model.Text("menu.helphint"), 104, 615, 16);
                 }
@@ -573,7 +622,7 @@ export namespace RE6Menu
 
     inline void* __fastcall Destroy(void* object, void*, char flags)
     {
-        hosts.erase(object);
+        if (hosts.erase(object)) RainDroplets::MenuOpen(false);
         return destroyHook.unsafe_thiscall<void*>(object, flags);
     }
 
@@ -634,7 +683,7 @@ export namespace RE6CameraMenu
 
     inline void Open(Host& host)
     {
-        host.model.OpenPlugins(RE6Menu::module, RE6Menu::Language(), 6, { "MAIN.FOVFactor" }, true);
+        host.model.OpenMenu(RE6Menu::module, RE6Menu::Language(), RE6Menu::Slots, { "MAIN.FOVFactor" });
         host.language = RE6Menu::languageGeneration.load();
     }
 

@@ -4,6 +4,7 @@ module;
 #include "FixSettings.hpp"
 #include "NativeTextHooks.hpp"
 #include "Shared/RWGTA/FixMenu.hpp"
+#include "Shared/RainDroplets.hpp"
 
 
 export module NativeText;
@@ -42,7 +43,7 @@ export namespace NeoText
     inline thread_local Template Current;
     inline thread_local Template OptionText;
     inline thread_local Template PromptText;
-    inline thread_local std::wstring Prompt;
+    inline thread_local std::wstring Prompt, Title;
     inline std::wstring (*UpdateNotice)() = nullptr;
     inline std::map<std::string, std::string> Startup;
     inline std::mutex RestartMutex;
@@ -53,10 +54,11 @@ export namespace NeoText
     inline bool LanguagePending = true;
 
     enum class Input : int16_t { Up = 1, Down, Left, Right, Select, Cancel };
-    enum class Menu { Options, Plugins, Settings };
+    enum class Menu { Options, Plugins };
     enum class OptionsScreen { None, Title, Pause };
-    constexpr size_t RowsPerPage = 7;
+    constexpr size_t RowsPerPage = 6;     // the rows of a list (Back included); every list scrolls through them
     constexpr uint32_t LanguagesLabel = 0x1E9A;
+    constexpr uint32_t OptionsTitle = 7820;     // the page's title and the big faded copy of it behind
     constexpr uint32_t OptionsHelp = 0x2058;
     constexpr uint32_t SubtitlesLabel = 7860;
     constexpr uint32_t PauseOptionsHelp = 9307;
@@ -66,10 +68,14 @@ export namespace NeoText
     inline Menu Page = Menu::Options;
     inline OptionsScreen Source = OptionsScreen::None;
     inline bool PluginsSelected = false;
-    inline size_t PluginIndex = 0, FirstPlugin = 0;
-    inline int SettingSlot = 0;
+    inline size_t Shown = RWGTAMenu::Model::RootPage;    // the list: the plugins list, a plugin's page or a category
+    // The wheel's notches from the window (the remainder kept); the last frame a menu script drew
+    inline std::atomic<int> Wheel{ 0 };
+    inline MenuList::WheelNotches Notches;
+    inline std::atomic<ULONGLONG> LastMenuRoot{ 0 };
     inline void ApplyLanguage();
     inline void DrawMenu(bool paused);
+    inline std::wstring PageTitle();
 
     inline bool IsOptions(const char* name)
     {
@@ -140,51 +146,74 @@ export namespace NeoText
         return static_cast<Input>(message);
     }
 
-    inline void MovePlugins(int direction)
-    {
-        const size_t count = Plugins.Pages().size() + 1;
-        PluginIndex = direction > 0 ? (PluginIndex + 1) % count :
-            (PluginIndex ? PluginIndex - 1 : count - 1);
-        if (PluginIndex < FirstPlugin)
-            FirstPlugin = PluginIndex;
-        if (PluginIndex >= FirstPlugin + RowsPerPage)
-            FirstPlugin = PluginIndex - RowsPerPage + 1;
-    }
-
+    // Up/Down move by a row (the window follows, wrapping like the game's lists), Select opens a list, changes a value
+    // or goes back on the Back row, Left/Right change values, Cancel goes back to the row it came from
     inline void Navigate(Input input)
     {
-        if (Page == Menu::Plugins)
+        auto& window = Plugins.Window(Shown);
+        if (input == Input::Up || input == Input::Down)
         {
-            if (input == Input::Up || input == Input::Down)
-                MovePlugins(input == Input::Up ? -1 : 1);
-            if (input == Input::Cancel || (input == Input::Select && PluginIndex == Plugins.Pages().size()))
-                ShowPage(Menu::Options);
-            else if (input == Input::Select)
-            {
-                ShowPage(Menu::Settings);
-                SettingSlot = 0;
-                while (Plugins.HiddenAbove(PluginIndex))
-                    Plugins.Scroll(PluginIndex, -1);
-            }
+            window.Move(input == Input::Up ? -1 : 1);
             return;
         }
         if (input == Input::Cancel)
         {
-            ShowPage(Menu::Plugins);
+            const auto parent = Plugins.Back(Shown);
+            if (parent == SIZE_MAX)
+                ShowPage(Menu::Options);
+            else
+                Shown = parent;
             return;
         }
-
-        auto rows = Plugins.WindowRows(PluginIndex);
-        if (input == Input::Up || input == Input::Down)
-            SettingSlot = Plugins.Move(PluginIndex, SettingSlot, input == Input::Up ? -1 : 1);
-        else if (SettingSlot >= 0 && size_t(SettingSlot) < rows.size())
+        const auto rows = Plugins.Shown(Shown, true);
+        const auto slot = window.Slot();
+        if (slot >= rows.size())
+            return;
+        const auto row = rows[slot];
+        if (!row)
         {
-            if (const auto row = rows[SettingSlot])
-                Plugins.Change(*row, input == Input::Select ? 0 : input == Input::Left ? -1 : 1,
-                    Source == OptionsScreen::Pause);
-            else if (input == Input::Select)
-                ShowPage(Menu::Plugins);
+            if (input == Input::Select)
+                Navigate(Input::Cancel);
         }
+        else if (RWGTAMenu::Model::Opens(*row))
+        {
+            if (input == Input::Select)
+                if (const auto target = Plugins.Enter(*row); target != SIZE_MAX)
+                    Shown = target;
+        }
+        else
+            Plugins.Change(*row, input == Input::Select ? 0 : input == Input::Left ? -1 : 1, Source == OptionsScreen::Pause);
+    }
+
+    // The wheel (one row per notch), Page Up/Down and Home/End, read while the list is drawn
+    inline void Scroll()
+    {
+        auto& window = Plugins.Window(Shown);
+        const int wheel = Wheel.exchange(0);
+        for (int i = 0; i < std::abs(wheel); ++i)
+            window.Scroll(wheel > 0 ? -1 : 1);
+        static bool held[4]{};
+        constexpr int keys[]{ VK_PRIOR, VK_NEXT, VK_HOME, VK_END };
+        const auto game = NeoRenderer::Window.load();
+        const bool focused = game && GetForegroundWindow() == game;
+        for (int i = 0; i < 4; ++i)
+        {
+            const bool down = focused && (GetAsyncKeyState(keys[i]) & 0x8000) != 0;
+            if (down && !held[i])
+            {
+                if (i < 2)
+                    window.Page(i ? 1 : -1);
+                else
+                    window.Edge(i == 3 ? 1 : -1);
+            }
+            held[i] = down;
+        }
+    }
+
+    inline void Message(UINT message, WPARAM wParam)
+    {
+        if (message == WM_MOUSEWHEEL && Page != Menu::Options && OptionsRoot)
+            Wheel += Notches.Take(GET_WHEEL_DELTA_WPARAM(wParam));
     }
 
     inline bool HandleOptionAction(uintptr_t root, int16_t message)
@@ -244,8 +273,11 @@ export namespace NeoText
         }
         if (input == Input::Select)
         {
-            Plugins.OpenPlugins(NeoRenderer::ThisModule(), CurrentLanguage(), RowsPerPage, {}, true);
-            PluginIndex = FirstPlugin = 0;
+            Plugins.OpenMenu(NeoRenderer::ThisModule(), CurrentLanguage(), RowsPerPage);
+            Shown = RWGTAMenu::Model::RootPage;
+            Plugins.Window(Shown).Reset();
+            Notches.Clear();
+            Wheel = 0;
             ShowPage(Menu::Plugins);
             return true;
         }
@@ -490,8 +522,21 @@ export namespace NeoText
             const bool help = paused ? textId == PauseOptionsHelp || y > 0.73f : textId == OptionsHelp;
             if (OptionsRoot == root && Page != Menu::Options && !help)
             {
+                // The page's other texts give way to the list; its title (both copies) names the shown list, in
+                // capitals like the game's own pages, the big copy narrowed for names longer than theirs
                 SaveTemplate(PromptText, context, root, scene);
-                SetNode(PromptText, 68, uint32_t(0));
+                if (textId == OptionsTitle && !paused)
+                {
+                    Title = PageTitle();
+                    const auto scale = *reinterpret_cast<const float*>(context.ecx + 628);
+                    if (scale > 1.0f)
+                        SetNode(PromptText, 628, scale * std::min(1.0f, 17.0f / std::max<size_t>(1, Title.size())));
+                    SetNode(PromptText, 44, 0.9f);
+                    SetNode(PromptText, 68, static_cast<uint32_t>(Title.size()));
+                    SetNode(PromptText, 72, Title.c_str());
+                }
+                else
+                    SetNode(PromptText, 68, uint32_t(0));
                 context.ecx = reinterpret_cast<uintptr_t>(PromptText.Node.data());
                 return;
             }
@@ -522,6 +567,25 @@ export namespace NeoText
         Painting = false;
     }
 
+    // The fix is named without the game's name in the game's own menu, where the long name doesn't fit
+    inline std::string ShortName(std::string name)
+    {
+        constexpr std::string_view game = "The Matrix: Path of Neo ";
+        if (name.starts_with(game))
+            name.erase(0, game.size());
+        return name;
+    }
+
+    // The shown list's name: Plugins, a plugin or a category
+    inline std::wstring PageTitle()
+    {
+        const auto& pages = Plugins.Pages();
+        auto title = asi_settings::text::Widen(Shown == RWGTAMenu::Model::RootPage || Shown >= pages.size()
+            ? MenuText("@menu.plugins", "Plugins") : ShortName(pages[Shown].title));
+        CharUpperBuffW(title.data(), static_cast<DWORD>(title.size()));
+        return title;
+    }
+
     inline void DrawMenuText(const std::string& text, float x, float y, float width, float scale = 0.45f)
     {
         DrawLine(OptionText, asi_settings::text::Widen(text), x, y, width, scale);
@@ -538,38 +602,65 @@ export namespace NeoText
             const auto x = *reinterpret_cast<const float*>(data + 32);
             const auto y = *reinterpret_cast<const float*>(data + 36);
             const auto scale = *reinterpret_cast<const float*>(data + 628);
-            DrawMenuText(selected ? "> " + plugins : plugins, x, y + (paused ? 0.071f : 0.099f), 0.43f, scale);
+            // Its square and the focus on it are drawn with the page's own squares (NeoHud::DrawSquares)
+            DrawMenuText(paused && selected ? "> " + plugins : plugins, x, y + (paused ? 0.071f : 0.099f), 0.43f, scale);
         }
         else
         {
             Plugins.SelectLanguage(CurrentLanguage());
+            Scroll();
             const auto& pages = Plugins.Pages();
+            if (Shown >= pages.size())
+                Shown = RWGTAMenu::Model::RootPage;
             const auto back = MenuText("@menu.back", "Back");
-            const float firstRow = paused ? 0.25f : 0.335f;
-            const float rowStep = paused ? 0.058f : 0.067f;
-            DrawMenuText(page == Menu::Plugins ? MenuText("@menu.plugins", "Plugins") : pages[PluginIndex].title,
-                0.19f, paused ? 0.15f : 0.225f, 0.67f, 0.63f);
-            if (page == Menu::Plugins)
+            const auto rows = Plugins.Shown(Shown, true);
+            const auto& window = Plugins.Window(Shown);
+            if (paused)
             {
-                for (size_t i = FirstPlugin; i <= pages.size() && i < FirstPlugin + RowsPerPage; ++i)
-                {
-                    const auto& label = i == pages.size() ? back : pages[i].title;
-                    DrawMenuText((PluginIndex == i ? "> " : "  ") + label,
-                        0.19f, firstRow + (i - FirstPlugin) * rowStep, 0.67f);
-                }
-            }
-            else
-            {
-                const auto rows = Plugins.WindowRows(PluginIndex);
+                const float firstRow = 0.25f, rowStep = 0.058f;
+                DrawMenuText(Shown == RWGTAMenu::Model::RootPage ? MenuText("@menu.plugins", "Plugins") : pages[Shown].title,
+                    0.19f, 0.15f, 0.67f, 0.63f);
                 for (size_t i = 0; i < rows.size(); ++i)
                 {
                     const auto row = rows[i];
                     const float y = firstRow + i * rowStep;
-                    DrawMenuText((size_t(SettingSlot) == i ? "> " : "  ") + (row ? Plugins.Label(*row) : back),
-                        0.19f, y, 0.47f);
-                    if (row)
+                    const bool values = row && !RWGTAMenu::Model::Opens(*row);
+                    DrawMenuText((window.Slot() == i ? "> " : "  ") + (row ? Plugins.Label(*row) : back), 0.19f, y,
+                        values ? 0.47f : 0.67f);
+                    if (values)
                         DrawMenuText(Plugins.Value(*row), 0.66f, y, 0.29f);
                 }
+                if (window.Above())
+                    DrawMenuText("  ...", 0.19f, firstRow - rowStep * 0.8f, 0.2f);
+                if (window.Below())
+                    DrawMenuText("  ...", 0.19f, firstRow + rows.size() * rowStep - rowStep * 0.35f, 0.2f);
+            }
+            else
+            {
+                // The game's sub-pages (Languages, Audio): labels where the Options rows are, each with its square
+                // (NeoHud::DrawSquares, the selected one ticked), the values in a column at the right
+                const auto data = OptionText.Node.data();
+                const float x = *reinterpret_cast<const float*>(data + 32);
+                const float scale = *reinterpret_cast<const float*>(data + 628);
+                const float rowStep = 0.1035f;
+                const float firstRow = *reinterpret_cast<const float*>(data + 36) - 3 * rowStep;
+                for (size_t i = 0; i < rows.size(); ++i)
+                {
+                    const auto row = rows[i];
+                    const float y = firstRow + i * rowStep;
+                    const bool values = row && !RWGTAMenu::Model::Opens(*row);
+                    const auto label = row ? ShortName(Plugins.Label(*row)) : back;
+                    // A label longer than the column is narrowed to fit it
+                    const float fit = values ? std::min(1.0f, 15.0f / std::max<size_t>(1, label.size())) : 1.0f;
+                    DrawMenuText(label, x, y + (1.0f - fit) * 0.03f, values ? 0.29f : 0.5f, scale * fit);
+                    if (values)
+                        DrawMenuText(Plugins.Value(*row), 0.686f, y, 0.275f, scale);
+                }
+                // More rows above or below: an ellipsis in the list's text
+                if (window.Above())
+                    DrawMenuText("...", x, firstRow - rowStep * 0.55f, 0.2f, scale);
+                if (window.Below())
+                    DrawMenuText("...", x, firstRow + rows.size() * rowStep - rowStep * 0.45f, 0.2f, scale);
             }
         }
         OptionText.Ready = false;
@@ -577,11 +668,29 @@ export namespace NeoText
 
     inline void BeforeRoot(void* root)
     {
+        // The game's front end (start logos ip_*, the start screen, options gm_* and the pause screens): no drops
+        const auto name = *reinterpret_cast<const char* const*>(static_cast<const uint8_t*>(root) + 632);
+        if (NeoHud::Contains(name, "\\gm_") || NeoHud::Contains(name, "\\ip_") || NeoHud::Contains(name, "_screen"))
+            LastMenuRoot = GetTickCount64();
         if (NeoHud::Root.options)
         {
             OptionText.Ready = false;
             const std::lock_guard lock(MenuMutex);
-            NeoHud::Root.hideOptionFocus = OptionsRoot == reinterpret_cast<uintptr_t>(root) && PluginsSelected;
+            const bool ours = OptionsRoot == reinterpret_cast<uintptr_t>(root);
+            if (!ours || Page == Menu::Options)
+            {
+                NeoHud::Root.rows = NeoHud::RowsNativeAndEntry;
+                NeoHud::Root.selected = ours && PluginsSelected ? NeoHud::SelectedEntry : NeoHud::SelectedNative;
+            }
+            else
+            {
+                Plugins.SelectLanguage(CurrentLanguage());
+                Scroll();
+                if (Shown >= Plugins.Pages().size())
+                    Shown = RWGTAMenu::Model::RootPage;
+                NeoHud::Root.rows = static_cast<int>(Plugins.Shown(Shown, true).size());
+                NeoHud::Root.selected = static_cast<int>(Plugins.Window(Shown).Slot());
+            }
         }
         if (!Current.Ready || Current.Root != reinterpret_cast<uintptr_t>(root))
             return;
@@ -651,5 +760,11 @@ export namespace NeoText
         auto tutorialText = hook::pattern("83 EC 08 53 55 8B 6C 24 14 56 57 8B 7C 24 20 8B 17 8B F1 33 DB 85 D2");
         TutorialTextHook = safetyhook::create_inline(tutorialText.get_first(), RememberTutorialText);
         NeoHud::BeforeRoot = BeforeRoot;
+        NeoRenderer::MenuMessage = Message;
+        // No drops over the game's menus
+        WFP::onGameProcessEvent() += []()
+        {
+            RainDroplets::MenuOpen(GetTickCount64() - LastMenuRoot.load() < 250);
+        };
     }
 }

@@ -334,6 +334,16 @@ namespace Window
             NativeHelpRequested.store(true);
             return 0;
         }
+        if (message == WM_MOUSEWHEEL && NativeMenuOpen.load())
+        {
+            NativeMenuWheel += GET_WHEEL_DELTA_WPARAM(wParam);
+            return 0;
+        }
+        if (message == WM_KEYDOWN && (wParam == VK_PRIOR || wParam == VK_NEXT || wParam == VK_HOME || wParam == VK_END) && NativeMenuOpen.load())
+        {
+            NativeMenuKey.store(int(wParam));
+            return 0;
+        }
         LRESULT overlayResult = 0;
         const bool consumed = DeveloperOverlay::Message(window, message, wParam, lParam, overlayResult);
         CursorConfinement::Suspend(DeveloperOverlay::BlocksInput());

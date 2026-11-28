@@ -15,6 +15,8 @@ export struct Screen
 } Screen;
 
 export int nWindowMode = 0;
+// Wheel counts of the menu mouse not yet taken by the Plugins pages
+export int32_t MenuWheel = 0;
 export int nWindowWidth = 0, nWindowHeight = 0;
 export uintptr_t GameplayCamera = 0;
 export uintptr_t ReflectionCamera = 0;

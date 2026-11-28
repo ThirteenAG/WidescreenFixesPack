@@ -96,6 +96,7 @@ export namespace SRSWindow
         CursorConfinement::Message(message, wParam);
         if (InputMessage)
             InputMessage(message, lParam);
+        SRSMenu::Message(message, wParam, lParam);
         LRESULT result = 0;
         if (SRSOverlay::Message(window, message, wParam, lParam, result))
             return result;

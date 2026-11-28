@@ -11,6 +11,7 @@ module;
 #include "Shared/NFS/LegacyText.hpp"
 #include "Shared/NFS/Text.hpp"
 #include "Shared/NFS/TextLanguage.hpp"
+#include "Shared/MenuList.hpp"
 
 export module Options;
 
@@ -28,8 +29,11 @@ import Input;
 // else is under one category of its own, "Plugins": the fix first, then every other loaded plugin with settings.
 //
 // The rows' values go through the game's options data layer (DALOptions) under ids of their own, and the plugins'
-// runtime tables (WFPPlugins) behind it. The native package has fourteen option slots. The host-first plugin list
-// and each plugin's sections page within those slots; Back from a plugin restores its position in the list.
+// runtime tables (WFPPlugins) behind it. Each list is one continuous list: the plugins (the fix first), a plugin's
+// page (its Preset, its settings or a row per category that opens them, Restore Defaults) and a category's settings.
+// The native package has fourteen option slots, which the game's own list scrolls through; a longer list keeps its
+// rows in those slots as a window that moves when the selection passes its first or last row. Back returns one level,
+// to the row it came from.
 //
 // The Plugins category reuses the options state 1: the console versions' video screen, which the PC version builds as
 // an empty screen and never lists. Selecting it opens FeOptionsScreen in that state and Back returns to the options
@@ -44,7 +48,6 @@ namespace
     constexpr int CategoryState = 1;
     constexpr int MaxRows = 14;
     constexpr int PluginRowId = 5900;       // the Plugins screen's rows
-    constexpr int PageRowId = 5901;
     constexpr int FirstPluginScreenId = 5902;
     constexpr int FirstGameScreenId = 5950; // the rows on the game's screens
 
@@ -433,9 +436,7 @@ namespace
         void* option = nullptr;
         bool enabled = true;
         int rootPlugin = -1;
-        bool pageSelector{};
     };
-    MenuRow Pager{};
     std::map<int, MenuRow> Rows;
     NFSCRowLayout::Layout ValueLayout;
     struct ValuePage
@@ -506,7 +507,6 @@ namespace
         TextFormatFlags.clear();
         RetireHelp(screen);
         Rows.clear();
-        Pager = {};
         PublishedTexts.clear();
         std::erase_if(Commands, [&](const Command& command)
         {
@@ -576,31 +576,45 @@ namespace
         return Preset.shown < 0 ? 3 : Preset.shown;
     }
 
-    // The plugin list and the selected plugin's section
+    // The open list: the plugins (CurrentPlugin -1), a plugin's page (CurrentCategory -1) or one of its categories
     int CurrentPlugin = -1;
-    size_t CurrentScreen = 0;
-    size_t CurrentRootPage = 0;
-    size_t ReturnPlugin = 0;
-    std::string RestoreSetting;
+    int CurrentCategory = -1;
     uint64_t RetryBuildAt{};
 
-    size_t RootCapacity()
+    // A row of the open list: a plugin of the list, or a row of a plugin's page or category
+    struct Entry
     {
-        return Plugins && Plugins->plugins.size() > MaxRows ? MaxRows - 1 : MaxRows;
-    }
+        WFPPlugins::Row item;
+        int rootPlugin = -1;
+    };
+    MenuList::Window ListWindow;            // the open list's selection and the first row in the slots
+    std::vector<MenuList::Key> BuiltKeys;   // the shown rows when the slots were filled
+    size_t BuiltFirst{};
+    int ShownSlot = -1;                     // the slot the game's list had selected
+    MenuList::Key SelectAfterBuild{};       // Back: the row it came from
 
-    size_t RootPageCount()
+    // Rows keep their keys while they exist: settings by their setting, plugins by their entry, the rest by kind
+    MenuList::Key EntryKey(const Entry& entry)
     {
-        auto count = Plugins ? Plugins->plugins.size() : 0;
-        return std::max<size_t>(1, (count + RootCapacity() - 1) / RootCapacity());
+        if (entry.rootPlugin >= 0)
+            return reinterpret_cast<MenuList::Key>(entry.item.plugin);
+        switch (entry.item.kind)
+        {
+            case WFPPlugins::Row::Kind::Preset:
+                return 1;
+            case WFPPlugins::Row::Kind::RestoreDefaults:
+                return 3;
+            case WFPPlugins::Row::Kind::Category:
+                return 5 + 2 * entry.item.category;
+            default:
+                return reinterpret_cast<MenuList::Key>(entry.item.setting);
+        }
     }
-    std::vector<WFPPlugins::Screen> Screens;
-    std::vector<bool> BuiltVisibility;
 
     void ScreensRetired()
     {
-        Screens.clear();
-        BuiltVisibility.clear();
+        BuiltKeys.clear();
+        ShownSlot = -1;
         Preset = {};
         Restore = {};
         KeepPresetChoice = false;
@@ -614,9 +628,9 @@ namespace
         RetireRows(RowsOwner.Get());
         ScreenOwner.Bind(screen);
         ResetRestartNotice();
-        CurrentPlugin = -1;
-        CurrentScreen = CurrentRootPage = ReturnPlugin = 0;
-        RestoreSetting.clear();
+        CurrentPlugin = CurrentCategory = -1;
+        ListWindow.Reset();
+        SelectAfterBuild = 0;
         PluginsScreen = PendingRebuild = 0;
         Commands.clear();
         Plugins.reset();
@@ -694,10 +708,23 @@ namespace
         if (manager == SetupManager && *reinterpret_cast<int*>(static_cast<uint8_t*>(manager) + 4) == CategoryState &&
             pOptionsScreen && *pOptionsScreen == PluginsScreen && CurrentPlugin >= 0)
         {
-            CurrentPlugin = -1;
-            CurrentRootPage = ReturnPlugin / RootCapacity();
-            RestoreSetting.clear();
-            RequestRebuild();
+            // One level up, to the row it came from
+            if (CurrentCategory >= 0)
+            {
+                Entry from{ { WFPPlugins::Row::Kind::Category, nullptr, nullptr, size_t(CurrentCategory) } };
+                SelectAfterBuild = EntryKey(from);
+                CurrentCategory = -1;
+            }
+            else
+            {
+                SelectAfterBuild = Plugins && size_t(CurrentPlugin) < Plugins->plugins.size() ?
+                    reinterpret_cast<MenuList::Key>(&Plugins->plugins[CurrentPlugin]) : 0;
+                CurrentPlugin = -1;
+            }
+            ListWindow.Reset();
+            Preset.Cancel();
+            Restore.Cancel();
+            PendingRebuild = PluginsScreen;
             return 0;
         }
         return shBack.unsafe_fastcall<uintptr_t>(manager, edx);
@@ -727,15 +754,6 @@ namespace
         return plugin.module == Self ? PlacedSettings() : std::vector<std::string>{};
     }
 
-    std::string ScreenName(const WFPPlugins::Screen& screen)
-    {
-        // The screen's title without the plugin's name, which the first row shows
-        auto name = WFPPlugins::Name(*screen.plugin);
-        if (screen.title.size() > name.size() + 2 && screen.title.compare(0, name.size() + 2, name + ": ") == 0)
-            return screen.title.substr(name.size() + 2);
-        return screen.title;
-    }
-
     // The texts of a row, rebuilt with the row and when the language changes
     void UpdateValueText(int id, const MenuRow& row)
     {
@@ -762,17 +780,28 @@ namespace
         UpdateValueText(id, row);
     }
 
-    void UpdatePluginTexts()
+    // The open list's title: "Plugins", the plugin's name or the category's, in capitals between stars like the
+    // game's screen titles ("*GAMEPLAY*")
+    std::string ListTitle()
     {
-        SetText(LabelHash(PageRowId), WFPText::Get("WFP_SECTION"));
         auto title = WFPText::Get("WFP_PLUGINS");
         if (Plugins && CurrentPlugin >= 0 && size_t(CurrentPlugin) < Plugins->plugins.size())
-            title = WFPPlugins::Name(Plugins->plugins[CurrentPlugin]);
-        SetText(TextHash("WFP_SCREEN_TITLE"), WFPText::Upper(title));
-        if (CurrentPlugin < 0)
-            SetText(ValueHash(PageRowId), std::to_string(CurrentRootPage + 1) + "/" + std::to_string(RootPageCount()));
-        else if (CurrentScreen < Screens.size())
-            SetText(ValueHash(PageRowId), ScreenName(Screens[CurrentScreen]));
+        {
+            auto& plugin = Plugins->plugins[CurrentPlugin];
+            title = WFPPlugins::Name(plugin);
+            if (CurrentCategory >= 0)
+            {
+                auto categories = WFPPlugins::Categories(plugin, Exclude(plugin));
+                if (size_t(CurrentCategory) < categories.size())
+                    title = categories[CurrentCategory].title;
+            }
+        }
+        return "*" + WFPText::Upper(title) + "*";
+    }
+
+    void UpdatePluginTexts()
+    {
+        SetText(TextHash("WFP_SCREEN_TITLE"), ListTitle());
     }
 
     // The texts, rebuilt when the game's language changes
@@ -939,15 +968,20 @@ namespace
         return Current(token);
     }
 
+    // Rows that open a list or act on accept: no value to change
+    bool Opens(const MenuRow& row)
+    {
+        return row.rootPlugin >= 0 || row.item.kind == WFPPlugins::Row::Kind::Category;
+    }
+
+    bool Fixed(const MenuRow& row)
+    {
+        return Opens(row) || row.item.kind == WFPPlugins::Row::Kind::Action;
+    }
+
     std::string ShownValue(const MenuRow& row)
     {
-        if (row.pageSelector)
-        {
-            if (CurrentPlugin < 0)
-                return std::to_string(CurrentRootPage + 1) + "/" + std::to_string(RootPageCount());
-            return CurrentScreen < Screens.size() ? ScreenName(Screens[CurrentScreen]) : std::string();
-        }
-        if (row.rootPlugin >= 0)
+        if (Opens(row))
             return {};
         if (row.item.kind == WFPPlugins::Row::Kind::Preset)
             return WFPText::Get(PresetLabels[std::clamp(PresetIndex(), 0, int(std::size(PresetLabels)) - 1)]);
@@ -961,8 +995,6 @@ namespace
 
     std::string RowLabel(const MenuRow& row)
     {
-        if (row.pageSelector)
-            return WFPText::Get("WFP_SECTION");
         return row.rootPlugin >= 0 ? WFPPlugins::Name(*row.item.plugin) : WFPPlugins::Label(row.item);
     }
 
@@ -1006,14 +1038,13 @@ namespace
         auto token = RowsOwner.Capture();
         auto pin = Plugins;
         auto found = std::find_if(Rows.begin(), Rows.end(), [&](const auto& entry) { return entry.second.widget == widget; });
-        bool pager = widget == Pager.widget;
-        if ((!pager && found == Rows.end()) || !Current(token))
+        if (found == Rows.end() || !Current(token))
         {
             draw(widget);
             return;
         }
-        auto id = pager ? PageRowId : found->first;
-        auto row = pager ? Pager : found->second;
+        auto id = found->first;
+        auto row = found->second;
         ValueTick = GetTickCount64();
         ContinuedValues.erase(widget);
         PendingFonts.erase(widget);
@@ -1107,10 +1138,7 @@ namespace
             maximum = saved->second;
         auto width = state && maximum ? float(maximum) * std::abs(state[14]) *
             RenderScale(*reinterpret_cast<uint32_t*>(leaves.front() + 0x24)) : std::numeric_limits<float>::quiet_NaN();
-        auto title = WFPText::Get("WFP_PLUGINS");
-        if (Plugins && CurrentPlugin >= 0 && size_t(CurrentPlugin) < Plugins->plugins.size())
-            title = WFPPlugins::Name(Plugins->plugins[CurrentPlugin]);
-        PublishGroup(header, "DRAW_HEADER", WFPText::Upper(title), token, width);
+        PublishGroup(header, "DRAW_HEADER", ListTitle(), token, width);
     }
 
     std::string ValueLine(uint8_t* package, const MenuRow& row, uint8_t* object, const std::string& text, ScreenToken token)
@@ -1207,20 +1235,21 @@ namespace
         auto package = ScreenPackage(token.screen, name);
         if (!Current(token))
             return;
-        bool pager = selected && selected == Pager.option;
-        if ((!pager && found == Rows.end()) || !package)
+        if (found == Rows.end() || !package)
         {
             HelpCaptions.Hide(package, name);
             Help = {};
             return;
         }
-        auto id = pager ? PageRowId : found->first;
-        auto row = pager ? Pager : found->second;
+        auto id = found->first;
+        auto row = found->second;
         auto pin = Plugins;
         auto label = RowLabel(row);
         auto value = ShownValue(row);
         auto text = label + (value.empty() ? std::string() : ": " + value);
-        if (!row.pageSelector && row.rootPlugin < 0)
+        if (row.rootPlugin >= 0)
+            text += "\n" + WFPText::Get("WFP_NFSU_PLUGINS_DESCRIPTION");
+        else if (row.item.kind != WFPPlugins::Row::Kind::Category)
             text += "\n" + WFPPlugins::Help(row.item);
         auto group = row.widget ? *reinterpret_cast<void**>(static_cast<uint8_t*>(row.widget) + 24) : nullptr;
         auto leaves = StringLeaves(group);
@@ -1332,7 +1361,7 @@ namespace
             return;
         auto initialize = original->second.initialize;
         auto token = RowsOwner.Capture();
-        auto owned = widget == Pager.widget || std::any_of(Rows.begin(), Rows.end(), [&](const auto& entry) { return entry.second.widget == widget; });
+        auto owned = std::any_of(Rows.begin(), Rows.end(), [&](const auto& entry) { return entry.second.widget == widget; });
         if (!owned || !Current(token))
         {
             initialize(widget);
@@ -1528,6 +1557,7 @@ namespace
                 widget = MakeButton(id, labels);
                 break;
             case WFPPlugins::Row::Kind::Action:
+            case WFPPlugins::Row::Kind::Category:
                 labels[0] = TextHash("WFP_EMPTY");
                 widget = MakeButton(id, labels);
                 break;
@@ -1601,36 +1631,6 @@ namespace
         return true;
     }
 
-    void AddValueRow(void* screen, int id)
-    {
-        auto token = RowsOwner.Capture();
-        auto pin = Plugins;
-        Rows.erase(id);
-        uint32_t labels[5] = { ValueHash(id), NoLabel, NoLabel, NoLabel, NoLabel };
-        auto widget = MakeChoice(id, labels);
-        if (!Current(token) || Plugins != pin)
-        {
-            DestroyWidget(widget);
-            return;
-        }
-        Pager = {};
-        Pager.shape = Shape::ValueText;
-        Pager.pageSelector = true;
-        Pager.widget = widget;
-        OwnWidget(widget);
-        auto option = PublishWidget(screen, widget);
-        if (!Current(token) || Plugins != pin)
-            return;
-        if (!option)
-        {
-            Pager = {};
-            RetryBuildAt = GetTickCount64() + 250;
-            return;
-        }
-        Pager.option = option;
-        RedrawWidget(widget);
-    }
-
     bool AddRootRow(void* screen, int id, size_t plugin)
     {
         auto token = RowsOwner.Capture();
@@ -1663,19 +1663,53 @@ namespace
         return true;
     }
 
-    // Which rows of the shown screen are visible, to rebuild it when a value hides or shows one
-    std::vector<bool> VisibleRows()
+    // A category is listed while one of its settings is shown
+    bool CategoryVisible(const asi_settings::LoadedPlugin& plugin, size_t category)
     {
-        std::vector<bool> visible;
-        if (CurrentScreen < Screens.size())
+        for (const auto& row : WFPPlugins::CategoryRows(plugin, category, Exclude(plugin)))
         {
-            for (auto& item : Screens[CurrentScreen].rows)
-                visible.push_back(CachedVisible(item));
+            if (CachedVisible(row))
+                return true;
         }
-        return visible;
+        return false;
     }
 
-    // The plugin list, or the selected plugin's section and its own preset/defaults
+    // The open list's shown rows
+    std::vector<Entry> ListEntries()
+    {
+        std::vector<Entry> entries;
+        auto pin = Plugins;
+        if (!pin)
+            return entries;
+        if (CurrentPlugin < 0)
+        {
+            for (size_t i = 0; i < pin->plugins.size(); ++i)
+                entries.push_back({ { WFPPlugins::Row::Kind::Action, &pin->plugins[i], nullptr }, int(i) });
+            return entries;
+        }
+        if (size_t(CurrentPlugin) >= pin->plugins.size())
+            return entries;
+        auto& plugin = pin->plugins[CurrentPlugin];
+        auto rows = CurrentCategory >= 0 ? WFPPlugins::CategoryRows(plugin, size_t(CurrentCategory), Exclude(plugin)) :
+            WFPPlugins::TopRows(plugin, Exclude(plugin));
+        for (auto& row : rows)
+        {
+            bool shown = row.kind == WFPPlugins::Row::Kind::Category ? CategoryVisible(plugin, row.category) : CachedVisible(row);
+            if (shown)
+                entries.push_back({ row });
+        }
+        return entries;
+    }
+
+    std::vector<MenuList::Key> EntryKeys(const std::vector<Entry>& entries)
+    {
+        std::vector<MenuList::Key> keys;
+        for (const auto& entry : entries)
+            keys.push_back(EntryKey(entry));
+        return keys;
+    }
+
+    // The open list's rows in the window's slots
     void BuildScreen(void* screen)
     {
         auto token = RowsOwner.Capture();
@@ -1683,56 +1717,32 @@ namespace
         UpdateTexts();
         if (!Current(token) || !pin || pin->plugins.empty())
             return;
-        CurrentRootPage = std::min(CurrentRootPage, RootPageCount() - 1);
-        if (CurrentPlugin < 0)
-        {
-            Screens.clear();
-            BuiltVisibility.clear();
-            UpdatePluginTexts();
-            bool pager = RootPageCount() > 1;
-            if (pager)
-            {
-                AddValueRow(screen, PageRowId);
-                if (!Current(token) || RetryBuildAt)
-                    return;
-            }
-            auto first = CurrentRootPage * RootCapacity();
-            auto end = std::min(first + RootCapacity(), pin->plugins.size());
-            for (size_t plugin = first; plugin < end; ++plugin)
-            {
-                if (!AddRootRow(screen, FirstPluginScreenId + int(plugin - first), plugin))
-                {
-                    if (Current(token))
-                        RetryBuildAt = GetTickCount64() + 250;
-                    return;
-                }
-            }
-            return;
-        }
         CurrentPlugin = std::min(CurrentPlugin, int(pin->plugins.size() - 1));
-        auto& plugin = pin->plugins[CurrentPlugin];
-        Screens = WFPPlugins::Screens(plugin, MaxRows - 1, true, Exclude(plugin));
-        CurrentScreen = std::min(CurrentScreen, Screens.empty() ? 0 : Screens.size() - 1);
-        WFPPlugins::PresetRow preset;
-        preset.Reset(plugin);
+        if (CurrentPlugin >= 0)
+        {
+            WFPPlugins::PresetRow preset;
+            preset.Reset(pin->plugins[CurrentPlugin]);
+            if (!Current(token) || Plugins != pin)
+                return;
+            Preset = std::move(preset);
+            Restore.Cancel();
+        }
+        UpdatePluginTexts();
+        auto entries = ListEntries();
         if (!Current(token) || Plugins != pin)
             return;
-        Preset = std::move(preset);
-        Restore.Cancel();
-        UpdatePluginTexts();
-        if (Screens.size() > 1)
+        BuiltKeys = EntryKeys(entries);
+        ListWindow.SetSlots(MaxRows);
+        ListWindow.Update(BuiltKeys);
+        if (auto key = std::exchange(SelectAfterBuild, 0))
+            ListWindow.SelectKey(key);
+        BuiltFirst = ListWindow.First();
+        for (size_t slot = 0; slot < ListWindow.Shown(); ++slot)
         {
-            AddValueRow(screen, PageRowId);
-            if (!Current(token) || RetryBuildAt)
-                return;
-        }
-        if (Screens.empty())
-            return;
-        BuiltVisibility = VisibleRows();
-        int id = FirstPluginScreenId;
-        for (size_t i = 0; i < Screens[CurrentScreen].rows.size(); ++i)
-        {
-            if (BuiltVisibility[i] && !AddRow(screen, id++, Screens[CurrentScreen].rows[i]))
+            auto& entry = entries[ListWindow.RowAt(slot)];
+            int id = FirstPluginScreenId + int(slot);
+            bool added = entry.rootPlugin >= 0 ? AddRootRow(screen, id, size_t(entry.rootPlugin)) : AddRow(screen, id, entry.item);
+            if (!added)
             {
                 if (Current(token))
                     RetryBuildAt = GetTickCount64() + 250;
@@ -1751,13 +1761,6 @@ namespace
     {
         if (!pOptionsScreen || !*pOptionsScreen || *pOptionsScreen != PluginsScreen)
             return;
-        auto screen = reinterpret_cast<uint8_t*>(*pOptionsScreen);
-        auto selected = *reinterpret_cast<void**>(screen + 0x34);
-        for (const auto& [id, row] : Rows)
-        {
-            if (row.option == selected && row.item.setting)
-                RestoreSetting = row.item.setting->id;
-        }
         PendingRebuild = PluginsScreen;
     }
 
@@ -1788,28 +1791,163 @@ namespace
             return;
         if (!Plugins || Plugins->plugins.empty())
             return;
-        size_t selection = 0;
-        if (CurrentPlugin < 0)
+        auto selection = int(ListWindow.Slot());
+        if (*reinterpret_cast<int*>(screen + 0x4C) > selection)
+            reinterpret_cast<void(__thiscall*)(uintptr_t, int)>((*reinterpret_cast<uintptr_t**>(screen))[3])(screen, selection);
+        ShownSlot = selection;
+    }
+
+    // The slot the game's list has selected, or -1
+    int SelectedSlot(ScreenToken token)
+    {
+        if (!Current(token) || reinterpret_cast<uintptr_t>(token.screen) != PluginsScreen || PendingRebuild || RetryBuildAt)
+            return -1;
+        auto selected = *reinterpret_cast<void**>(static_cast<uint8_t*>(token.screen) + 0x34);
+        auto found = std::find_if(Rows.begin(), Rows.end(), [&](const auto& entry) { return entry.second.option == selected; });
+        return found != Rows.end() ? found->first - FirstPluginScreenId : -1;
+    }
+
+    // The window follows the game's list: its selection moves within the slots
+    void FollowSelection(ScreenToken token)
+    {
+        int slot = SelectedSlot(token);
+        if (slot >= 0 && std::exchange(ShownSlot, slot) != slot)
+            ListWindow.Select(ListWindow.First() + size_t(slot));
+    }
+
+    // The game's list stops at its first and last slot (it doesn't wrap). A list longer than the slots moves its
+    // window there by a row instead, the selection staying in that slot.
+    constexpr uint32_t MessageUp = 0x72619778;
+    constexpr uint32_t MessageDown = 0x911C0A4B;
+    using NotifyFn = int(__fastcall*)(void* screen, void* edx, uint32_t message, void* object, int a, int b);
+    NotifyFn OriginalNotify = nullptr;
+
+    int __fastcall ScreenNotify(void* screen, void* edx, uint32_t message, void* object, int a, int b)
+    {
+        auto token = RowsOwner.Capture();
+        int before = message == MessageUp || message == MessageDown ? SelectedSlot(token) : -1;
+        auto result = OriginalNotify(screen, edx, message, object, a, b);
+        if (before < 0 || screen != token.screen || SelectedSlot(token) != before)
+            return result;
+        FollowSelection(token);
+        int last = int(ListWindow.Shown()) - 1;
+        if ((message == MessageUp && before == 0 && ListWindow.Above()) ||
+            (message == MessageDown && before == last && ListWindow.Below()))
         {
-            auto first = CurrentRootPage * RootCapacity();
-            auto returned = std::clamp(ReturnPlugin, first, std::min(first + RootCapacity(), Plugins->plugins.size()) - 1);
-            selection = returned - first + (RootPageCount() > 1 ? 1 : 0);
+            ListWindow.Move(message == MessageUp ? -1 : 1, false);
+            PendingRebuild = PluginsScreen;
         }
-        else if (!RestoreSetting.empty())
+        return result;
+    }
+
+    // Rows without a value to change (a plugin, a category, an action) show their name only: no value box, and no
+    // arrows when highlighted. The package's row objects are shared by every list, so a row with a value shows them
+    // again.
+    std::unordered_set<uint8_t*> HiddenObjects;
+
+    void SetHidden(uint8_t* object, bool hide)
+    {
+        auto& flags = *reinterpret_cast<uint32_t*>(object + 0x1C);
+        if (hide && (flags & 1) == 0)
         {
-            size_t index = Screens.size() > 1 ? 1 : 0;
-            for (const auto& [id, row] : Rows)
+            flags |= 0x2400001;
+            HiddenObjects.insert(object);
+        }
+        else if (!hide && HiddenObjects.erase(object) && (flags & 1) != 0)
+            flags = (flags & ~1u) | 0x2400000;
+    }
+
+    uint8_t* FindObject(uint8_t* head, uint32_t hash)
+    {
+        size_t budget{ 4096 };
+        auto find = [&](auto&& self, uint8_t* first, size_t depth) -> uint8_t*
+        {
+            for (auto object = first; object && budget && depth < 32; object = *reinterpret_cast<uint8_t**>(object + 4))
             {
-                if (row.item.setting && row.item.setting->id == RestoreSetting)
+                --budget;
+                if (*reinterpret_cast<uint32_t*>(object + 0x10) == hash)
+                    return object;
+                if (*reinterpret_cast<uint32_t*>(object + 0x18) == 5)
                 {
-                    selection = index;
-                    break;
+                    if (auto child = self(self, *reinterpret_cast<uint8_t**>(object + 0x64), depth + 1))
+                        return child;
                 }
-                ++index;
+            }
+            return nullptr;
+        };
+        return find(find, head, 0);
+    }
+
+    void UpdateArrows(ScreenToken token)
+    {
+        if (!Current(token))
+            return;
+        std::string name;
+        auto package = ScreenPackage(token.screen, name);
+        if (!Current(token) || !package)
+            return;
+        auto selected = *reinterpret_cast<void**>(static_cast<uint8_t*>(token.screen) + 0x34);
+        for (const auto& [id, row] : Rows)
+        {
+            if (!row.widget)
+                continue;
+            auto widget = static_cast<uint8_t*>(row.widget);
+            bool hide = Fixed(row);
+            auto label = *reinterpret_cast<uint8_t**>(widget + 24);
+            auto left = *reinterpret_cast<uint8_t**>(widget + 40);
+            auto right = *reinterpret_cast<uint8_t**>(widget + 44);
+            if (auto group = FindObject(*reinterpret_cast<uint8_t**>(package + 0x4C), HashString("OPTION_%d", id - FirstPluginScreenId + 1));
+                group && *reinterpret_cast<uint32_t*>(group + 0x18) == 5)
+            {
+                size_t budget{ 64 };
+                for (auto child = *reinterpret_cast<uint8_t**>(group + 0x64); child && budget--; child = *reinterpret_cast<uint8_t**>(child + 4))
+                {
+                    if (child != label && child != left && child != right)
+                        SetHidden(child, hide);
+                }
+            }
+            for (auto arrow : { left, right })
+            {
+                if (arrow && row.option == selected)
+                    SetHidden(arrow, hide);
             }
         }
-        if (*reinterpret_cast<int*>(screen + 0x4C) > int(selection))
-            reinterpret_cast<void(__thiscall*)(uintptr_t, int)>((*reinterpret_cast<uintptr_t**>(screen))[3])(screen, int(selection));
+    }
+
+    // The list's arrows: the game shows the top and bottom arrow while its selection can move up or down (their
+    // scripts, from its list update). A windowed list's selection can move past the slots it shows.
+    constexpr uint32_t TopArrowHash = 0x0DAEDBDC;       // TOP_ARROW
+    constexpr uint32_t BottomArrowHash = 0xF53D4E1E;    // BOTTOM_ARROW
+    constexpr uint32_t ShowScript = 0x6EBBFB68;
+    constexpr uint32_t HideScript = 0xFB12D252;
+    void (__fastcall* SetScript)(uint8_t* object, void* edx, uint8_t* script, bool restart) = nullptr;
+
+    void UpdateIndicators(ScreenToken token)
+    {
+        if (!Current(token) || reinterpret_cast<uintptr_t>(token.screen) != PluginsScreen || PendingRebuild ||
+            ListWindow.Count() <= ListWindow.Shown())
+            return;
+        std::string name;
+        auto package = ScreenPackage(token.screen, name);
+        if (!Current(token) || !package)
+            return;
+        auto head = *reinterpret_cast<uint8_t**>(package + 0x4C);
+        auto show = [&](uint32_t hash, bool shown)
+        {
+            auto object = FindObject(head, hash);
+            if (!object)
+                return;
+            for (auto script = *reinterpret_cast<uint8_t**>(object + 0x4C); script; script = *reinterpret_cast<uint8_t**>(script + 4))
+            {
+                if (*reinterpret_cast<uint32_t*>(script + 0x30) == (shown ? ShowScript : HideScript))
+                {
+                    SetScript(object, nullptr, script, false);
+                    return;
+                }
+            }
+        };
+        show(TopArrowHash, ListWindow.Selected() > 0);
+        show(BottomArrowHash, ListWindow.Selected() + 1 < ListWindow.Count());
     }
 
     // A value changed through a row: the Plugins screen's preset row follows, and the list is rebuilt when a value hides
@@ -2179,20 +2317,6 @@ namespace
             return OriginalScroll(dal, edx, id, delta, a, b, c);
         if (!delta)
             return true;
-        if (id == PageRowId)
-        {
-            auto count = CurrentPlugin < 0 ? RootPageCount() : Screens.size();
-            if (!count)
-                return true;
-            auto& page = CurrentPlugin < 0 ? CurrentRootPage : CurrentScreen;
-            page = (page + count + (delta > 0 ? 1 : count - 1)) % count;
-            if (CurrentPlugin < 0)
-                ReturnPlugin = page * RootCapacity();
-            RestoreSetting.clear();
-            UpdatePluginTexts();
-            RequestRebuild();
-            return true;
-        }
         auto row = FindRow(id);
         if (!row)
             return true;
@@ -2285,9 +2409,20 @@ namespace
             if (command.kind == CommandKind::Accept && size_t(row.rootPlugin) < pin->plugins.size())
             {
                 CurrentPlugin = row.rootPlugin;
-                ReturnPlugin = size_t(CurrentPlugin);
-                CurrentScreen = 0;
-                RestoreSetting.clear();
+                CurrentCategory = -1;
+                ListWindow.Reset();
+                RequestRebuild();
+            }
+            return;
+        }
+        if (row.item.kind == WFPPlugins::Row::Kind::Category)
+        {
+            if (command.kind == CommandKind::Accept)
+            {
+                CurrentCategory = int(row.item.category);
+                ListWindow.Reset();
+                Preset.Cancel();
+                Restore.Cancel();
                 RequestRebuild();
             }
             return;
@@ -2330,13 +2465,18 @@ namespace
                     else
                     {
                         Restore.confirm = false;
-                        auto items = CurrentScreen < Screens.size() ? Screens[CurrentScreen].rows : std::vector<WFPPlugins::Row>{};
-                        for (const auto& item : items)
+                        // The whole plugin: every category's settings
+                        auto& plugin = *row.item.plugin;
+                        auto categories = WFPPlugins::Categories(plugin, Exclude(plugin));
+                        for (size_t category = 0; category < categories.size(); ++category)
                         {
-                            if (!active())
-                                return;
-                            if (item.kind == WFPPlugins::Row::Kind::Setting)
-                                WFPPlugins::Set(*item.plugin, *item.setting, asi_settings::detail::JsonToText(item.setting->defaultValue), active);
+                            for (const auto& item : WFPPlugins::CategoryRows(plugin, category, Exclude(plugin)))
+                            {
+                                if (!active())
+                                    return;
+                                if (item.kind == WFPPlugins::Row::Kind::Setting)
+                                    WFPPlugins::Set(*item.plugin, *item.setting, asi_settings::detail::JsonToText(item.setting->defaultValue), active);
+                            }
                         }
                     }
                 }
@@ -2410,8 +2550,12 @@ namespace
                 RedrawRows();
                 if (!Current(token))
                     return;
-                if (VisibleRows() != BuiltVisibility)
+                if (*pOptionsScreen == PluginsScreen && EntryKeys(ListEntries()) != BuiltKeys)
+                {
+                    // A value hid or showed rows: the selection stays on its row
+                    SelectAfterBuild = ListWindow.Count() ? ListWindow.KeyAt(ListWindow.Slot()) : 0;
                     RequestRebuild();
+                }
             }
         }
         if (StockRebuildNeeded && SetupManager && *pOptionsScreen != PluginsScreen && Plugins)
@@ -2467,15 +2611,32 @@ namespace
             auto found = std::find_if(Rows.begin(), Rows.end(), [&](const auto& entry) { return entry.second.option == selected; });
             if (found != Rows.end())
                 LayoutRowValue(found->second, token);
-            else if (selected && selected == Pager.option)
-                LayoutRowValue(Pager, token);
         }
+        FollowSelection(token);
+        UpdateArrows(token);
+        UpdateIndicators(token);
         RefreshTitle(token);
         RefreshHelp(token);
         if (Current(token))
             RestartNotice(token);
     }
 
+}
+
+// The input update reads the wheel and the front end's lists move a row in an update the wheel moved, whatever it
+// moved by: the update passes on a notch each time instead, the rest kept (fast spins and high-rate mice lose and add nothing)
+namespace FrontendWheel
+{
+    MenuList::WheelNotches Notches;
+    int Pending = 0;
+
+    int Next(int delta)
+    {
+        Pending += Notches.Take(delta);
+        int step = Pending > 0 ? 1 : Pending < 0 ? -1 : 0;
+        Pending -= step;
+        return step * 120;
+    }
 }
 
 class Options
@@ -2485,6 +2646,15 @@ public:
     {
         WFP::onInitEvent() += []()
         {
+            // The input update's wheel movement since its last update (eax), which the front end reads
+            {
+                auto wheel = hook::pattern("FF 52 04 8B 40 08 8B 0D ? ? ? ? A3");
+                static auto WheelHook = safetyhook::create_mid(wheel.get_first(12), [](SafetyHookContext& regs)
+                {
+                    regs.eax = uint32_t(FrontendWheel::Next(int32_t(regs.eax)));
+                });
+            }
+
             // The update notice in the game's one-button message dialog over the main menu, once no movie plays there
             {
                 auto message = hook::pattern("6A 00 6A 00 68 01 26 7B 41 E8 ? ? ? ? 83 C4 04 50 8B 44 24 10 50 E8");
@@ -2635,6 +2805,17 @@ public:
             auto videoAdvanced = hook::pattern("53 55 56 8B 35 ? ? ? ? 8B 46 0C 57 68 6B FD 3D 87 68 6D 57 1B B7 50 8B E9 E8");
             auto back = hook::pattern("51 56 8B F1 8B 46 04 83 F8 1B 0F 87 ? ? ? ? 0F B6 88 ? ? ? ? FF 24 8D");
             auto ownerVtable = *ownerClass.get_first<void**>(2);
+            {
+                // FeOptionsScreen::NotificationMessage, for the window of a list longer than the screen's slots
+                ProtectedGameRef<uintptr_t> notify(reinterpret_cast<uintptr_t*>(&ownerVtable[1]));
+                OriginalNotify = reinterpret_cast<NotifyFn>(ownerVtable[1]);
+                notify = reinterpret_cast<uintptr_t>(&ScreenNotify);
+            }
+            {
+                // The list update's arrow scripts (FEObject::SetScript)
+                auto arrows = hook::pattern("68 DC DB AE 0D 8B C8 E8 ? ? ? ? 8B F8 3B FB 74 ? 68 52 D2 12 FB 8B CF E8 ? ? ? ? 8B F0 3B F3 74 ? 53 56 8B CF E8");
+                SetScript = reinterpret_cast<decltype(SetScript)>(injector::GetBranchDestination(arrows.get_first(0x28)).as_int());
+            }
             auto deletingDestructor = static_cast<uint8_t*>(ownerVtable[0]);
             hook::range_pattern(uintptr_t(deletingDestructor), uintptr_t(deletingDestructor + 8), "56 8B F1 E8 ? ? ? ?").get_first();
             shDestroyScreen = safetyhook::create_inline(injector::GetBranchDestination(deletingDestructor + 3).as_int(), DestroyScreen);
@@ -2669,9 +2850,9 @@ public:
             {
                 PendingRebuild = 0;
                 PluginsScreen = regs.esi;
-                CurrentPlugin = -1;
-                CurrentScreen = CurrentRootPage = ReturnPlugin = 0;
-                RestoreSetting.clear();
+                CurrentPlugin = CurrentCategory = -1;
+                ListWindow.Reset();
+                SelectAfterBuild = 0;
                 if (ScreenOwner.Get() == reinterpret_cast<void*>(regs.esi))
                 {
                     RowsOwner.Bind(reinterpret_cast<void*>(regs.esi));

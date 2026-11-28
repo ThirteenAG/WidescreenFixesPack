@@ -3,14 +3,19 @@ module;
 #include "stdafx.h"
 #include "FixSettings.hpp"
 #include "Shared/RWGTA/FixMenu.hpp"
+#include "Shared/MenuList.hpp"
+#include "Shared/RainDroplets.hpp"
 #include <array>
+#include <atomic>
 #include <map>
 #include <memory>
 
 // The settings in the game's own journal: a "Plugins" row on the Options page opens a journal page of native text
-// rows. The first page lists the plugins (the fix first); a plugin's page lists its rows. Clicking a row (or Enter,
-// or the pad's accept button on it) moves to its next value; Left/Right step either way while a row is under the
-// cursor. The preset row chooses a preset and the row after it applies it (twice, to confirm).
+// rows. The first page lists the plugins (the fix first); a plugin's page lists its Preset, its settings or a row per
+// category opening that category, and Restore defaults. Every list scrolls a row at a time (the arrows right of the
+// list, the wheel). Clicking a row (or Enter, or the pad's accept button on it) moves to its next value or opens it;
+// Left/Right step either way while a row is under the cursor. The preset row chooses a preset and the row after it
+// applies it (twice, to confirm). Back returns to the list the page was opened from.
 export module NativeMenu;
 
 import ComVars;
@@ -36,7 +41,8 @@ export namespace PsychonautsMenu
     constexpr size_t TableSize = 21;
     constexpr float PageWidth = 540.0f, PageHeight = 480.0f;
     constexpr size_t WindowRows = 11;
-    constexpr size_t PluginsPerPage = WindowRows - 1;
+    // Wheel deltas from the game window, taken by the journal frame
+    inline std::atomic<int> wheelDelta{ 0 };
 
     struct Api
     {
@@ -72,8 +78,7 @@ export namespace PsychonautsMenu
 
     struct Line
     {
-        enum class Kind { Plugin, Row, Apply, Back } kind{};
-        size_t index{};
+        enum class Kind { Row, Apply, Back } kind{};
         RWGTAMenu::Row row{};
     };
 
@@ -84,8 +89,8 @@ export namespace PsychonautsMenu
         std::vector<Object> rows;
         std::vector<Line> lines;
         RWGTAMenu::Model model;
-        size_t firstPlugin{};
-        int plugin{ -1 };
+        size_t view{ RWGTAMenu::Model::RootPage };
+        MenuList::WheelNotches wheel;
         std::string shownHelp;
     };
     inline std::map<Object, std::unique_ptr<Menu>> menus;  // by Options widget
@@ -238,34 +243,36 @@ export namespace PsychonautsMenu
         return result;
     }
 
+    // The small arrows right of the list when rows are above or below its window
+    constexpr const char* ScrollUp = "^";
+    constexpr const char* ScrollDown = "v";
+
     inline void Build(Menu& menu)
     {
         menu.lines.clear();
-        auto& plugins = menu.model.Pages();
-        if (menu.plugin < 0 || size_t(menu.plugin) >= plugins.size())
+        auto& model = menu.model;
+        if (menu.view >= model.Pages().size())
+            menu.view = RWGTAMenu::Model::RootPage;
+        for (auto row : model.Shown(menu.view, true))
         {
-            menu.plugin = -1;
-            const auto lastPage = plugins.empty() ? 0 : (plugins.size() - 1) / PluginsPerPage * PluginsPerPage;
-            menu.firstPlugin = std::min(menu.firstPlugin, lastPage);
-            const auto end = std::min(menu.firstPlugin + PluginsPerPage, plugins.size());
-            for (size_t i = menu.firstPlugin; i < end; ++i)
-                menu.lines.push_back({ Line::Kind::Plugin, i });
-        }
-        else
-        {
-            for (auto row : menu.model.WindowRows(size_t(menu.plugin)))
+            if (!row)
             {
-                if (!row)
-                    break;
-                menu.lines.push_back({ Line::Kind::Row, 0, *row });
-                if (row->kind == RWGTAMenu::RowKind::Preset)
-                    menu.lines.push_back({ Line::Kind::Apply, 0, { RWGTAMenu::RowKind::ApplyPreset, row->plugin } });
+                menu.lines.push_back({ Line::Kind::Back });
+                continue;
             }
-            while (menu.lines.size() + 1 > menu.rows.size())
-                menu.lines.pop_back();
+            menu.lines.push_back({ Line::Kind::Row, *row });
+            if (row->kind == RWGTAMenu::RowKind::Preset)
+                menu.lines.push_back({ Line::Kind::Apply, { RWGTAMenu::RowKind::ApplyPreset, row->plugin } });
         }
-        menu.lines.push_back({ Line::Kind::Back });
+        if (menu.lines.size() > menu.rows.size())
+            menu.lines.resize(menu.rows.size());
 
+        // The journal hands a click to every child still marked as under the cursor; a page built during that pass
+        // must not let a row that was under the cursor before (or while hidden) take the same click
+        for (auto widget : menu.rows)
+            Field<uint32_t>(widget, 8) &= ~2u;
+        Field<uint32_t>(menu.up, 8) &= ~2u;
+        Field<uint32_t>(menu.down, 8) &= ~2u;
         for (size_t i = 0; i < menu.rows.size(); ++i)
         {
             const bool shown = i < menu.lines.size();
@@ -276,17 +283,13 @@ export namespace PsychonautsMenu
             std::string text;
             switch (line.kind)
             {
-                case Line::Kind::Plugin:
-                    text = plugins[line.index].title;
-                    break;
                 case Line::Kind::Row:
                 case Line::Kind::Apply:
                 {
-                    auto row = line.kind == Line::Kind::Row ? line.row : RWGTAMenu::Row{ RWGTAMenu::RowKind::ApplyPreset, line.row.plugin };
-                    text = line.kind == Line::Kind::Row ? menu.model.Label(row) : Text("menu.applypreset");
+                    text = line.kind == Line::Kind::Row ? model.Label(line.row) : Text("menu.applypreset");
                     if (text.starts_with("menu."))
                         text = "Apply";
-                    auto value = menu.model.Value(row);
+                    auto value = model.Value(line.row);
                     if (!value.empty())
                         text += ": " + value;
                     break;
@@ -297,32 +300,52 @@ export namespace PsychonautsMenu
             }
             SetText(menu.rows[i], text);
         }
-        const bool page = menu.plugin >= 0;
-        SetVisible(menu.up, page ? menu.model.HiddenAbove(size_t(menu.plugin)) : menu.firstPlugin != 0);
-        SetVisible(menu.down, page ? menu.model.HiddenBelow(size_t(menu.plugin)) :
-            menu.firstPlugin + PluginsPerPage < plugins.size());
-        SetText(menu.title, page ? plugins[size_t(menu.plugin)].title : Text("menu.plugins"), true);
+        auto& window = model.Window(menu.view);
+        SetVisible(menu.up, window.Above());
+        SetVisible(menu.down, window.Below());
+        SetText(menu.title, menu.view == RWGTAMenu::Model::RootPage ? Text("menu.plugins") : model.Pages()[menu.view].title, true);
         menu.shownHelp = "\x01";
     }
+
+    inline bool leaving = false;
 
     inline void Leave(Menu& menu)
     {
         menu.model.Close();
-        menu.plugin = -1;
+        menu.view = RWGTAMenu::Model::RootPage;
+        leaving = true;
         Virtual(menu.page, SlotClose, char(1));
+        leaving = false;
+    }
+
+    inline void Build(Menu& menu);
+
+    // The journal closes a page on Back (Esc, the pad's back button): inside a plugin's page or a category it goes up one
+    // level instead, onto the row it came from; on the plugins list it closes like the game's own sub-pages
+    inline int __fastcall PageClose(Object self, void*, char back)
+    {
+        if (auto found = pages.find(self); found != pages.end() && !leaving && back)
+        {
+            auto& menu = *found->second;
+            const auto parent = menu.model.Back(menu.view);
+            if (parent != SIZE_MAX)
+            {
+                menu.view = parent;
+                Build(menu);
+                return 0;
+            }
+            menu.model.Close();
+            menu.view = RWGTAMenu::Model::RootPage;
+        }
+        return reinterpret_cast<int(__thiscall*)(Object, char)>(api.containerTable[SlotClose])(self, back);
     }
 
     inline void Act(Menu& menu, Object child, int direction)
     {
+        auto& model = menu.model;
         if (child == menu.up || child == menu.down)
         {
-            const bool previous = child == menu.up;
-            if (menu.plugin >= 0)
-                menu.model.Scroll(size_t(menu.plugin), previous ? -1 : 1);
-            else if (previous && menu.firstPlugin >= PluginsPerPage)
-                menu.firstPlugin -= PluginsPerPage;
-            else if (!previous && menu.firstPlugin + PluginsPerPage < menu.model.Pages().size())
-                menu.firstPlugin += PluginsPerPage;
+            model.Window(menu.view).Scroll(child == menu.up ? -1 : 1);
             Build(menu);
             return;
         }
@@ -335,31 +358,38 @@ export namespace PsychonautsMenu
         auto line = menu.lines[index];
         switch (line.kind)
         {
-            case Line::Kind::Plugin:
-                if (direction)
-                    return;
-                menu.plugin = int(line.index);
-                menu.model.PageShown(line.index);
-                break;
             case Line::Kind::Row:
+                if (RWGTAMenu::Model::Opens(line.row))
+                {
+                    if (direction)
+                        return;
+                    if (const auto page = model.Enter(line.row); page != SIZE_MAX)
+                        menu.view = page;
+                    break;
+                }
                 // The preset selector cycles on accept; the separate Apply row confirms it.
                 if (line.row.kind == RWGTAMenu::RowKind::Preset && direction == 0)
                     direction = 1;
-                menu.model.Change(line.row, direction, true);
+                model.Change(line.row, direction, true);
                 break;
             case Line::Kind::Apply:
-                menu.model.Change({ RWGTAMenu::RowKind::Preset, line.row.plugin }, direction, true);
-                break;
-            case Line::Kind::Back:
                 if (direction)
                     return;
-                if (menu.plugin < 0)
+                model.Change({ RWGTAMenu::RowKind::Preset, line.row.plugin }, 0, true);
+                break;
+            case Line::Kind::Back:
+            {
+                if (direction)
+                    return;
+                const auto parent = model.Back(menu.view);
+                if (parent == SIZE_MAX)
                 {
                     Leave(menu);
                     return;
                 }
-                menu.plugin = -1;
+                menu.view = parent;
                 break;
+            }
         }
         Build(menu);
     }
@@ -376,11 +406,14 @@ export namespace PsychonautsMenu
         if (auto found = pages.find(self); found != pages.end())
         {
             auto& menu = *found->second;
-            menu.model.OpenPlugins(host, SettingsLanguage(), WindowRows - 2, {}, true);
-            SetText(menu.up, Text("menu.previous"));
-            SetText(menu.down, Text("menu.next"));
-            menu.firstPlugin = 0;
-            menu.plugin = -1;
+            // A Preset row brings its Apply row, so the window keeps one widget free for it
+            menu.model.OpenMenu(host, SettingsLanguage(), WindowRows - 1);
+            SetText(menu.up, ScrollUp);
+            SetText(menu.down, ScrollDown);
+            menu.view = RWGTAMenu::Model::RootPage;
+            menu.model.Window(menu.view).Reset();
+            menu.wheel.Clear();
+            wheelDelta = 0;
             Build(menu);
         }
         return api.show(self);
@@ -415,13 +448,24 @@ export namespace PsychonautsMenu
     // Under the cursor: a row's help; else the restart warning or the update notice
     inline void Frame()
     {
+        // The droplets stay off the game's menus (the journal and its pages) while they show
+        RainDroplets::MenuOpen(currentMenu.is_initialized() && currentMenu.get());
         if (!currentMenu.is_initialized())
             return;
         auto found = pages.find(currentMenu.get());
         if (found == pages.end())
+        {
+            wheelDelta = 0;
             return;
+        }
         auto& menu = *found->second;
         if (RWGTAMenu::Model::Changed().exchange(false))
+            Build(menu);
+        // The wheel moves the list a row per notch
+        bool scrolled = false;
+        for (int notches = menu.wheel.Take(wheelDelta.exchange(0)); notches; notches += notches > 0 ? -1 : 1)
+            scrolled |= menu.model.Window(menu.view).Scroll(notches > 0 ? -1 : 1);
+        if (scrolled)
             Build(menu);
         std::string help;
         for (size_t i = 0; i < menu.rows.size() && i < menu.lines.size(); ++i)
@@ -544,6 +588,7 @@ export namespace PsychonautsMenu
         std::copy_n(api.containerTable, TableSize, pageTable.begin());
         pageTable[SlotActivated] = reinterpret_cast<void*>(&PageActivated);
         pageTable[SlotShow] = reinterpret_cast<void*>(&PageShow);
+        pageTable[SlotClose] = reinterpret_cast<void*>(&PageClose);
         lookupHook = safetyhook::create_inline(lookup, Lookup);
         optionsHook = safetyhook::create_inline(options, OptionsCreated);
         activatedHook = safetyhook::create_inline(activated, OptionsActivated);

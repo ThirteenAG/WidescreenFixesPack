@@ -6,7 +6,6 @@
 #include <optional>
 #include <string>
 #include <string_view>
-#include <tuple>
 #include <vector>
 #include "Shared/AsiSettings/asi_settings.hpp"
 #include "Shared/OtherPlugins.hpp"
@@ -16,8 +15,8 @@
 // - Settings that belong next to the game's own options go into those menus (Video, Generic, Controls, Mouse
 //   Settings), before the game's Restore Defaults, which then resets them too.
 // - One "Plugins" row at the end of Options lists the fix first, then every other plugin with settings. Each opens its
-//   page: its preset row and the confirmation to apply it, its remaining settings, compatibility settings last, and
-//   Restore Defaults for that page's rows.
+//   page: its preset row and the confirmation to apply it, its settings (or a submenu per category of them, as the
+//   game's Options has Video, Audio...), compatibility settings last, and Restore Defaults for all of them.
 //
 // The MaxFX menus are scripts: menu.txt describes every menu and its rows ([Menu], [Item], [Toggle], [Slider],
 // [Back]), with a numeric ID per row that the game's menu mode answers through virtual functions: getSlider/setSlider
@@ -449,8 +448,8 @@ namespace MaxPayneMenu
     // The rows of a menu, one script entry each
     using Rows = std::vector<std::string>;
 
-    // A menu shows about a dozen rows between its headline and the tooltip
-    constexpr size_t MaxRows = 12;
+    // The rows a menu shows between its headline and the tooltip, its Back included
+    constexpr size_t MaxRows = 15;
 
     inline int32_t AddRow(Row row)
     {
@@ -491,21 +490,6 @@ namespace MaxPayneMenu
         return text + "\t[Back]\r\n\tName = GCID_BACK;\r\n\tToolTip = GCID_BACK_TIP;\r\n\tID = 0;\r\n\t}\r\n";
     }
 
-    // Submenus of at most MaxRows rows; more continue in the next ones, "Name (2/3)"
-    inline Rows Submenus(const std::string& title, const std::string& tip, const Rows& rows)
-    {
-        if (rows.size() <= MaxRows)
-            return { Submenu(title, tip, rows) };
-        Rows menus;
-        size_t count = (rows.size() + MaxRows - 1) / MaxRows;
-        for (size_t i = 0; i < count; ++i)
-        {
-            Rows part(rows.begin() + i * MaxRows, rows.begin() + std::min(rows.size(), (i + 1) * MaxRows));
-            menus.push_back(Submenu(title + " (" + std::to_string(i + 1) + "/" + std::to_string(count) + ")", tip, part));
-        }
-        return menus;
-    }
-
     inline bool Shown(const Setting& setting)
     {
         if (!setting.InMenu() || setting.type == asi_settings::Type::Info || setting.type == asi_settings::Type::Key)
@@ -524,40 +508,6 @@ namespace MaxPayneMenu
             }
         }
         return false;
-    }
-
-    // A plugin's settings for the menu, in its page order with compatibility pages last; for the fix, without the
-    // ones placed into the game's menus
-    inline std::vector<const Setting*> MenuSettings(int pluginIndex)
-    {
-        auto& description = Get().plugins[pluginIndex].file.description;
-        std::vector<const asi_settings::Page*> pages;
-        for (auto& page : description.pages)
-            pages.push_back(&page);
-        std::stable_sort(pages.begin(), pages.end(), [](auto a, auto b) { return a->order < b->order; });
-        std::stable_partition(pages.begin(), pages.end(), [](auto page) { return !asi_settings::text::IEquals(page->section, "compatibility"); });
-        auto pageIndex = [&](const Setting& setting)
-        {
-            for (size_t i = 0; i < pages.size(); ++i)
-            {
-                if (asi_settings::text::IEquals(pages[i]->id, setting.page))
-                    return int(i);
-            }
-            return 0;
-        };
-
-        std::vector<const Setting*> settings;
-        for (auto& setting : description.settings)
-        {
-            if (Shown(setting) && !(pluginIndex == 0 && Placed(setting)))
-                settings.push_back(&setting);
-        }
-        std::stable_sort(settings.begin(), settings.end(), [&](auto a, auto b)
-        {
-            auto key = [&](const Setting* s) { return std::make_tuple(s->compatibility ? 1 : 0, pageIndex(*s), s->order); };
-            return key(a) < key(b);
-        });
-        return settings;
     }
 
     inline std::string SettingRow(int pluginIndex, const Setting& setting)
@@ -582,10 +532,17 @@ namespace MaxPayneMenu
         return RowLine(std::move(row), OtherPlugins::Text(Get().plugins[pluginIndex], setting.description));
     }
 
-    // A plugin's page in Plugins: its preset, its settings, Restore Defaults for them
+    // A plugin's page in Plugins, a submenu of the game's own kind: its preset and the confirmation to apply it, then
+    // its settings when they are one category (in a Settings submenu when they don't fit), otherwise a submenu per
+    // category, and Restore Defaults for all of them.
+    // The game's menus don't scroll: a page keeps to the rows a menu shows.
     inline Rows PluginPage(int pluginIndex)
     {
         auto& plugin = Get().plugins[pluginIndex];
+        auto categories = OtherPlugins::Categories(plugin, [&](const Setting& setting)
+        {
+            return Shown(setting) && !(pluginIndex == 0 && Placed(setting));
+        });
         Rows rows;
         std::vector<const Setting*> page;
         if (OtherPlugins::HasPresets(plugin))
@@ -599,11 +556,36 @@ namespace MaxPayneMenu
             apply.plugin = pluginIndex;
             rows.push_back(ConfirmLine(std::move(apply), Quoted(HostText("WFP_PRESET_APPLY")), HostText("WFP_PRESET_APPLY_DESCRIPTION")));
         }
-        for (auto setting : MenuSettings(pluginIndex))
+        for (auto& category : categories)
         {
-            rows.push_back(SettingRow(pluginIndex, *setting));
-            if (setting->HasValue())
-                page.push_back(setting);
+            for (auto setting : category.settings)
+            {
+                if (setting->HasValue())
+                    page.push_back(setting);
+            }
+        }
+        if (categories.size() == 1)
+        {
+            // One category: its settings on this page; when they are more than the menu shows, in a Settings
+            // submenu beside the preset and Restore Defaults
+            Rows settings;
+            for (auto setting : categories.front().settings)
+                settings.push_back(SettingRow(pluginIndex, *setting));
+            if (rows.size() + settings.size() + (page.empty() ? 0 : 1) + 1 <= MaxRows)
+                rows.insert(rows.end(), settings.begin(), settings.end());
+            else
+                rows.push_back(Submenu(HostText("WFP_SETTINGS"), HostText("WFP_SETTINGS_DESCRIPTION"), settings));
+        }
+        else
+        {
+            for (auto& category : categories)
+            {
+                Rows settings;
+                for (auto setting : category.settings)
+                    settings.push_back(SettingRow(pluginIndex, *setting));
+                auto title = TitleCase(category.title);
+                rows.push_back(Submenu(title, title, settings));
+            }
         }
         if (!page.empty())
         {
@@ -614,7 +596,7 @@ namespace MaxPayneMenu
             rows.push_back(ConfirmLine(std::move(restore), "GCID_RESTOREDEFAULTS", HostText("WFP_RESTOREDEFAULTS_DESCRIPTION")));
         }
         auto name = TitleCase(OtherPlugins::Name(plugin));
-        return rows.empty() ? Rows() : Submenus(name, name, rows);
+        return rows.empty() ? Rows() : Rows{ Submenu(name, name, rows) };
     }
 
     // The plugins with settings, the fix first: when the menu is read, since Ultimate ASI Loader loads them one after

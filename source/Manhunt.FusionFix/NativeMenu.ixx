@@ -3,6 +3,7 @@ module;
 #include <stdafx.h>
 #include "common.h"
 #include "Shared/RWGTA/FixMenu.hpp"
+#include "Shared/MenuList.hpp"
 #include "FixSettings.hpp"
 #include <safetyhook.hpp>
 #include <filesystem>
@@ -19,8 +20,15 @@ import NativeMenuView;
 
 
 
+// "Plugins" on the Settings screen: the list of plugins (the fix first, then the other plugins with ASI Settings), a
+// plugin's settings with their values or its categories, each opening its settings, drawn as the screen's own rows.
+// Every list scrolls by a line through the rows the screen shows: Up/Down wrap at the ends, Page Up/Page Down move by
+// a screen, Home/End go to the ends, the wheel scrolls, the mouse selects the row under it; small arrows mark lines
+// above and below, and Back returns to the row a list was opened from.
 export namespace MHMenu
 {
+    std::atomic<int> Wheel{ 0 };            // the DirectInput mouse's wheel movement since the menu last read it
+
     inline int __cdecl SettingsInput();
     inline int __cdecl SettingsDraw();
     inline int __cdecl VideoInput();
@@ -51,6 +59,9 @@ export namespace MHMenu
         std::set<std::string> messages;
         ULONGLONG restartUntil = 0;
         safetyhook::MidHook defaults;
+        MenuList::WheelNotches wheel;
+        MenuList::Repeat pageUp, pageDown;
+        bool homeHeld = false, endHeld = false;
 
         bool BackPressed()
         {
@@ -93,8 +104,10 @@ export namespace MHMenu
         {
             Close();
             language = ABI::Language();
-            model.OpenPlugins(module, language, 32, JoinedIDs(), true);
+            model.OpenMenu(module, language, View::Slots, JoinedIDs());
             opened = model.IsOpen();
+            Wheel.exchange(0);
+            wheel.Clear();
             refresh = true;
             return opened && Build();
         }
@@ -117,7 +130,7 @@ export namespace MHMenu
             if (videoOpen && videoLanguage == selectedLanguage) return;
             video.Close();
             videoLanguage = selectedLanguage;
-            video.OpenPlugins(module, videoLanguage, 32, JoinedIDs(), true);
+            video.OpenMenu(module, videoLanguage, View::Slots, JoinedIDs());
             videoOpen = video.IsOpen();
             beforeVideo.clear();
             writtenVideo.clear();
@@ -197,6 +210,20 @@ export namespace MHMenu
         if (!state.Build()) return 1;
         if (ABI::Down()) state.view.Move(1);
         if (ABI::Up()) state.view.Move(-1);
+        // A screen of lines, the ends, the wheel (a line per notch)
+        auto now = GetTickCount64();
+        auto held = [](int key) { return (GetAsyncKeyState(key) & 0x8000) != 0; };
+        if (state.pageUp.Step(held(VK_PRIOR), now)) state.view.Page(-1);
+        if (state.pageDown.Step(held(VK_NEXT), now)) state.view.Page(1);
+        bool home = held(VK_HOME), end = held(VK_END);
+        if (home && !state.homeHeld) state.view.Edge(-1);
+        if (end && !state.endHeld) state.view.Edge(1);
+        state.homeHeld = home;
+        state.endHeld = end;
+        for (int notches = state.wheel.Take(Wheel.exchange(0)); notches; notches += notches > 0 ? -1 : 1)
+            state.view.Scroll(notches > 0 ? -1 : 1);
+        state.refresh = true;
+        if (!state.Build()) return 1;
         bool mouse = ABI::MouseMode();
         bool hoverAction = false;
         if (ABI::HoverActive())
@@ -205,8 +232,7 @@ export namespace MHMenu
             if (hovered >= 0 && static_cast<size_t>(hovered) < state.view.items.size()
                 && state.view.items[hovered].enabled)
             {
-                state.view.selected = static_cast<size_t>(hovered);
-                state.view.Remember();
+                state.view.Point(static_cast<size_t>(hovered));
                 hoverAction = true;
             }
         }
@@ -273,14 +299,22 @@ export namespace MHMenu
         if (!state.enabled) return ABI::Function<int(__cdecl*)()>(ABI::Address::SettingsDraw())();
         if (state.opened && state.Build())
         {
-            auto title = state.Words(state.view.details ? "menu.details" : "menu.plugins");
+            std::wstring title;
+            Text::Convert(state.model.Pages()[state.view.page].title, title);
             ABI::Header(title.c_str());
             auto y = ABI::Y();
             for (size_t i = 0; i < state.view.items.size(); ++i)
             {
                 const auto& item = state.view.items[i];
-                ABI::Row(item.text.c_str(), y, item.enabled && i == state.view.selected);
+                ABI::Row(item.text.c_str(), y, item.enabled && i == state.view.Selected());
                 y += ABI::Spacing();
+            }
+            // A list longer than the screen: the lines shown under it, like the Bonus Features' "1-4"
+            auto& shown = state.view.Current();
+            if (shown.Above() || shown.Below())
+            {
+                auto range = std::to_wstring(shown.First() + 1) + L"-" + std::to_wstring(shown.First() + shown.Shown());
+                ABI::Mark(range.c_str(), ABI::Y() + ABI::Spacing() * float(View::Slots + 0.5f));
             }
             auto restart = state.model.RestartRequired() ? state.Words("menu.restartshort") : std::wstring{};
             ABI::Footer(restart.c_str());
@@ -378,6 +412,16 @@ export namespace MHMenu
         return result;
     }
 
+    // The game's DirectInput mouse read: its wheel movement, every report summed (no per-frame flag in between)
+    inline SafetyHookInline MouseStateHook;
+    inline int __cdecl MouseState(int32_t* state)
+    {
+        auto result = MouseStateHook.ccall<int>(state);
+        if (result == 0 && state)
+            Wheel += state[2];
+        return result;
+    }
+
     inline void Tick()
     {
         auto state = Storage();
@@ -397,6 +441,7 @@ export namespace MHMenu
         if (!GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_PIN,
             reinterpret_cast<LPCWSTR>(&Init), &pinned) || pinned != state->module) { delete state; return; }
         Storage() = state;
+        MouseStateHook = safetyhook::create_inline(reinterpret_cast<void*>(ABI::Address::MouseState()), MouseState);
         // This call site is reached only by Yes in the game's confirmation.
         state->defaults = safetyhook::create_mid(reinterpret_cast<void*>(ABI::Address::DefaultsConfirmed()), [](SafetyHookContext&)
         {

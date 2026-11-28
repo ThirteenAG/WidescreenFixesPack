@@ -143,7 +143,7 @@ const wchar_t* SelectXidiProfile()
         return L"P_Controls_joystick";
     else if (!CMenusManager::IsMenuDisplayed(Page::P_Map) && (CMenusManager::IsOpsatDisplayed() || CMenusManager::IsMenuDisplayed(Page::P_Controls_Popup_Joy_Selection)))
         return L"Opsat";
-    else if (CMenusManager::IsMainMenuDisplayed())
+    else if (CMenusManager::IsMainMenuDisplayed() || bPluginsPageOpen)
         return L"Menu";
     return L"Main";
 }

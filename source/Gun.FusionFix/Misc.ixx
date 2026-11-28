@@ -230,6 +230,7 @@ public:
             }
 
             GunMenu::Init();
+            GunDisplay::menuInput = GunMenu::Message;
             GunMenu::Scene = []()
             {
                 static std::once_flag once;

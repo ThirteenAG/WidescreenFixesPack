@@ -70,7 +70,7 @@ void InstallOptions(void* setPage)
         }, NoAction, nullptr, "SETUP.Option.Language" };
 
     static const std::vector<float> times = { 0.0f, 0.1f, 0.15f, 0.2f, 0.25f, 0.35f, 0.5f, 0.75f, 1.0f };
-    enum { Root, Display, Graphics, Sound, CameraPage, ControlsPage, Keys, MoreKeys, ClassicKeys, ClassicKeys2, GamePage };
+    enum { Root, Display, Graphics, Sound, CameraPage, ControlsPage, Keys, ClassicKeys, GamePage };
     Sections = {
         { Open(L"DISPLAY", Display), Open(L"GRAPHICS", Graphics), Open(L"SOUND", Sound), Open(L"CAMERA", CameraPage),
           Open(L"CONTROLS", ControlsPage), Open(L"GAME", GamePage), Back() },
@@ -113,21 +113,20 @@ void InstallOptions(void* setPage)
           Toggle(L"STICK THROTTLE", "INPUT", "StickThrottle", StickThrottle),
           Toggle(L"MOUSE AIM", "INPUT", "MouseAim", GTA2Input::MouseAim),
           Choice(L"STICK DEADZONE", "INPUT", "StickDeadzone", Deadzone, { 0.05f, 0.1f, 0.15f, 0.2f, 0.25f, 0.3f, 0.4f }),
-          Open(L"MODERN KEYS", Keys), Open(L"MORE MODERN KEYS", MoreKeys),
-          Open(L"CLASSIC KEYS", ClassicKeys), Open(L"MORE CLASSIC KEYS", ClassicKeys2), Back() },
+          Open(L"MODERN KEYS", Keys), Open(L"CLASSIC KEYS", ClassicKeys), Back() },
         { Key(L"MOVE UP", "INPUT", "MoveUpKey", MoveUpKey), Key(L"MOVE DOWN", "INPUT", "MoveDownKey", MoveDownKey),
           Key(L"MOVE LEFT", "INPUT", "MoveLeftKey", MoveLeftKey), Key(L"MOVE RIGHT", "INPUT", "MoveRightKey", MoveRightKey),
           Key(L"FIRE", "INPUT", "FireKey", FireKey), Key(L"ENTER VEHICLE", "INPUT", "EnterVehicleKey", EnterVehicleKey),
-          Key(L"JUMP", "INPUT", "JumpKey", JumpKey), Key(L"SPECIAL", "INPUT", "SpecialKey", SpecialKey), Back() },
-        { Key(L"PREVIOUS WEAPON", "INPUT", "PreviousWeaponKey", PreviousWeaponKey),
+          Key(L"JUMP", "INPUT", "JumpKey", JumpKey), Key(L"SPECIAL", "INPUT", "SpecialKey", SpecialKey),
+          Key(L"PREVIOUS WEAPON", "INPUT", "PreviousWeaponKey", PreviousWeaponKey),
           Key(L"NEXT WEAPON", "INPUT", "NextWeaponKey", NextWeaponKey), Key(L"PAUSE", "INPUT", "PauseKey", PauseKey),
           Key(L"QUICKSAVE", "MISC", "QuicksaveKey", nQuicksaveKey), Key(L"ZOOM IN", "MISC", "ZoomIncreaseKey", nZoomIncreaseKey),
           Key(L"ZOOM OUT", "MISC", "ZoomDecreaseKey", nZoomDecreaseKey),
           Key(L"RECOVER PLAYER", "MISC", "RecoverPlayerKey", GTA2Input::RecoveryKey),
           Key(L"TOGGLE ROTATION", "CAMERA", "ToggleRotationKey", GTA2Camera::ToggleKey), Back() },
         { NativeKey(L"UP", 0), NativeKey(L"DOWN", 1), NativeKey(L"LEFT", 2), NativeKey(L"RIGHT", 3),
-          NativeKey(L"ATTACK", 4), NativeKey(L"ENTER/EXIT", 5), NativeKey(L"JUMP", 6), Back() },
-        { NativeKey(L"PREVIOUS WEAPON", 7), NativeKey(L"NEXT WEAPON", 8), NativeKey(L"SPECIAL 1", 9),
+          NativeKey(L"ATTACK", 4), NativeKey(L"ENTER/EXIT", 5), NativeKey(L"JUMP", 6),
+          NativeKey(L"PREVIOUS WEAPON", 7), NativeKey(L"NEXT WEAPON", 8), NativeKey(L"SPECIAL 1", 9),
           NativeKey(L"SPECIAL 2", 10), NativeKey(L"SPECIAL 3", 11), Back() },
         { language, RegRange(L"TEXT SPEED", "Option", "text_speed", 1, 3, 1, 3),
           Toggle(L"SKIP INTRO MOVIE", "MAIN", "SkipIntro", bSkipMovie),

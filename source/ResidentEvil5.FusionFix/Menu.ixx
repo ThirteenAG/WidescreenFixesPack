@@ -3,11 +3,13 @@ module;
 #include <stdafx.h>
 #include "FixSettings.hpp"
 #include "Shared/NFS/PluginsMenu.hpp"
+#include "Shared/MenuList.hpp"
 #include "Shared/RWGTA/UpdateCheck.hpp"
 
 export module Menu;
 
 import SplitScreen;
+import Overlay;
 
 // The fix's settings in the game's own Options menu, at the title screen and in the pause menu.
 //
@@ -76,7 +78,6 @@ namespace
         void (__fastcall* StopInput)(Page, void*);
         int (__fastcall* ScrollNav)(Page, void*, int pressed, int repeated, int cursor, int count, int* scroll, int visible);
         int (__fastcall* MouseRow)(Page, void*, int cursor, int count, int, int);
-        int (__fastcall* Wheel)(uintptr_t, void*, int scroll, int min, int max, int, int, int);
         bool (__fastcall* MouseClick)(uintptr_t, void*, int area, int kind, int layer);
         bool (__fastcall* MouseClickRange)(uintptr_t, void*, int first, int last, int kind, int layer);
         int (__fastcall* MouseHover)(uintptr_t, void*, int layer);
@@ -371,12 +372,13 @@ namespace
         bool topReturn = false;
 
         std::shared_ptr<WFPPlugins::Snapshot> snapshot;
-        int level = 0;                  // 0 the list of plugins, 1 a plugin's page
-        size_t plugin = 0;
-        int listCursor = 0;
+        int level = 0;                  // 0 the list of plugins, 1 a plugin's page, 2 one of its categories
+        size_t plugin = 0, category = 0;
+        int listCursor = 0, topCursor = 0;
         std::vector<WFPPlugins::Row> rows;
         WFPPlugins::PresetRow preset;
         WFPPlugins::RestoreRow restore;
+        MenuList::WheelNotches wheel;
     } pages;
 
     std::string PluginTitle(size_t index)
@@ -401,15 +403,40 @@ namespace
         return { "MAIN.FOVFactor", "MAIN.ModernControls", "MAIN.ForceLaserSight", "MAIN.KnifeParry" };
     }
 
+    // A plugin's page: its Preset, its settings or a row per category, Restore Defaults
     void OpenPlugin(size_t index)
     {
         pages.level = 1;
         pages.plugin = index;
         auto& plugin = pages.snapshot->plugins[index];
-        pages.rows = WFPPlugins::Rows(plugin, Excluded(plugin));
-        std::erase_if(pages.rows, [](const WFPPlugins::Row& row) { return !WFPPlugins::Visible(row); });
+        auto excluded = Excluded(plugin);
+        pages.rows = WFPPlugins::TopRows(plugin, excluded);
+        std::erase_if(pages.rows, [&](const WFPPlugins::Row& row)
+        {
+            return row.kind == WFPPlugins::Row::Kind::Category ? !WFPPlugins::AnyVisible(plugin, row.category, excluded) :
+                !WFPPlugins::Visible(row);
+        });
         pages.preset.Reset(plugin);
         pages.restore = {};
+    }
+
+    // The settings of one category of the open plugin
+    void OpenCategory(size_t category)
+    {
+        pages.level = 2;
+        pages.category = category;
+        auto& plugin = pages.snapshot->plugins[pages.plugin];
+        pages.rows = WFPPlugins::CategoryRows(plugin, category, Excluded(plugin));
+        std::erase_if(pages.rows, [](const WFPPlugins::Row& row) { return !WFPPlugins::Visible(row); });
+        pages.preset.Cancel();
+        pages.restore.Cancel();
+    }
+
+    std::string CategoryTitle()
+    {
+        auto& plugin = pages.snapshot->plugins[pages.plugin];
+        auto categories = WFPPlugins::Categories(plugin, Excluded(plugin));
+        return pages.category < categories.size() ? Upper(categories[pages.category].title) : PluginTitle(pages.plugin);
     }
 
     void OpenList()
@@ -423,6 +450,8 @@ namespace
         pages.snapshot = WFPPlugins::Find(self, tag);
         pages.level = 0;
         pages.listCursor = 0;
+        pages.wheel.Clear();
+        Overlay::TakeWheel();
         pages.rows.clear();
     }
 
@@ -487,6 +516,8 @@ namespace
         auto& row = pages.rows[index];
         if (row.kind == WFPPlugins::Row::Kind::Preset)
             return 3;
+        if (row.kind == WFPPlugins::Row::Kind::Category)
+            return 0;
         if (row.kind != WFPPlugins::Row::Kind::Setting || !WFPPlugins::Enabled(row))
             return 0;
         auto& setting = *row.setting;
@@ -508,6 +539,8 @@ namespace
         if (pages.level == 0)
             return false;
         auto& row = pages.rows[index];
+        if (row.kind == WFPPlugins::Row::Kind::Category)
+            return false;
         pages.restore.Cancel();
         if (row.kind == WFPPlugins::Row::Kind::Preset)
         {
@@ -531,6 +564,10 @@ namespace
         auto& plugin = pages.snapshot->plugins[pages.plugin];
         switch (row.kind)
         {
+            case WFPPlugins::Row::Kind::Category:
+                pages.topCursor = index;
+                OpenCategory(row.category);
+                return true;
             case WFPPlugins::Row::Kind::Preset:
                 pages.restore.Cancel();
                 return pages.preset.Accept();
@@ -562,7 +599,8 @@ namespace
         int cursor = Field<int>(page, Cursor);
         int scroll = Field<int>(page, Scroll);
         bool inGame = Field<int>(page, InGame) != 0;
-        std::string title = pages.level == 0 ? Upper(WFPText::Get("WFP_PLUGINS")) : PluginTitle(pages.plugin);
+        std::string title = pages.level == 0 ? Upper(WFPText::Get("WFP_PLUGINS")) : pages.level == 1 ? PluginTitle(pages.plugin) :
+            CategoryTitle();
 
         if (!inGame)
         {
@@ -590,7 +628,7 @@ namespace
                     label = RowLabel(pages.rows[index]);
                     value = RowValue(pages.rows[index]);
                 }
-                if (pages.level == 1 && !WFPPlugins::Enabled(pages.rows[index]))
+                if (pages.level > 0 && !WFPPlugins::Enabled(pages.rows[index]))
                     color = WithAlpha(color & 0xFF606060, color >> 24);
                 Text(page, label, LabelX, y, color, size, 440.0f);
                 Text(page, value, ValueX, y, color, size, 360.0f);
@@ -600,8 +638,9 @@ namespace
                 if (selected && Field<int>(page, FadeLevel) == 9)
                 {
                     sprintf_s(name, "sel_%02d", i + 1);
+                    // The value's glow; a row without a value (a category, Restore defaults) shows the selection by its text
                     float width = value.empty() ? 0.0f : std::min(Width(value, FontSize), 360.0f);
-                    Game::HighlightScale(page, nullptr, name, (width + 150.0f) / 300.0f);
+                    Game::HighlightScale(page, nullptr, name, value.empty() ? 0.0f : (width + 150.0f) / 300.0f);
                 }
             }
             if (Game::FadedIn(page, nullptr, 0) && cursor + scroll < count)
@@ -678,6 +717,11 @@ namespace
         int repeated = Game::Repeated(page, nullptr, Field<int>(page, PadIndex), Field<int>(page, Player));
         if (Field<uint8_t>(*Game::System, 0x10428))
             pressed = repeated = 0;
+        // The frame's wheel movement scrolls the list a row per notch; the game's list navigation would also move the
+        // selection with it, so it sits out that frame
+        const int wheel = Overlay::TakeWheel();
+        const int wheelDelta = Game::KeyboardPlayer(page) ? wheel : 0;
+        int notches = pages.wheel.Take(wheelDelta);
         Game::Housekeep(page, nullptr);
         Game::HideElements(page, nullptr);
         Field<int>(page, 0x12C) = 0;
@@ -686,10 +730,13 @@ namespace
         Game::MouseScreen(page, nullptr, 6, inGame ? 164 : 144, 1);
         Game::MouseScreen(page, nullptr, 6, 0, 2);
 
-        if (OtherPlugins::Changed().exchange(false) && pages.level == 1)
+        if (OtherPlugins::Changed().exchange(false) && pages.level > 0)
         {
             int cursor = Field<int>(page, Cursor) + Field<int>(page, Scroll);
-            OpenPlugin(pages.plugin);
+            if (pages.level == 1)
+                OpenPlugin(pages.plugin);
+            else
+                OpenCategory(pages.category);
             int count = RowCount();
             if (cursor >= count)
             {
@@ -704,11 +751,20 @@ namespace
 
         if (Game::BackPressed(page, nullptr))
         {
-            if (pages.level == 1)
+            // Back to the list one level up, on the row this page was opened from
+            if (pages.level > 0)
             {
-                pages.level = 0;
-                pages.rows.clear();
                 int index = pages.listCursor;
+                if (pages.level == 2)
+                {
+                    OpenPlugin(pages.plugin);
+                    index = std::min(pages.topCursor, RowCount() - 1);
+                }
+                else
+                {
+                    pages.level = 0;
+                    pages.rows.clear();
+                }
                 Field<int>(page, Scroll) = std::max(0, index - (VisibleRows - 1));
                 Field<int>(page, Cursor) = index - Field<int>(page, Scroll);
                 inGame ? Game::SoundBackInGame(page, nullptr) : Game::SoundBack(page, nullptr);
@@ -746,10 +802,19 @@ namespace
             }
 
             int scroll = Field<int>(page, Scroll);
-            int cursor = Game::ScrollNav(page, nullptr, pressed, repeated, Field<int>(page, Cursor), count, &scroll, VisibleRows);
-            cursor = Game::MouseRow(page, nullptr, cursor, std::min(count, VisibleRows), 0, 0);
-            if (mouse)
-                scroll = Game::Wheel(mouseAreas, nullptr, scroll, 0, std::max(0, count - VisibleRows), 0, 1, 2);
+            int cursor = wheelDelta ? Field<int>(page, Cursor) :
+                Game::ScrollNav(page, nullptr, pressed, repeated, Field<int>(page, Cursor), count, &scroll, VisibleRows);
+            if (!wheelDelta)
+                cursor = Game::MouseRow(page, nullptr, cursor, std::min(count, VisibleRows), 0, 0);
+            // The wheel: the selection stays on its row while it is in the window
+            {
+                for (; notches; notches += notches > 0 ? -1 : 1)
+                {
+                    int index = cursor + scroll;
+                    scroll = std::clamp(scroll + (notches > 0 ? -1 : 1), 0, std::max(0, count - VisibleRows));
+                    cursor = std::clamp(index - scroll, 0, std::min(count, VisibleRows) - 1);
+                }
+            }
             if (cursor != Field<int>(page, Cursor) || scroll != Field<int>(page, Scroll))
             {
                 Field<int>(page, Cursor) = cursor;
@@ -1481,7 +1546,6 @@ export namespace Menu
         MouseClick = Call<decltype(MouseClick)>(update, 0x2AE);
         ScrollNav = Call<decltype(ScrollNav)>(update, 0x320);
         MouseRow = Call<decltype(MouseRow)>(update, 0x32E);
-        Wheel = Call<decltype(Wheel)>(update, 0x35B);
         SoundBackInGame = Call<decltype(SoundBackInGame)>(update, 0x25A);
         SoundBack = Call<decltype(SoundBack)>(update, 0x261);
         SoundValue = Call<decltype(SoundValue)>(update, 0x464);

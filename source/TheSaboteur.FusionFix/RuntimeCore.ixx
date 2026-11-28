@@ -7,6 +7,7 @@ module;
 export module RuntimeCore;
 
 import ComVars;
+import NativeMenu;
 
 export namespace SaboteurRuntimeCore
 {
@@ -38,6 +39,7 @@ export namespace SaboteurRuntimeCore
                 }
             }
         }
+        SaboteurMenu::WindowMessage(message, wParam);
         if (message == WM_NCDESTROY)
         {
             RemoveWindowSubclass(window, Procedure, id);

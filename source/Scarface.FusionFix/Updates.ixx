@@ -32,7 +32,7 @@ export namespace ScarfaceUpdates
         config.show = [](const std::wstring& message)
         {
             ScarfaceMenu::shownLanguage = ScarfaceMenu::Language();
-            ScarfaceMenu::model.OpenPlugins(ScarfaceMenu::Module(), ScarfaceMenu::shownLanguage, 32, {}, true);
+            ScarfaceMenu::model.OpenMenu(ScarfaceMenu::Module(), ScarfaceMenu::shownLanguage, 8);
             ScarfaceMenu::view = {};
             ScarfaceMenu::view.notice = asi_settings::text::Narrow(message);
             ScarfaceMenu::opened = ScarfaceMenu::view.Build(ScarfaceMenu::model, true);

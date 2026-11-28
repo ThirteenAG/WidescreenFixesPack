@@ -64,6 +64,7 @@ export namespace CondemnedRenderer
     {
         window = target;
         InputMessage(message);
+        if (message == WM_MOUSEWHEEL) CondemnedMenuNative::WheelMessage(GET_WHEEL_DELTA_WPARAM(wParam));
         LRESULT result = 0;
         if (CondemnedOverlay::Message(target, message, wParam, lParam, result))
             return result;

@@ -128,6 +128,7 @@ public:
                 state->wheel = current.lZ;
                 MouseRead::X = current.lX;
                 MouseRead::Y = current.lY;
+                MouseRead::MenuWheel += current.lZ;
                 if (RawMouseEnabled)
                 {
                     Total::X += current.lX;

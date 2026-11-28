@@ -3,6 +3,8 @@ module;
 #include <stdafx.h>
 #include <d3d9.h>
 #include "FixSettings.hpp"
+#include <algorithm>
+#include <atomic>
 #include <cstdint>
 #include <cstring>
 #include <deque>
@@ -10,7 +12,8 @@ module;
 #include <vector>
 #include <utility>
 #include "Shared/RWGTA/FixMenu.hpp"
-#include <fstream>
+#include "Shared/RainDroplets.hpp"
+#include "Shared/PadInput.hpp"
 
 export module Frontend;
 
@@ -120,6 +123,10 @@ export namespace GunMenu
         void Flag(const char* name)
         {
             Add(13, 0, Checksum(name));
+        }
+        void Flag(uint32_t name)
+        {
+            Add(13, 0, name);
         }
         void Text(const char* name, const std::string& text)
         {
@@ -320,6 +327,10 @@ export namespace GunMenu
 export namespace GunMenu
 {
     constexpr auto Entry = Checksum("wfp_gun_plugins");
+    // The rows the scrolling list shows at once, and the native right menus' row step
+    constexpr size_t Slots = 6;
+    constexpr float RowStep = 40.0f;
+    constexpr float ListTop = 48.0f;
     inline const std::set<std::string> joined{ "MAIN.FOVFactor", "MAIN.WindowMode" };
     enum class Command { Choose, Left, Right, Back };
     struct Pending
@@ -331,9 +342,7 @@ export namespace GunMenu
     struct Item
     {
         uint32_t id{};
-        size_t page{ SIZE_MAX };
-        RWGTAMenu::Row row{};
-        bool back{}, next{}, previous{}, details{};
+        const RWGTAMenu::Row* row{};
     };
     struct State
     {
@@ -343,13 +352,25 @@ export namespace GunMenu
         WeakSlot anchor{};
         std::deque<Pending> pending;
         std::vector<Item> items;
-        uint32_t generation{ 1 };
+        uint32_t generation{ 1 }, focused{};
         unsigned depth{};
-        size_t page{ SIZE_MAX }, slice{};
-        bool busy{}, open{}, display{}, pause{}, enabled{}, modelOpen{}, details{}, notice{};
-        size_t helpSlice{};
-        std::string language, help;
+        size_t page{ SIZE_MAX };
+        bool busy{}, display{}, pause{}, enabled{}, modelOpen{};
+        std::string language, notice;
+        MenuList::WheelNotches wheel;
+        MenuList::Repeat shoulders[2];
     };
+    // The wheel and Page Up/Page Down/Home/End from the window's messages, taken by the next menu update
+    inline std::atomic<int> WheelInput{}, PageInput{}, EdgeInput{};
+    inline void Message(UINT message, WPARAM wParam)
+    {
+        if (message == WM_MOUSEWHEEL)
+            WheelInput += GET_WHEEL_DELTA_WPARAM(wParam);
+        else if (message == WM_KEYDOWN && (wParam == VK_PRIOR || wParam == VK_NEXT))
+            PageInput += wParam == VK_NEXT ? 1 : -1;
+        else if (message == WM_KEYDOWN && (wParam == VK_HOME || wParam == VK_END))
+            EdgeInput = wParam == VK_END ? 1 : -1;
+    }
     inline State& Get() { static auto* value = new State; return *value; }
     inline void (*Frame)() = nullptr;
     inline void (*Scene)() = nullptr;
@@ -374,6 +395,7 @@ export namespace GunMenu
         }
         return result;
     }
+    inline bool Open() { return Get().page != SIZE_MAX; }
     inline bool Current()
     {
         auto& state = Get();
@@ -385,14 +407,80 @@ export namespace GunMenu
         auto* element = Lookup(menu);
         return Read<uint8_t>(element, 396) == 1 ? Read<uint32_t>(element, 392) : 0;
     }
+
+    // A script command of the game (a C function of its script table), run outside a script
+    inline bool Call(const char* name, const Parameters& parameters)
+    {
+        if (!Read<void*>((MenuSymbols.is_initialized() ? MenuSymbols.get_ptr() : nullptr))) return false;
+        auto* entry = symbol(Checksum(name));
+        auto* known = symbol(Checksum("SetScreenElementProps"));
+        if (!entry || !known || Read<uint8_t>(entry, 2) != Read<uint8_t>(known, 2)) return false;
+        auto function = Read<bool(__cdecl*)(const Structure*, void*)>(entry, 12);
+        return function && function(&parameters.value, nullptr);
+    }
+    inline void Fire(const char* type, const char* target, uint32_t child = 0)
+    {
+        Parameters data;
+        data.Name("child_id", child);
+        Parameters parameters;
+        parameters.Name("type", type);
+        parameters.Name("target", target);
+        if (child) parameters.Nested("data", &data.value);
+        Call("FireEvent", parameters);
+    }
+    // A colour of the game's pause_menu_colors (right_selected, right_unselected...)
+    inline std::vector<uint32_t> MenuColor(const char* name)
+    {
+        auto* entry = symbol(Checksum("pause_menu_colors"));
+        if (!entry || Read<uint8_t>(entry, 2) != 10) return {};
+        auto* colors = Read<const Structure*>(entry, 12);
+        for (auto* item = colors ? colors->head : nullptr; item; item = item->next)
+        {
+            if (item->name != Checksum(name) || (item->encodedType >> 1) != 12) continue;
+            auto* array = reinterpret_cast<const Array*>(item->value);
+            if (!array || array->count != 4) return {};
+            auto* values = reinterpret_cast<const uint32_t*>(array->data);
+            return { values[0], values[1], values[2], values[3] };
+        }
+        return {};
+    }
+    // The game moves the selector arrows apart for the longer words of the other languages
+    inline float ArrowOffset()
+    {
+        if (Read<int>((MenuLanguage.is_initialized() ? MenuLanguage.get_ptr() : nullptr)) == 2) return 0.0f;
+        auto* entry = symbol(Checksum("menu_non_english_arrow_offset"));
+        if (!entry || Read<uint8_t>(entry, 2) != 5) return 0.0f;
+        auto* pair = Read<const float*>(entry, 12);
+        return pair ? pair[0] : 0.0f;
+    }
+
+    inline uint32_t Suffix(uint32_t id, const char* suffix)
+    {
+        // The game's AppendSuffixToChecksum: the checksum continued over the suffix
+        for (; *suffix; ++suffix)
+        {
+            id ^= static_cast<uint8_t>(*suffix);
+            for (int bit = 0; bit < 8; ++bit) id = (id >> 1) ^ ((id & 1) ? 0xEDB88320 : 0);
+        }
+        return id;
+    }
+    inline uint32_t RowId(size_t index)
+    {
+        return Checksum(("wfp_gun_row_" + std::to_string(index)).c_str());
+    }
+    inline uint32_t JoinedId(size_t index)
+    {
+        return Checksum(("wfp_gun_display_" + std::to_string(index)).c_str());
+    }
     inline void Release()
     {
         auto& state = Get();
         if (state.anchor.element) unlink(state.anchor.element, &state.anchor);
         state.anchor = {};
-        state.open = state.display = false;
-        state.details = state.modelOpen = state.notice = false;
-        state.help.clear();
+        state.page = SIZE_MAX;
+        state.display = state.modelOpen = false;
+        state.focused = 0;
+        state.notice.clear();
         state.items.clear();
         state.pending.clear();
         ++state.generation;
@@ -401,9 +489,13 @@ export namespace GunMenu
     {
         auto& state = Get();
         auto language = AutoLanguage();
-        if (!force && state.modelOpen && state.language == language) return;
+        if (!force && state.modelOpen)
+        {
+            state.model.SelectLanguage(language);
+            return;
+        }
         state.language = language;
-        state.model.OpenPlugins(state.module, language, 32, joined);
+        state.model.OpenMenu(state.module, language, Slots, joined);
         state.modelOpen = true;
     }
     inline void Layout()
@@ -411,11 +503,17 @@ export namespace GunMenu
         if (auto* menu = Lookup("pause_right_menu"))
             reinterpret_cast<char(__thiscall*)(void*)>(Native().layout)(menu);
     }
-    inline uint32_t RowId(size_t index)
+
+    // The value between the selector arrows: the game's font and size, narrowed for words longer than its own
+    inline void ValueText(Parameters& parameters, const std::string& value)
     {
-        return Checksum(("wfp_gun_row_" + std::to_string(index)).c_str());
+        const auto text = NativeText(value);
+        parameters.Text("text", text);
+        parameters.XY("scale", std::min(1.0f, 8.0f / static_cast<float>(std::max<size_t>(1, text.size()))), 0.7f);
     }
-    inline bool Row(uint32_t id, const std::string& label, const std::string& value, size_t index, bool privatePage)
+    // A row of the native right menu (make_right_menu_item). selector: the label at the left and the value in the
+    // middle, the game's selector layout; arrows: the selector's arrows around the value.
+    inline bool Row(uint32_t id, size_t index, const std::string& label, const std::string& value, bool selector, bool arrows)
     {
         Parameters parameters;
         parameters.Name("id", id);
@@ -423,32 +521,78 @@ export namespace GunMenu
         parameters.Text("text", NativeText(label));
         parameters.Name("pad_choose_script", "nullscript");
         parameters.Integer("index", static_cast<uint32_t>(index));
+        // A type the item script doesn't build keeps its label where its selectors have it
+        if (selector) parameters.Name("type", "wfp_value");
         if (!Lookup(id) && !Run("make_right_menu_item", parameters)) return false;
         if (!Lookup(id)) return false;
-        // Keep the native focus container and its text child; give complete labels and values two lines.
-        uint32_t child = id;
-        for (char c : std::string("_text"))
+        if (!selector)
         {
-            child ^= static_cast<uint8_t>(c);
-            for (int bit = 0; bit < 8; ++bit) child = (child >> 1) ^ ((child & 1) ? 0xEDB88320 : 0);
+            // A plugin or category name on one line across the row, centred where the game centres its own
+            Parameters text;
+            text.XY("dims", 256.0f, 40.0f);
+            // The block lays out its text again when the text is set
+            text.Text("text", NativeText(label));
+            Properties(Suffix(id, "_text"), text);
+            return true;
         }
+        if (Lookup(Suffix(id, "_value"))) return true;
+        // The selector's elements as make_right_menu_selector makes them, under the names its highlight colours
+        auto color = MenuColor("right_unselected");
+        ArrayView rgba(1, color);
+        ArrayView centre(13, { Checksum("center"), Checksum("center") });
         Parameters text;
-        text.Text("text", NativeText(label + (value.empty() ? "" : "\n" + value)));
-        text.XY("dims", 256.0f, 48.0f);
-        text.XY("pos", 128.0f, 0.0f);
-        text.Number("scale", 0.85f);
-        ArrayView justify(13, { Checksum("left"), Checksum("center") });
-        text.List("just", &justify.value);
-        text.List("internal_just", &justify.value);
-        if (!Properties(child, text)) return false;
-        Parameters container;
-        // Rows joined to a native page keep the native row height, so the page's layout spaces them like its own rows.
-        container.XY("dims", 256.0f, privatePage ? 48.0f : 24.0f);
-        container.List("just", &justify.value);
-        container.List("internal_just", &justify.value);
-        Properties(id, container);
-        if (privatePage) Get().items.push_back({ id });
+        text.Name("parent", id);
+        text.Name("local_id", "selector_text");
+        text.Name("font", "dialog");
+        text.List("just", &centre.value);
+        if (color.size() == 4) text.List("rgba", &rgba.value);
+        ValueText(text, value);
+        text.Integer("z_priority", 202);
+        text.XY("pos", 214.0f, 1.0f);
+        if (!Create(Suffix(id, "_value"), Checksum("TextElement"), text)) return false;
+        if (!arrows) return true;
+        const float offset = ArrowOffset();
+        for (int side = 0; side < 2; ++side)
+        {
+            ArrayView just(13, { Checksum(side ? "left" : "right"), Checksum("center") });
+            Parameters arrow;
+            arrow.Name("parent", id);
+            arrow.Name("local_id", side ? "right_arrow" : "left_arrow");
+            arrow.Name("texture", "arrow_LRUD");
+            arrow.List("just", &just.value);
+            if (color.size() == 4) arrow.List("rgba", &rgba.value);
+            arrow.Integer("z_priority", 202);
+            arrow.XY("pos", side ? 274.0f + offset : 164.0f - offset, 6.5f);
+            arrow.XY("scale", 2.0f, 2.0f);
+            arrow.Number("rot_angle", side ? -135.0f : 45.0f);
+            arrow.Number("scale360", 0.5f);
+            if (!Create(Suffix(id, side ? "_right" : "_left"), Checksum("SpriteElement"), arrow)) return false;
+        }
         return true;
+    }
+    inline bool Selector(const RWGTAMenu::Row& row)
+    {
+        return !RWGTAMenu::Model::Opens(row);
+    }
+    inline bool Arrows(const RWGTAMenu::Row& row)
+    {
+        return row.kind == RWGTAMenu::RowKind::Setting || row.kind == RWGTAMenu::RowKind::Preset;
+    }
+    // The label and value of a row already shown
+    inline void Refresh(uint32_t id, const std::string& label, const std::string& value)
+    {
+        if (Lookup(Suffix(id, "_text")))
+        {
+            Parameters text;
+            text.Text("text", NativeText(label));
+            Properties(Suffix(id, "_text"), text);
+        }
+        if (Lookup(Suffix(id, "_value")))
+        {
+            Parameters text;
+            ValueText(text, value);
+            Properties(Suffix(id, "_value"), text);
+        }
     }
     inline void RefreshJoined()
     {
@@ -456,141 +600,114 @@ export namespace GunMenu
         const auto& rows = state.model.JoinedRows();
         for (size_t i = 0; i < rows.size(); ++i)
         {
-            auto id = Checksum(("wfp_gun_display_" + std::to_string(i)).c_str());
-            Row(id, state.model.Label(rows[i]), state.model.Value(rows[i]), i + 8, false);
+            if (Lookup(JoinedId(i))) Refresh(JoinedId(i), state.model.Label(rows[i]), state.model.Value(rows[i]));
+            else Row(JoinedId(i), i + 8, state.model.Label(rows[i]), state.model.Value(rows[i]), true, Arrows(rows[i]));
         }
         Layout();
     }
-    inline std::vector<std::string> HelpParts()
-    {
-        std::vector<std::string> parts;
-        auto text = Get().help;
-        if (text.empty()) text = Get().model.Text("menu.presethelp");
-        while (!text.empty())
-        {
-            // Five lines of the small font fit the text block; longer text would push its start out of view.
-            size_t count = std::min<size_t>(90, text.size());
-            if (count < text.size())
-            {
-                auto space = text.rfind(' ', count);
-                if (space != std::string::npos && space > 40) count = space;
-                else while (count && (static_cast<unsigned char>(text[count]) & 0xC0) == 0x80) --count;
-            }
-            parts.push_back(text.substr(0, count));
-            text.erase(0, count);
-            text.erase(0, text.find_first_not_of(' ') == std::string::npos ? text.size() : text.find_first_not_of(' '));
-        }
-        return parts;
-    }
-    inline bool BuildHelp()
+    inline const Item* Focused()
     {
         auto& state = Get();
-        state.busy = true;
-        state.items.clear();
-        Parameters menu;
-        ArrayView empty(10, {});
-        menu.List("menu_struct", &empty.value);
-        menu.Name("pad_back_script", "nullscript");
-        menu.XY("pos", 288.0f, 96.0f);
-        menu.Text("subtitle", NativeText(state.model.Text(state.notice ? "menu.plugins" : "menu.details")));
-        if (!Run("make_right_menu", menu)) { state.busy = false; return false; }
-        auto parts = HelpParts();
-        if (parts.empty()) parts.emplace_back();
-        state.helpSlice = std::min(state.helpSlice, parts.size() - 1);
+        for (const auto& item : state.items)
+            if (item.id == state.focused) return &item;
+        return nullptr;
+    }
+    // The selected row's description under the list; an update notice while it is shown
+    inline void Help()
+    {
+        auto& state = Get();
+        std::string text = state.notice;
+        if (text.empty())
+        {
+            if (auto* item = Focused())
+                text = state.model.Help(*item->row);
+            if (state.model.RestartRequired())
+                text += (text.empty() ? "" : "\n") + state.model.Text("menu.restartwarning");
+        }
         Parameters body;
-        body.Name("type", "TextBlockElement");
-        body.Name("id", "wfp_gun_help");
+        body.Text("text", NativeText(text));
+        if (Lookup("wfp_gun_help"))
+        {
+            Properties(Checksum("wfp_gun_help"), body);
+            return;
+        }
         body.Name("parent", "pause_right_menu_anchor");
-        body.Name("font", "small");
-        body.Text("text", NativeText(parts[state.helpSlice]));
-        body.XY("dims", 256.0f, 112.0f);
-        body.XY("pos", 0.0f, 32.0f);
-        body.Number("scale", 0.8f);
+        // In the font and size of the game's control hints at the bottom
+        body.Name("font", "dialog");
+        body.XY("dims", 256.0f / 0.7f, 80.0f / 0.7f);
+        body.XY("pos", 0.0f, 20.0f + Slots * RowStep);
+        body.Number("scale", 0.7f);
         body.Integer("z_priority", 205);
         ArrayView justify(13, { Checksum("left"), Checksum("top") });
-        ArrayView color(1, { 40, 32, 24, 255 });
+        auto color = MenuColor("right_unselected");
+        ArrayView rgba(1, color);
         body.List("just", &justify.value);
         body.List("internal_just", &justify.value);
-        body.List("rgba", &color.value);
-        if (!Create(Checksum("wfp_gun_help"), Checksum("TextBlockElement"), body))
-        {
-            state.busy = false;
-            return false;
-        }
-        Parameters navigation;
-        navigation.XY("pos", 0.0f, 156.0f);
-        navigation.Number("regular_space_amount", 40.0f);
-        Properties(Checksum("pause_right_menu"), navigation);
-        if (state.helpSlice)
-            if (Row(RowId(state.items.size()), state.model.Text("menu.previous"), {}, state.items.size(), true)) state.items.back().previous = true;
-        if (state.helpSlice + 1 < parts.size())
-            if (Row(RowId(state.items.size()), state.model.Text("menu.next"), {}, state.items.size(), true)) state.items.back().next = true;
-        if (Row(RowId(state.items.size()), state.model.Text("menu.back"), {}, state.items.size(), true)) state.items.back().back = true;
-        Layout();
-        state.busy = false;
-        return Lookup("wfp_gun_help") && !state.items.empty();
+        if (color.size() == 4) body.List("rgba", &rgba.value);
+        Create(Checksum("wfp_gun_help"), Checksum("TextBlockElement"), body);
     }
-    inline bool Build()
+    // The page as a native scrolling right menu with every row; the game scrolls it and moves the selection
+    inline bool Build(size_t page)
     {
         auto& state = Get();
-        if (!Current()) return false;
+        if (!Current() || page >= state.model.Pages().size()) return false;
         state.busy = true;
         state.items.clear();
+        state.page = page;
+        state.focused = 0;
+        const auto rows = state.model.ListRows(page, false);
         Parameters menu;
         ArrayView empty(10, {});
         menu.List("menu_struct", &empty.value);
         menu.Name("pad_back_script", "nullscript");
-        menu.XY("pos", 288.0f, 96.0f);
-        menu.Text("subtitle", NativeText(state.page == SIZE_MAX ? state.model.Text("menu.plugins") : state.model.Pages()[state.page].title));
-        if (!Run("make_right_menu", menu)) { state.busy = false; return false; }
-        // The rows start below the page title.
-        Parameters spacing;
-        spacing.XY("pos", 0.0f, 40.0f);
-        spacing.Number("regular_space_amount", 44.0f);
-        Properties(Checksum("pause_right_menu"), spacing);
-        const auto& pages = state.model.Pages();
-        auto visible = state.page == SIZE_MAX ? std::vector<const RWGTAMenu::Row*>{} : state.model.VisibleRows(state.page);
-        auto count = state.page == SIZE_MAX ? pages.size() : visible.size();
-        auto start = state.slice * 2;
-        for (size_t i = start; i < std::min(count, start + 2); ++i)
+        menu.XY("pos", 288.0f, ListTop + RowStep * 0.5f);
+        menu.XY("dims", 256.0f, Slots * RowStep);
+        menu.Text("subtitle", NativeText(state.model.Pages()[page].title));
+        menu.Flag("scrolling");
+        menu.Flag("no_focus");
+        bool built = Run("make_right_menu", menu);
+        if (built)
         {
-            auto id = RowId(state.items.size());
-            if (state.page == SIZE_MAX)
-            {
-                if (!Row(id, pages[i].title, {}, state.items.size(), true)) { state.busy = false; return false; }
-                state.items.back().page = i;
-            }
-            else
-            {
-                const auto& row = *visible[i];
-                if (!Row(id, state.model.Label(row), state.model.Value(row), state.items.size(), true)) { state.busy = false; return false; }
-                state.items.back().row = row;
-            }
+            // The rows have a height and are centred on their place: the list is half a row lower than the script
+            // puts it, the title where it has it
+            Parameters title;
+            title.XY("pos", 0.0f, -RowStep * 0.5f);
+            Properties(Checksum("pause_right_menu_subtitle"), title);
         }
-        if (start)
+        for (size_t i = 0; built && i < rows.size(); ++i)
         {
-            if (Row(RowId(state.items.size()), state.model.Text("menu.previous"), {}, state.items.size(), true)) state.items.back().previous = true;
+            const auto& row = *rows[i];
+            const auto id = RowId(i);
+            built = Row(id, i, state.model.Label(row), Selector(row) ? state.model.Value(row) : std::string{}, Selector(row), Arrows(row));
+            state.items.push_back({ id, rows[i] });
+            // The item script leaves its rows without a height (the game's scrolling menus list text rows); the
+            // scrolling menu wraps by the height of its rows and divides by zero without one
+            Parameters container;
+            container.XY("dims", 256.0f, RowStep);
+            if (built) Properties(id, container);
         }
-        if (start + 2 < count)
+        if (built && !state.items.empty())
         {
-            if (Row(RowId(state.items.size()), state.model.Text("menu.next"), {}, state.items.size(), true)) state.items.back().next = true;
+            Layout();
+            // The row the page was left on (the one a page opened from), else its first
+            const auto key = state.model.Window(page).SelectedKey();
+            state.focused = state.items.front().id;
+            for (const auto& item : state.items)
+                if (reinterpret_cast<MenuList::Key>(item.row) == key) state.focused = item.id;
+            Fire("unfocus", "pause_left_menu");
+            Fire("focus", "pause_right_menu", state.focused);
+            Help();
         }
-        if (state.page != SIZE_MAX)
-        {
-            if (Row(RowId(state.items.size()), state.model.Text("menu.details"),
-                    state.model.RestartRequired() ? state.model.Text("menu.restartshort") : std::string{}, state.items.size(), true))
-                state.items.back().details = true;
-        }
-        if (Row(RowId(state.items.size()), state.model.Text("menu.back"), {}, state.items.size(), true)) state.items.back().back = true;
-        Layout();
         state.busy = false;
-        return !state.items.empty();
+        return built && !state.items.empty();
     }
     inline void Close()
     {
-        Get().open = false;
-        Get().details = false;
-        Get().items.clear();
+        auto& state = Get();
+        state.page = SIZE_MAX;
+        state.focused = 0;
+        state.notice.clear();
+        state.items.clear();
         Parameters parameters;
         Run("return_to_left_menu", parameters);
     }
@@ -598,87 +715,51 @@ export namespace GunMenu
     {
         auto& state = Get();
         if (input.generation != state.generation || input.root != state.anchor.element || !Current()) return;
-        if (!state.open)
+        const int direction = input.command == Command::Left ? -1 : input.command == Command::Right ? 1 : 0;
+        if (!Open())
         {
             if (input.selected == Entry && input.command == Command::Choose)
             {
-                state.open = true;
                 state.display = false;
-                state.page = SIZE_MAX;
-                state.slice = 0;
-                if (!Build()) Close();
+                state.model.Window(RWGTAMenu::Model::RootPage).Reset();
+                if (!Build(RWGTAMenu::Model::RootPage)) Close();
                 return;
             }
             for (size_t i = 0; i < state.model.JoinedRows().size(); ++i)
             {
-                if (input.selected != Checksum(("wfp_gun_display_" + std::to_string(i)).c_str())) continue;
-                const auto& row = state.model.JoinedRows()[i];
-                state.model.Change(row, input.command == Command::Left ? -1 : input.command == Command::Right ? 1 : 0, state.pause);
+                if (input.selected != JoinedId(i)) continue;
+                state.model.Change(state.model.JoinedRows()[i], direction, state.pause);
                 RefreshJoined();
-                return;
-            }
-            return;
-        }
-        auto item = std::find_if(state.items.begin(), state.items.end(), [&](const auto& row) { return row.id == input.selected; });
-        if (state.details)
-        {
-            if (input.command == Command::Back || (item != state.items.end() && item->back))
-            {
-                state.details = false;
-                if (state.notice)
-                {
-                    state.notice = false;
-                    state.help.clear();
-                }
-                if (!Build()) Close();
-            }
-            else if (item != state.items.end())
-            {
-                if (item->next) ++state.helpSlice;
-                else if (item->previous && state.helpSlice) --state.helpSlice;
-                if (!BuildHelp()) Close();
-            }
-            return;
-        }
-        if (input.command == Command::Back || (item != state.items.end() && item->back))
-        {
-            if (state.page == SIZE_MAX) { Close(); return; }
-            state.page = SIZE_MAX;
-            state.slice = 0;
-        }
-        else if (item != state.items.end())
-        {
-            auto selected = *item;
-            if (selected.next) ++state.slice;
-            else if (selected.previous && state.slice) --state.slice;
-            else if (selected.details)
-            {
-                state.details = true;
-                state.helpSlice = 0;
-                if (!BuildHelp()) Close();
-                return;
-            }
-            else if (selected.page != SIZE_MAX)
-            {
-                state.page = selected.page;
-                state.slice = 0;
-                state.model.PageShown(state.page);
-            }
-            else if (state.model.Enabled(selected.row, state.pause))
-            {
-                state.model.Change(selected.row, input.command == Command::Left ? -1 : input.command == Command::Right ? 1 : 0, state.pause);
-                for (const auto& row : state.items)
-                {
-                    if (!row.back && !row.next && !row.previous && !row.details && row.page == SIZE_MAX)
-                        Row(row.id, state.model.Label(row.row), state.model.Value(row.row), 0, false);
-                    else if (row.details)
-                        Row(row.id, state.model.Text("menu.details"), state.model.RestartRequired() ? state.model.Text("menu.restartshort") : std::string{}, 0, false);
-                }
                 RWGTAMenu::Model::Changed() = false;
                 return;
             }
+            return;
         }
-        if (!Build()) Close();
+        if (input.command == Command::Back)
+        {
+            const auto parent = state.model.Back(state.page);
+            state.notice.clear();
+            if (parent == SIZE_MAX || !Build(parent)) Close();
+            return;
+        }
+        auto item = std::find_if(state.items.begin(), state.items.end(), [&](const auto& row) { return row.id == input.selected; });
+        if (item == state.items.end()) return;
+        const auto row = *item->row;
+        if (RWGTAMenu::Model::Opens(row))
+        {
+            if (input.command != Command::Choose) return;
+            state.model.Window(state.page).SelectKey(reinterpret_cast<MenuList::Key>(item->row));
+            const auto target = state.model.Enter(row);
+            state.notice.clear();
+            if (target != SIZE_MAX && !Build(target)) Close();
+            return;
+        }
+        if (!state.model.Enabled(row, state.pause)) return;
+        state.model.Change(row, direction, state.pause);
+        for (const auto& shown : state.items)
+            Refresh(shown.id, state.model.Label(*shown.row), Selector(*shown.row) ? state.model.Value(*shown.row) : std::string{});
+        Help();
+        RWGTAMenu::Model::Changed() = false;
     }
     inline char __fastcall Launch(void* manager, void*, uint32_t type, uint32_t target, uint32_t source, Structure* parameters, char flag, float radius)
     {
@@ -692,11 +773,11 @@ export namespace GunMenu
         else input = false;
         if (state.enabled && input && !state.busy && Current() && state.pending.size() < 32)
         {
-            auto selected = Selected(state.open || state.display ? "pause_right_menu" : "pause_left_menu");
-            bool own = state.open || selected == Entry;
+            auto selected = Selected(Open() || state.display ? "pause_right_menu" : "pause_left_menu");
+            bool own = Open() || selected == Entry;
             for (size_t i = 0; !own && i < state.model.JoinedRows().size(); ++i)
-                own = selected == Checksum(("wfp_gun_display_" + std::to_string(i)).c_str());
-            if (own && (state.open || command != Command::Back))
+                own = selected == JoinedId(i);
+            if (own && (Open() || command != Command::Back))
             {
                 // Only the native active menu dispatch is consumed, once. Rebuild after the outer scheduler unwinds.
                 state.pending.push_back({ command, state.generation, selected, state.anchor.element });
@@ -735,17 +816,53 @@ export namespace GunMenu
         state.pending.clear();
         for (const auto& input : pending) Dispatch(input);
         if (!Current()) return;
-        if (state.open && !state.details)
+        if (Open())
         {
-            auto selected = Selected("pause_right_menu");
+            // The game moved the selection: the model's window follows it, and the help shows the new row's
+            const auto selected = Selected("pause_right_menu");
+            if (selected && selected != state.focused)
+            {
+                state.focused = selected;
+                state.notice.clear();
+                if (auto* item = Focused())
+                    state.model.Window(state.page).SelectKey(reinterpret_cast<MenuList::Key>(item->row));
+                Help();
+            }
+            // A wheel notch moves the selection a row (stopping at the ends), the page keys a window of rows; the
+            // game's list follows the selection
+            auto& window = state.model.Window(state.page);
+            bool moved = false;
+            for (int notches = state.wheel.Take(WheelInput.exchange(0)); notches; notches += notches > 0 ? -1 : 1)
+                moved |= window.Move(notches > 0 ? -1 : 1, false);
+            if (const int page = PageInput.exchange(0)) moved |= window.Page(page);
+            if (const int edge = EdgeInput.exchange(0)) moved |= window.Edge(edge);
+            // LB/RB page like Page Up/Page Down
+            XINPUT_STATE pad{};
+            DWORD slot{};
+            const bool read = PadInput::Read(pad, slot);
+            const auto now = GetTickCount64();
+            for (int i = 0; i < 2; ++i)
+            {
+                const WORD button = i ? XINPUT_GAMEPAD_RIGHT_SHOULDER : XINPUT_GAMEPAD_LEFT_SHOULDER;
+                if (state.shoulders[i].Step(read && (pad.Gamepad.wButtons & button), now))
+                    moved |= window.Page(i ? 1 : -1);
+            }
             for (const auto& item : state.items)
-                if (item.id == selected && item.page == SIZE_MAX && !item.back && !item.next && !item.previous && !item.details)
-                    state.help = state.model.Label(item.row) + "\n" + state.model.Help(item.row);
+            {
+                if (!moved || reinterpret_cast<MenuList::Key>(item.row) != window.SelectedKey()) continue;
+                Parameters sound;
+                Run("generic_menu_up_or_down_sound", sound);
+                // A focused menu keeps its child on a focus event; it takes the given child after an unfocus
+                Fire("unfocus", "pause_right_menu");
+                Fire("focus", "pause_right_menu", item.id);
+            }
         }
-        if (!state.open)
+        else
         {
+            WheelInput = PageInput = EdgeInput = 0;
+            state.wheel.Clear();
             state.display = Lookup("display_hideHUD") != nullptr;
-            if (state.display && !Lookup(Checksum("wfp_gun_display_0")))
+            if (state.display && !Lookup(JoinedId(0)))
             {
                 state.busy = true;
                 RefreshJoined();
@@ -755,9 +872,18 @@ export namespace GunMenu
         if (RWGTAMenu::Model::Changed().exchange(false))
         {
             Model();
-            if (state.open) { if (!(state.details ? BuildHelp() : Build())) Close(); }
+            if (Open()) { if (!Build(state.page)) Close(); }
             else if (state.display) RefreshJoined();
         }
+    }
+    // The game's own flag for a shown menu: the root window's menu_state tag (entering, on, leaving; off in play)
+    inline bool MenuShown()
+    {
+        auto* tags = Read<const Structure*>(Lookup("root_window"), 44);
+        for (auto* item = tags ? tags->head : nullptr; item; item = item->next)
+            if (item->name == Checksum("menu_state"))
+                return item->value != Checksum("off");
+        return false;
     }
     inline void __cdecl Update()
     {
@@ -773,6 +899,14 @@ export namespace GunMenu
             state.enabled = false;
             Log("Native menu unavailable; original menu retained");
         }
+        // Drops stay off the game's menus: the pause menus set the root window's flag, the front end menus and
+        // dialogs are found by their anchors
+        static const uint32_t screens[] = { Checksum("main_menu_anchor"), Checksum("startup_main_menu_anchor"),
+            Checksum("difficulty_menu_anchor"), Checksum("files_vmenu"), Checksum("pause_left_menu_anchor"),
+            Checksum("dialog_box_anchor"), Checksum("fancy_message_anchor"), Checksum("keyboard_anchor") };
+        const bool menu = MenuShown() ||
+            std::any_of(std::begin(screens), std::end(screens), [](uint32_t id) { return Lookup(id) != nullptr; });
+        RainDroplets::MenuOpen(menu);
     }
     inline void Init()
     {

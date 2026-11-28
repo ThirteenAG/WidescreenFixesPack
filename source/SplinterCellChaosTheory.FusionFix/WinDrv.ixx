@@ -33,6 +33,9 @@ namespace UWindowsViewport
             NativeWindowsMenuHelp(Msg == WM_KEYDOWN && !(lParam & (1u << 30))))
             return 0;
 
+        if (Msg == WM_MOUSEWHEEL && NativeWindowsMenuWheel && NativeWindowsMenuWheel(GET_WHEEL_DELTA_WPARAM(wParam)))
+            return 0;
+
         if (Screen.bRawInputMouse)
         {
             const bool inactive = Msg == WM_KILLFOCUS || (Msg == WM_ACTIVATEAPP && !wParam) ||

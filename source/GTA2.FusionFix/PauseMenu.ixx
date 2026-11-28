@@ -15,6 +15,12 @@ import Log;
 
 // The paused game owns its HUD fonts; frontend artwork/fonts are destroyed
 // before gameplay. Keep this adapter on the native pause draw and key paths.
+// Enter on the pause screen opens the plugins list; a plugin opens its settings,
+// or the list of its categories, each opening its settings. Every list is one
+// list that scrolls by a row through the rows shown (Back scrolls with them,
+// Up/Down wrap at the ends), Page Up/Page Down and the shoulders move by a
+// window, Home/End go to the ends, and three dots mark the rows above and
+// below; Esc goes back to the row a list was opened from.
 export namespace GTA2PauseMenu
 {
     SafetyHookInline DrawHook, KeyHook;
@@ -23,15 +29,11 @@ export namespace GTA2PauseMenu
     RWGTAMenu::Model Model;
     bool Opened = false;
     void* OwnerGame = nullptr, * OwnerPlayer = nullptr;
-    size_t Page = SIZE_MAX, RootStart = 0, Selected = 0, RootSelected = 0;
+    size_t Page = SIZE_MAX;              // the model's page shown
     std::pair<size_t, size_t> HelpSelection{ SIZE_MAX, SIZE_MAX };
     ULONGLONG HelpStarted{};
-    size_t ShownPage = SIZE_MAX;
-    std::vector<const RWGTAMenu::Row*> ShownRows;
-    constexpr size_t RootRows = 7;
-    constexpr size_t WindowRows = 9;     // rows shown at once on a plugin's page (its settings scroll, Back included)
-    size_t Scroll = 0;
-    bool PadHeld[7]{};
+    constexpr size_t WindowRows = 9;     // rows shown at once, Back included
+    bool PadHeld[11]{};
     DWORD PadRepeat[4]{};
     bool InputActive = false;
 
@@ -45,9 +47,8 @@ export namespace GTA2PauseMenu
     }
     void Close()
     {
-        ShownPage = SIZE_MAX; ShownRows.clear();
         Opened = false; OwnerGame = OwnerPlayer = nullptr;
-        Model.Close(); Page = SIZE_MAX; RootStart = Selected = RootSelected = 0;
+        Model.Close(); Page = SIZE_MAX;
     }
     void Open(void* player)
     {
@@ -55,53 +56,48 @@ export namespace GTA2PauseMenu
             GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
                 reinterpret_cast<LPCWSTR>(&GTA2Options::HostModule), &GTA2Options::HostModule);
         GTA2Options::Model.Close();
-        Model.OpenPlugins(GTA2Options::HostModule, GTA2Options::LanguageTag(), WindowRows - 1, {}, true);
+        Model.OpenMenu(GTA2Options::HostModule, GTA2Options::LanguageTag(), WindowRows);
         OwnerGame = pGame; OwnerPlayer = player;
-        Page = SIZE_MAX; RootStart = Selected = RootSelected = 0; Opened = true;
+        Page = RWGTAMenu::Model::RootPage; Opened = true;
         HelpSelection = { SIZE_MAX, SIZE_MAX };
     }
-    size_t Links()
+    // The rows of the page shown, Back last (null); its window follows them
+    std::vector<const RWGTAMenu::Row*> Rows()
     {
-        return std::min(RootRows, Model.Pages().size() - std::min(RootStart, Model.Pages().size()));
+        return Page == SIZE_MAX ? std::vector<const RWGTAMenu::Row*>{} : Model.ListRows(Page, true);
     }
-    size_t Count()
+    // Back: to the list the page was opened from, on its row, or out of the plugins list
+    void Back()
     {
-        if (Page != SIZE_MAX) return ShownPage == Page ? ShownRows.size() + 1 : 1;
-        return Links() + (RootStart ? 1 : 0) + (RootStart + Links() < Model.Pages().size() ? 1 : 0) + 1;
+        size_t parent = Model.Back(Page);
+        if (parent == SIZE_MAX)
+            Close();
+        else
+            Page = parent;
     }
     void Activate(int direction)
     {
-        if (Page != SIZE_MAX)
+        auto rows = Rows();
+        auto& window = Model.Window(Page);
+        if (window.Selected() >= rows.size())
+            return;
+        auto row = rows[window.Selected()];
+        if (!row)
         {
-            if (ShownPage != Page)
-                return;
-            if (Selected < ShownRows.size())
-            {
-                const auto shown = ShownRows[Selected];
-                const auto rows = Model.VisibleRows(Page);
-                const auto found = std::find(rows.begin(), rows.end(), shown);
-                if (found != rows.end())
-                    Model.Change(**found, direction, true);
-            }
-            else if (!direction) { Page = SIZE_MAX; Selected = RootSelected; }
+            if (!direction) Back();
             return;
         }
-        if (direction) return;
-        auto links = Links();
-        size_t position = Selected;
-        if (position < links)
+        if (RWGTAMenu::Model::Opens(*row))
         {
-            RootSelected = Selected;
-            Page = RootStart + position; Selected = 0; Model.PageShown(Page);
+            if (!direction)
+            {
+                size_t page = Model.Enter(*row);
+                if (page != SIZE_MAX)
+                    Page = page;
+            }
+            return;
         }
-        else
-        {
-            position -= links;
-            if (RootStart && !position) { RootStart -= RootRows; Selected = 0; return; }
-            if (RootStart) --position;
-            if (RootStart + links < Model.Pages().size() && !position) { RootStart += RootRows; Selected = 0; return; }
-            Close();
-        }
+        Model.Change(*row, direction, true);
     }
     void Dispatch(void* player, int key)
     {
@@ -115,17 +111,18 @@ export namespace GTA2PauseMenu
                 if (key == 64) Close(); // native pause action resumes through its own lifecycle
                 else
                 {
-                    auto count = Count();
-                    if (key == 200) Selected = (Selected + count - 1) % count;
-                    else if (key == 208) Selected = (Selected + 1) % count;
+                    Rows();
+                    auto& window = Model.Window(Page);
+                    if (key == 200) window.Move(-1, true);
+                    else if (key == 208) window.Move(1, true);
+                    else if (key == 201) window.Page(-1);
+                    else if (key == 209) window.Page(1);
+                    else if (key == 199) window.Edge(-1);
+                    else if (key == 207) window.Edge(1);
                     else if (key == 203) Activate(-1);
                     else if (key == 205) Activate(1);
                     else if (key == 28) Activate(0);
-                    else if (key == 1 || key == 14)
-                    {
-                        if (Page == SIZE_MAX) Close();
-                        else { Page = SIZE_MAX; Selected = RootSelected; }
-                    }
+                    else if (key == 1 || key == 14) Back();
                     return; // prevent menu keys becoming gameplay actions/quit prompt
                 }
             }
@@ -138,7 +135,8 @@ export namespace GTA2PauseMenu
         // must not apply the same keyboard transition a second time.
         if (Available(player) && InputDevices::Focused())
         {
-            if (key == 28 || (Opened && (key == 200 || key == 208 || key == 203 || key == 205 || key == 1 || key == 14)))
+            if (key == 28 || (Opened && (key == 200 || key == 208 || key == 203 || key == 205 || key == 1 || key == 14 ||
+                key == 201 || key == 209 || key == 199 || key == 207)))
                 return;
             if (Opened && key == 64) Close();
         }
@@ -158,8 +156,11 @@ export namespace GTA2PauseMenu
             InputDevices::Key(VK_DOWN) || y > 0.35f || Button(XINPUT_GAMEPAD_DPAD_DOWN),
             InputDevices::Key(VK_RETURN) || Button(XINPUT_GAMEPAD_A),
             InputDevices::Key(VK_ESCAPE) || InputDevices::Key(VK_BACK) || Button(XINPUT_GAMEPAD_B),
-            (ModernControls && InputDevices::Key(PauseKey)) || Button(XINPUT_GAMEPAD_START) };
-        constexpr int keys[] = { 203, 205, 200, 208, 28, 1, 64 };
+            (ModernControls && InputDevices::Key(PauseKey)) || Button(XINPUT_GAMEPAD_START),
+            InputDevices::Key(VK_PRIOR) || Button(XINPUT_GAMEPAD_LEFT_SHOULDER),
+            InputDevices::Key(VK_NEXT) || Button(XINPUT_GAMEPAD_RIGHT_SHOULDER),
+            InputDevices::Key(VK_HOME), InputDevices::Key(VK_END) };
+        constexpr int keys[] = { 203, 205, 200, 208, 28, 1, 64, 201, 209, 199, 207 };
         // Ignore buttons already held when the pause HUD first appears. In
         // particular the P/Start press that paused must not immediately resume.
         if (!InputActive)
@@ -168,7 +169,7 @@ export namespace GTA2PauseMenu
             InputActive = true; return;
         }
         auto now = GetTickCount();
-        for (int i = 0; i < 7; ++i)
+        for (int i = 0; i < int(std::size(keys)); ++i)
         {
             bool pressed = down[i] && !PadHeld[i];
             if (i < 4)
@@ -241,67 +242,39 @@ export namespace GTA2PauseMenu
             return;
         }
         RWGTAMenu::Model::Changed().exchange(false);
-        auto rows = Page == SIZE_MAX ? std::vector<const RWGTAMenu::Row*>{} : Model.VisibleRows(Page);
-        if (Page != SIZE_MAX && ShownPage == Page)
-        {
-            if (Selected == ShownRows.size())
-                Selected = rows.size();
-            else if (Selected < ShownRows.size())
-            {
-                const auto found = std::find(rows.begin(), rows.end(), ShownRows[Selected]);
-                if (found != rows.end())
-                    Selected = size_t(found - rows.begin());
-            }
-        }
-        if (ShownPage != Page) Scroll = 0;
-        ShownPage = Page;
-        ShownRows = rows;
-        auto count = Count();
-        if (Selected >= count) Selected = 0;
-        // A plugin's page is one list: keep the selected row inside the window
-        auto shown = Page == SIZE_MAX ? count : std::min(count, WindowRows);
-        if (Selected < Scroll) Scroll = Selected;
-        if (Selected >= Scroll + shown) Scroll = Selected - shown + 1;
-        Scroll = std::min(Scroll, count - shown);
-        auto title = Page == SIZE_MAX ? Model.Text("menu.plugins") : Model.Pages()[Page].title;
+        auto rows = Rows();
+        auto& window = Model.Window(Page);
+        auto title = Model.Pages()[Page].title;
         Text(FontText(title), 48, 68, wHeadingFont, 544);
-        for (size_t i = Scroll; i < Scroll + shown; ++i)
+        for (size_t slot = 0; slot < window.Shown(); ++slot)
         {
+            size_t i = window.First() + slot;
             std::wstring label, value;
-            if (Page != SIZE_MAX)
+            if (auto row = rows[i])
             {
-                if (i < rows.size())
+                label = FontText(Model.Label(*row));
+                if (!RWGTAMenu::Model::Opens(*row))
                 {
-                    label = FontText(Model.Label(*rows[i])); value = FontText(Model.Value(*rows[i]));
-                    if (!Model.Enabled(*rows[i], true)) value = FontText(Model.Text("menu.unavailable"));
-                }
-                else label = FontText(Model.Text("menu.back"));
-            }
-            else
-            {
-                auto n = i;
-                if (n < Links()) label = FontText(Model.Pages()[RootStart + n].title);
-                else
-                {
-                    n -= Links();
-                    if (RootStart && n == 0) label = FontText(Model.Text("menu.previous"));
-                    else
-                    {
-                        if (RootStart) --n;
-                        label = FontText(Model.Text(RootStart + Links() < Model.Pages().size() && n == 0 ? "menu.next" : "menu.back"));
-                    }
+                    value = FontText(Model.Value(*row));
+                    if (!Model.Enabled(*row, true)) value = FontText(Model.Text("menu.unavailable"));
                 }
             }
+            else label = FontText(Model.Text("menu.back"));
             auto valueWidth = value.empty() ? 0 : std::min(580, TextWidth(value.c_str(), wRowFont));
             auto width = value.empty() ? 580 : std::max(0, 580 - valueWidth - 20);
-            if (i == Selected)
+            if (i == window.Selected())
                 label = L"(" + Fit(label, width - TextWidth(L"()", wRowFont), wRowFont) + L")";
             else label = L" " + label;
-            const int y = 116 + int(i - Scroll) * 28;
+            const int y = 116 + int(slot) * 28;
             Text(label, 48, y, wRowFont, width);
             if (!value.empty()) Text(value, 628 - valueWidth, y, wRowFont, valueWidth);
         }
-        auto selection = std::pair{ Page, Selected };
+        // More rows above or below: three dots of the font (it has no arrows) above the first and below the last row
+        if (window.Above())
+            Text(L"...", 48, 116 - 20, wRowFont, 64);
+        if (window.Below())
+            Text(L"...", 48, 116 + int(window.Shown()) * 28 - 8, wRowFont, 64);
+        auto selection = std::pair{ Page, window.Selected() };
         if (HelpSelection != selection)
         {
             HelpSelection = selection;
@@ -310,8 +283,8 @@ export namespace GTA2PauseMenu
         std::wstring description;
         if (Model.RestartRequired())
             description = FontText(Model.Text("menu.restartwarning")) + L"\n";
-        if (Page != SIZE_MAX && Selected < rows.size())
-            description += FontText(Model.Help(*rows[Selected]));
+        if (window.Selected() < rows.size() && rows[window.Selected()] && !RWGTAMenu::Model::Opens(*rows[window.Selected()]))
+            description += FontText(Model.Help(*rows[window.Selected()]));
         Description(std::move(description));
     }
     void Install()

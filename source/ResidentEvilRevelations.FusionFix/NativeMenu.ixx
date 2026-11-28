@@ -3,6 +3,9 @@ module;
 #include <stdafx.h>
 #include "FixSettings.hpp"
 #include "Shared/RWGTA/FixMenu.hpp"
+#include "Shared/MenuList.hpp"
+#include "Shared/RainDroplets.hpp"
+#include <cmath>
 #include "Shared/RWGTA/UpdateCheck.hpp"
 #include <array>
 #include <climits>
@@ -78,6 +81,20 @@ export namespace RevMenuNative
         const auto help = static_cast<uint8_t*>(Find("8B 04 B5 ? ? ? ? 8B 0D ? ? ? ? 8D 56 F9 F7 DA 1B D2 83 E2 E3 83 C2 21 52 50 E8 ? ? ? ?"));
         pInputManager.SetAddress(*reinterpret_cast<uintptr_t**>(input + 1));
         pHelpManager.SetAddress(*reinterpret_cast<uintptr_t**>(help + 9));
+        const auto mouse = static_cast<uint8_t*>(Find("8B 88 04 06 00 00 8B 1D ? ? ? ? 0F 5B C0"));
+        pGameMouse.SetAddress(*reinterpret_cast<uintptr_t**>(mouse + 8));
+    }
+
+    // The game's lists move a row per wheel notch, like Up/Down. The mouse keeps this frame's wheel movement times its
+    // speed factor; without the factor a notch is 120.
+    inline int Wheel()
+    {
+        const auto mouse = reinterpret_cast<void*>(pGameMouse.get());
+        if (!mouse)
+            return 0;
+        const auto speed = Read<float>(mouse, 156);
+        const auto delta = Read<int>(mouse, 52);
+        return speed > 0.0f ? static_cast<int>(std::lround(delta / speed)) : delta;
     }
 }
 
@@ -90,8 +107,7 @@ export namespace RevMenu
     {
         Kind kind{ Kind::Empty };
         std::string label;
-        RWGTAMenu::Row row{};
-        size_t target{};
+        const RWGTAMenu::Row* row{};
     };
     struct Host
     {
@@ -99,9 +115,10 @@ export namespace RevMenu
         RWGTAMenu::Model model;
         std::array<int, Native::MaximumRows> actions{}, labels{}, files{};
         std::array<Item, Native::MaximumRows> items{};
-        size_t slots{}, logical{}, offset{}, page{}, first{}, selected{ 1 }, helpFirst{}, helpReturnSelection{ 1 };
+        size_t slots{}, logical{}, offset{}, page{}, selected{ 1 }, helpFirst{}, helpReturnSelection{ 1 };
         uint32_t language{};
         int mouseX{ INT_MIN }, mouseY{ INT_MIN };
+        MenuList::WheelNotches wheel;
         bool plugins{}, details{}, transition{}, helpHeld{}, inputSeen{}, alive{ true };
         std::string helpTitle, previewTitle, previewHelp;
         std::string renderKey;
@@ -237,11 +254,11 @@ export namespace RevMenu
     inline void OpenModel(Host& host)
     {
         host.language = languageGeneration.load();
-        // The pages scroll here (Populate), so the model's own window size doesn't limit them; it needs at least 3.
-        host.model.OpenPlugins(module, Language(), (std::max)(host.slots - 5, size_t{ 3 }), {}, true);
+        // Every list scrolls through the rows between the title and Back (one fewer on a settings page, for Details)
+        host.model.OpenMenu(module, Language(), host.slots - 2);
         Remember(host.model);
-        if (host.page > host.model.Pages().size())
-            host.page = host.first = 0;
+        if (host.page >= host.model.Pages().size())
+            host.page = RWGTAMenu::Model::RootPage;
     }
 
     // A row label is { widget, message id, message file }; rows may read different files.
@@ -301,10 +318,23 @@ export namespace RevMenu
     inline std::string Description(const Host& host, const Item& item)
     {
         if (item.kind == Kind::Setting)
-            return host.model.Help(item.row);
-        if (item.kind == Kind::Plugin)
+            return host.model.Help(*item.row);
+        if (item.kind == Kind::Plugin && item.row && item.row->kind == RWGTAMenu::RowKind::Plugin)
             return host.model.Text("menu.pluginshelp");
         return {};
+    }
+
+    // The rows of the list a page shows at once: between the title and Back, and Details on a page of settings
+    inline size_t ListRows(const Host& host)
+    {
+        return host.slots - (host.details || !host.page ? 2 : 3);
+    }
+
+    inline MenuList::Window& List(Host& host)
+    {
+        auto& window = host.model.Window(host.page);
+        window.SetSlots(ListRows(host));
+        return window;
     }
 
     inline bool Selectable(const Item& item)
@@ -315,56 +345,40 @@ export namespace RevMenu
     inline void Populate(Host& host)
     {
         host.items = {};
-        const size_t rows = host.slots - (host.page && !host.details ? 5 : 4);
+        const size_t rows = ListRows(host);
         auto& items = host.items;
-        items[0] = { Kind::Title, host.details ? host.helpTitle : host.page ? host.model.Pages()[host.page - 1].title : host.model.Text("menu.plugins") };
+        items[0] = { Kind::Title, host.details ? host.helpTitle : host.model.Pages()[host.page].title };
         if (host.details)
         {
             for (size_t i = 0; i < rows && i + host.helpFirst < host.help.size(); ++i)
                 items[i + 1] = { Kind::Title, host.help[i + host.helpFirst] };
-            if (host.helpFirst)
-                items[host.slots - 3] = { Kind::Previous, host.model.Text("menu.previous") };
-            if (host.helpFirst + rows < host.help.size())
-                items[host.slots - 2] = { Kind::Next, host.model.Text("menu.next") };
-        }
-        else if (!host.page)
-        {
-            const auto& pages = host.model.Pages();
-            for (size_t i = 0; i < rows && i + host.first < pages.size(); ++i)
-                items[i + 1] = { Kind::Plugin, pages[i + host.first].title, {}, i + host.first + 1 };
-            if (host.first)
-                items[host.slots - 3] = { Kind::Previous, host.model.Text("menu.previous") };
-            if (host.first + rows < pages.size())
-                items[host.slots - 2] = { Kind::Next, host.model.Text("menu.next") };
         }
         else
         {
-            const auto visible = host.model.VisibleRows(host.page - 1);
-            if (host.first >= visible.size())
-                host.first = 0;
-            for (size_t i = 0; i < rows && i + host.first < visible.size(); ++i)
+            auto& window = List(host);
+            const auto shown = host.model.Shown(host.page, false);
+            for (size_t i = 0; i < shown.size() && i < rows; ++i)
             {
-                const auto row = *visible[i + host.first];
-                auto label = host.model.Label(row);
-                const auto value = host.model.Value(row);
+                const auto* row = shown[i];
+                auto label = host.model.Label(*row);
+                const auto value = host.model.Value(*row);
                 if (!value.empty())
                     label += ": " + value;
-                items[i + 1] = { Kind::Setting, std::move(label), row };
+                items[i + 1] = { RWGTAMenu::Model::Opens(*row) ? Kind::Plugin : Kind::Setting, std::move(label), row };
             }
-            if (host.first)
-                items[host.slots - 3] = { Kind::Previous, host.model.Text("menu.previous") };
-            if (host.first + rows < visible.size())
-                items[host.slots - 2] = { Kind::Next, host.model.Text("menu.next") };
+            // The selection on the list follows its window
+            if (host.selected >= 1 && host.selected <= rows)
+                host.selected = window.Slot() + 1;
         }
         if (!host.details && host.page)
         {
             if (host.selected < host.slots && items[host.selected].kind == Kind::Setting)
             {
-                host.previewTitle = host.model.Label(items[host.selected].row);
+                host.previewTitle = host.model.Label(*items[host.selected].row);
                 host.previewHelp = Description(host, items[host.selected]);
             }
             if (!host.previewHelp.empty())
-                items[host.slots - 4] = { Kind::Details, host.model.Text("menu.details") };
+                items[host.slots - 2] = { Kind::Details, host.model.Text("menu.details") };
         }
         items[host.slots - 1] = { Kind::Back, host.model.Text("menu.back") };
         host.selected = (std::min)(host.selected, host.slots - 1);
@@ -418,38 +432,74 @@ export namespace RevMenu
             host.details = false;
             host.selected = host.helpReturnSelection;
         }
-        else if (host.page)
-        {
-            host.page = host.first = 0;
-            host.selected = 1;
-        }
         else
         {
-            host.plugins = false;
-            host.logical = host.slots;
-            Root(host);
-            return;
+            // A page returns to the list it was opened from, on the row it came from; the plugins list closes
+            const auto parent = host.model.Back(host.page);
+            if (parent == SIZE_MAX)
+            {
+                host.plugins = false;
+                host.logical = host.slots;
+                Root(host);
+                return;
+            }
+            host.page = parent;
+            host.selected = List(host).Slot() + 1;
         }
         Populate(host);
+    }
+
+    // Up (-1) or Down (+1) through the page: the list scrolls by a row at its window's edges and wraps at the page's ends
+    inline void Move(Host& host, int direction)
+    {
+        const size_t rows = ListRows(host);
+        const bool onList = !host.details && host.selected >= 1 && host.selected <= rows &&
+            host.items[host.selected].kind != Kind::Empty;
+        if (onList)
+        {
+            auto& window = List(host);
+            const bool inside = direction > 0 ? window.Slot() + 1 < window.Shown() || window.Below() :
+                window.Slot() > 0 || window.Above();
+            if (inside)
+            {
+                window.Move(direction, false);
+                host.selected = window.Slot() + 1;
+                return;
+            }
+        }
+        const size_t from = host.selected;
+        do
+        {
+            host.selected = (host.selected + host.slots + direction) % host.slots;
+        } while (!Selectable(host.items[host.selected]) && host.selected != from);
+        // Entering the list from below lands on its last row, from above (a wrap) on its first
+        if (!host.details && host.selected >= 1 && host.selected <= rows && host.items[host.selected].kind != Kind::Empty)
+        {
+            auto& window = List(host);
+            window.Edge(direction > 0 ? -1 : 1);
+            host.selected = window.Slot() + 1;
+        }
     }
 
     inline void Activate(const std::shared_ptr<Host>& host, int direction)
     {
         const auto item = host->items[host->selected];
-        const size_t rows = host->slots - (host->page && !host->details ? 5 : 4);
         switch (item.kind)
         {
         case Kind::Setting:
-            host->model.Change(item.row, direction, false);
+            host->model.Change(*item.row, direction, false);
             break;
         case Kind::Plugin:
+        {
             if (direction)
                 return;
-            host->page = item.target;
-            host->first = 0;
+            const auto page = host->model.Enter(*item.row);
+            if (page == SIZE_MAX)
+                return;
+            host->page = page;
             host->selected = 1;
-            host->model.PageShown(host->page - 1);
             break;
+        }
         case Kind::Details:
             if (direction || host->previewHelp.empty())
                 return;
@@ -460,15 +510,6 @@ export namespace RevMenu
             host->details = true;
             host->selected = host->slots - 1;
             break;
-        case Kind::Previous:
-        case Kind::Next:
-        {
-            if (direction)
-                return;
-            auto& first = host->details ? host->helpFirst : host->first;
-            first = item.kind == Kind::Next ? first + rows : first >= rows ? first - rows : 0;
-            break;
-        }
         case Kind::Back:
             if (!direction)
                 Back(*host);
@@ -605,20 +646,28 @@ export namespace RevMenu
         if (hover >= 0)
         {
             if (host->plugins)
+            {
                 host->selected = static_cast<size_t>(hover);
+                if (!host->details && host->selected >= 1 && host->selected <= ListRows(*host))
+                    List(*host).Point(host->selected - 1);
+            }
             else
                 host->logical = static_cast<size_t>(hover) + host->offset;
         }
-        const int direction = repeated & 0x10010 ? -1 : repeated & 0x40040 ? 1 : 0;
-        if (direction)
+        // Up/Down and the wheel (a row per notch, up is a positive delta) move the same way
+        const auto step = [&](int direction)
         {
-            if (host->plugins)
+            if (host->plugins && host->details)
             {
-                do
-                {
-                    host->selected = (host->selected + host->slots + direction) % host->slots;
-                } while (!Selectable(host->items[host->selected]));
+                // The help text scrolls a line at a time
+                const size_t rows = ListRows(*host);
+                if (direction > 0 && host->helpFirst + rows < host->help.size())
+                    ++host->helpFirst;
+                else if (direction < 0 && host->helpFirst)
+                    --host->helpFirst;
             }
+            else if (host->plugins)
+                Move(*host, direction);
             else
             {
                 const auto count = host->slots + 1;
@@ -628,7 +677,11 @@ export namespace RevMenu
                 else if (host->logical >= host->offset + host->slots)
                     host->offset = host->logical - host->slots + 1;
             }
-        }
+        };
+        for (int notches = host->wheel.Take(Native::Wheel()); notches; notches += notches > 0 ? -1 : 1)
+            step(notches > 0 ? -1 : 1);
+        if (const int direction = repeated & 0x10010 ? -1 : repeated & 0x40040 ? 1 : 0)
+            step(direction);
         DWORD foregroundProcess = 0;
         GetWindowThreadProcessId(GetForegroundWindow(), &foregroundProcess);
         const bool helpHeld = foregroundProcess == GetCurrentProcessId() && (GetAsyncKeyState(VK_F1) & 0x8000);
@@ -638,7 +691,7 @@ export namespace RevMenu
             const auto text = item.kind == Kind::Details ? host->previewHelp : Description(*host, item);
             if (!text.empty())
             {
-                host->helpTitle = item.kind == Kind::Details ? host->previewTitle : item.kind == Kind::Setting ? host->model.Label(item.row) : item.label;
+                host->helpTitle = item.kind == Kind::Details ? host->previewTitle : item.kind == Kind::Setting ? host->model.Label(*item.row) : item.label;
                 host->help = Wrap(text);
                 host->helpFirst = 0;
                 host->helpReturnSelection = host->selected;
@@ -666,7 +719,8 @@ export namespace RevMenu
             OpenModel(*host);
             host->plugins = true;
             host->details = false;
-            host->page = host->first = 0;
+            host->page = RWGTAMenu::Model::RootPage;
+            List(*host).Reset();
             host->selected = 1;
             Populate(*host);
         }
@@ -692,6 +746,7 @@ export namespace RevMenu
             prior->second->alive = false;
         hosts[object] = host;
         OpenModel(*host);
+        RainDroplets::MenuOpen(true);
         return result;
     }
 
@@ -704,6 +759,7 @@ export namespace RevMenu
             host->alive = false;
             hosts.erase(found);
         }
+        RainDroplets::MenuOpen(!hosts.empty());
         return destroyHook.unsafe_thiscall<void*>(object, flags);
     }
 

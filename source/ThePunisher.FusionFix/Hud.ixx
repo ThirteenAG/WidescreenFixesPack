@@ -9,6 +9,7 @@ module;
 
 export module Hud;
 
+import NativeMenu;
 import ComVars;
 
 export

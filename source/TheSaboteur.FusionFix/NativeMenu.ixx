@@ -5,6 +5,7 @@ module;
 #include "RuntimeBridge.hpp"
 #include "Shared/RWGTA/FixMenu.hpp"
 #include "Shared/RWGTA/UpdateCheck.hpp"
+#include "Shared/RainDroplets.hpp"
 #include <filesystem>
 #include <stdexcept>
 
@@ -39,7 +40,10 @@ export namespace SaboteurMenu
     inline std::filesystem::path Directory;
     inline std::map<std::string, std::string> Startup;
     inline std::string ShownLanguage;
-    inline size_t Page{ SIZE_MAX }, Offset{ 0 }, Selected{ 0 };
+    // The shown list (the plugins list, a plugin's page or a category) scrolls through the page's 4 rows (the
+    // Settings pages' row height, the help under them), Back last
+    inline constexpr size_t Slots{ 4 };
+    inline size_t Page{ RWGTAMenu::Model::RootPage };
     inline bool Details{ false };
     inline RWGTAMenu::Row HelpRow;
     inline std::string Notice;
@@ -47,6 +51,12 @@ export namespace SaboteurMenu
     inline void* ActiveMovie = nullptr;
     inline std::atomic<bool> MenuOpen{ false }, PendingHelp{ false };
     inline bool HelpHeld = false;
+    // The thread the menu movie calls from, the wheel's notches from the window, the last call of a menu movie
+    inline std::atomic<DWORD> MovieThread{ 0 };
+    inline MenuList::WheelNotches Notches;
+    inline std::atomic<ULONGLONG> LastMenuCall{ 0 };
+    // The gamma screen at startup (gamma.gfx) comes before the menu movies: it counts as a menu until one of them calls
+    inline std::atomic<bool> GammaShown{ false };
     inline std::map<std::pair<HMODULE, std::string>, std::string> OtherStartup;
 
     inline void Remember(const asi_settings::LoadedPlugin& plugin)
@@ -58,21 +68,36 @@ export namespace SaboteurMenu
                 OtherStartup.try_emplace({ plugin.module, setting.id }, OtherPlugins::Get(plugin, setting));
     }
 
+    inline std::atomic<int> Wheel{ 0 }, PageKeys{ 0 }, EdgeKeys{ 0 };
+
     inline void Poll(bool blocked)
     {
         const bool down = (GetAsyncKeyState(VK_F1) & 0x8000) != 0;
         const auto window = SaboteurRuntime::GetWindow();
-        if (!blocked && MenuOpen.load() && window && GetForegroundWindow() == window && down && !HelpHeld)
+        const bool focused = !blocked && MenuOpen.load() && window && GetForegroundWindow() == window;
+        if (focused && down && !HelpHeld)
             PendingHelp.store(true);
         HelpHeld = down;
+        // Page Up/Down, Home/End: the menu movie has no use for them
+        static bool held[4]{};
+        constexpr int keys[]{ VK_PRIOR, VK_NEXT, VK_HOME, VK_END };
+        for (int i = 0; i < 4; ++i)
+        {
+            const bool pressed = focused && (GetAsyncKeyState(keys[i]) & 0x8000) != 0;
+            if (pressed && !held[i])
+            {
+                if (i < 2)
+                    PageKeys += i ? 1 : -1;
+                else
+                    EdgeKeys = i == 3 ? 1 : -1;
+            }
+            held[i] = pressed;
+        }
     }
 
-    enum class Kind { Page, Setting, Previous, Next, Help, Back };
     struct Item
     {
-        Kind kind;
-        size_t index{ 0 };
-        RWGTAMenu::Row row{};
+        const RWGTAMenu::Row* row{};     // null: Back
         std::string label, value;
     };
     inline std::vector<Item> Items;
@@ -125,13 +150,15 @@ export namespace SaboteurMenu
     inline void Open()
     {
         ShownLanguage = Language();
-        Model.OpenPlugins(Module, ShownLanguage, 4096, {}, true);
+        Model.OpenMenu(Module, ShownLanguage, Slots);
         for (const auto& page : Model.Pages())
             if (page.plugin)
                 Remember(*page.plugin);
         MenuOpen.store(true);
-        Page = SIZE_MAX;
-        Offset = Selected = 0;
+        Page = RWGTAMenu::Model::RootPage;
+        Model.Window(Page).Reset();
+        Notches.Clear();
+        Wheel = PageKeys = EdgeKeys = 0;
         Details = false;
     }
 
@@ -148,43 +175,26 @@ export namespace SaboteurMenu
             return;
         }
         Items.clear();
-        if (Page == SIZE_MAX)
-        {
-            const auto count = Model.Pages().size();
-            Offset = count ? (std::min)(Offset, (count - 1) / 5 * 5) : 0;
-            for (size_t i = Offset; i < (std::min)(Offset + 5, count); ++i)
-                Items.push_back({ Kind::Page, i, {}, Model.Pages()[i].title });
-            if (Offset)
-                Items.push_back({ Kind::Previous, 0, {}, Model.Text("menu.previous") });
-            if (Offset + 5 < count)
-                Items.push_back({ Kind::Next, 0, {}, Model.Text("menu.next") });
-        }
-        else if (Page < Model.Pages().size())
-        {
-            auto rows = Model.VisibleRows(Page);
-            Offset = rows.empty() ? 0 : (std::min)(Offset, (rows.size() - 1) / 5 * 5);
-            for (size_t i = Offset; i < (std::min)(Offset + 5, rows.size()); ++i)
-                Items.push_back({ Kind::Setting, i, *rows[i], Model.Label(*rows[i]), Model.Value(*rows[i]) });
-            if (Offset)
-                Items.push_back({ Kind::Previous, 0, {}, Model.Text("menu.previous") });
-            if (Offset + 5 < rows.size())
-                Items.push_back({ Kind::Next, 0, {}, Model.Text("menu.next") });
-        }
-        Items.push_back({ Kind::Back, 0, {}, Model.Text("menu.back") });
-        Selected = (std::min)(Selected, Items.size() - 1);
-        if (Items[Selected].kind == Kind::Setting)
-            HelpRow = Items[Selected].row;
+        if (Page >= Model.Pages().size())
+            Page = RWGTAMenu::Model::RootPage;
+        for (auto row : Model.Shown(Page, true))
+            Items.push_back(row ? Item{ row, Model.Label(*row), Model.Value(*row) } : Item{ nullptr, Model.Text("menu.back") });
+        const auto& window = Model.Window(Page);
+        const auto selected = (std::min)(window.Slot(), Items.size() - 1);
+        if (Items[selected].row && !RWGTAMenu::Model::Opens(*Items[selected].row))
+            HelpRow = *Items[selected].row;
         else if (!Details)
             HelpRow = {};
-        const auto title = Page < Model.Pages().size() ? Model.Pages()[Page].title : Model.Text("menu.plugins");
+        const auto title = Page != RWGTAMenu::Model::RootPage ? Model.Pages()[Page].title : Model.Text("menu.plugins");
         const auto help = HelpRow.plugin ? Model.Help(HelpRow) : std::string{};
         const auto details = "F1: " + Model.Text("menu.details");
         Invoke(movie, "_global.FFLabel", { Value(Model.Text("menu.plugins").c_str()) });
         Invoke(movie, "_global.FFBegin", { Value(title.c_str()), Value(static_cast<double>(Items.size())),
-            Value(static_cast<double>(Selected)), Value(Details ? 1.0 : 0.0), Value(help.c_str()),
+            Value(static_cast<double>(selected)), Value(Details ? 1.0 : 0.0), Value(help.c_str()),
             Value(RestartPending() ? Model.Text("menu.restartwarning").c_str() : ""), Value(help.empty() ? "" : details.c_str()) });
         for (size_t i = 0; i < Items.size(); ++i)
             Invoke(movie, "_global.FFRow", { Value(static_cast<double>(i)), Value(Items[i].label.c_str()), Value(Items[i].value.c_str()) });
+        Invoke(movie, "_global.FFMarks", { Value(!Details && window.Above() ? 1.0 : 0.0), Value(!Details && window.Below() ? 1.0 : 0.0) });
     }
 
     inline void Back(void* movie)
@@ -193,11 +203,10 @@ export namespace SaboteurMenu
             Notice.clear();
         else if (Details)
             Details = false;
-        else if (Page != SIZE_MAX)
+        else if (const auto parent = Model.Back(Page); parent != SIZE_MAX)
         {
-            Model.PageShown(Page);
-            Page = SIZE_MAX;
-            Offset = Selected = 0;
+            // The list it came from, on the row it came from
+            Page = parent;
             HelpRow = {};
         }
         else
@@ -221,45 +230,76 @@ export namespace SaboteurMenu
             Details = !Details;
         else if (!Details && !Items.empty())
         {
-            if (input == "up")
-                Selected = (Selected + Items.size() - 1) % Items.size();
-            else if (input == "down")
-                Selected = (Selected + 1) % Items.size();
+            auto& window = Model.Window(Page);
+            if (input == "up" || input == "down")
+                window.Move(input == "up" ? -1 : 1);
             else if (input.starts_with("select:"))
-            {
-                const auto index = strtoul(command + 7, nullptr, 10);
-                if (index < Items.size())
-                    Selected = index;
-            }
+                window.Point(strtoul(command + 7, nullptr, 10));
+            else if (input.starts_with("scroll:"))
+                window.Scroll(input == "scroll:-1" ? -1 : 1);
             else if (input == "accept" || input == "left" || input == "right")
             {
-                const auto item = Items[Selected];
+                const auto slot = window.Slot();
+                if (slot >= Items.size())
+                    return;
+                const auto item = Items[slot];
                 const int direction = input == "left" ? -1 : input == "right" ? 1 : 0;
-                if (item.kind == Kind::Setting)
-                    Model.Change(item.row, direction, false);
-                else if (!direction)
+                if (!item.row)
                 {
-                    if (item.kind == Kind::Page)
-                    {
-                        Page = item.index;
-                        Offset = Selected = 0;
-                        Model.PageShown(Page);
-                    }
-                    else if (item.kind == Kind::Previous || item.kind == Kind::Next)
-                    {
-                        Offset = item.kind == Kind::Next ? Offset + 5 : Offset - 5;
-                        Selected = 0;
-                    }
-                    else if (item.kind == Kind::Back)
+                    if (!direction)
                         Back(movie);
                 }
+                else if (RWGTAMenu::Model::Opens(*item.row))
+                {
+                    if (!direction)
+                        if (const auto target = Model.Enter(*item.row); target != SIZE_MAX)
+                            Page = target;
+                }
+                else
+                    Model.Change(*item.row, direction, false);
             }
         }
         Render(movie);
     }
 
+    // The wheel (one row per notch) and Page Up/Down, Home/End: the window moves
+    inline void Scroll(void* movie)
+    {
+        if (!Model.IsOpen() || movie != ActiveMovie || Details || !Notice.empty())
+        {
+            Wheel = PageKeys = EdgeKeys = 0;
+            return;
+        }
+        auto& window = Model.Window(Page);
+        bool moved = false;
+        const int wheel = Wheel.exchange(0);
+        for (int i = 0; i < std::abs(wheel); ++i)
+            moved |= window.Scroll(wheel > 0 ? -1 : 1);
+        const int pages = PageKeys.exchange(0);
+        for (int i = 0; i < std::abs(pages); ++i)
+            moved |= window.Page(pages > 0 ? 1 : -1);
+        if (const int edge = EdgeKeys.exchange(0))
+            moved |= window.Edge(edge);
+        if (moved)
+            Render(movie);
+    }
+
+    inline void Message(UINT message, WPARAM wParam)
+    {
+        if (!MenuOpen.load())
+            return;
+        if (message == WM_MOUSEWHEEL)
+            Wheel += Notches.Take(GET_WHEEL_DELTA_WPARAM(wParam));
+    }
+
     inline int __fastcall Callback(void* self, void* edx, void* movie, const char* command, const char* argument)
     {
+        if (command && command[0] == 'F' && command[1] == 'F')
+        {
+            MovieThread = GetCurrentThreadId();
+            LastMenuCall = GetTickCount64();
+            GammaShown = false;
+        }
         if (command)
         {
             const std::string_view name{ command };
@@ -292,8 +332,12 @@ export namespace SaboteurMenu
                 NotificationMovie = nullptr;
                 if (Model.IsOpen() && (RWGTAMenu::Model::Changed().exchange(false) || ShownLanguage != Language()))
                     Render(movie);
+                Scroll(movie);
                 return 0;
             }
+            // A menu movie is shown (LastMenuCall above)
+            if (name == "FFMenu")
+                return 0;
             if (name == "FFDismiss")
             {
                 if (movie == ActiveMovie)
@@ -315,6 +359,8 @@ export namespace SaboteurMenu
         if (name)
         {
             auto stem = std::filesystem::path(name).stem().string();
+            if (!_stricmp(stem.c_str(), "gamma"))
+                GammaShown = true;
             if (!_stricmp(stem.c_str(), "StartScreen") || !_stricmp(stem.c_str(), "PauseMenu") || !_stricmp(stem.c_str(), "FusionFixInterface"))
             {
                 const auto path = Directory / (stem + ".gfx");
@@ -390,5 +436,14 @@ export namespace SaboteurMenu
     void Frame(bool blocked)
     {
         Poll(blocked);
+        // The menu movies call in while the start screen or pause menu is shown: no drops over them
+        RainDroplets::MenuOpen(GammaShown.load() || GetTickCount64() - LastMenuCall.load() < 1000);
+        if (ActiveMovie && GetCurrentThreadId() == MovieThread.load())
+            Scroll(ActiveMovie);
+    }
+
+    void WindowMessage(UINT message, WPARAM wParam)
+    {
+        Message(message, wParam);
     }
 }

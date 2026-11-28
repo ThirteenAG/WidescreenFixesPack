@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "FixSettings.hpp"
 #include "Shared/D3D8Compatibility.hpp"
+#include "Shared/D3D9Options.hpp"
 #include "Shared/CursorConfinement.hpp"
 #include "Shared/MaxPayne/GamepadButtons.hpp"
 #include "Shared/MaxPayne/NativeIcons.hpp"
@@ -42,6 +43,10 @@ CEXP void InitializeASI()
     {
         if (WidescreenFixConflict::Found())
             return;
+        // The game gives up when it can't make its device: while another program is in exclusive fullscreen, or the
+        // display is off, that is a lost device, which goes once it ends
+        D3D9Options::waitForDevice = true;
+        D3D9Options::HookCreation();
         D3D8Compatibility::Initialize(true);
         // Per monitor DPI awareness, so the game gets real pixels on scaled desktops. The process' awareness can be set
         // only once: when it's set already (the exe's compatibility settings, "Override high DPI scaling", make it per

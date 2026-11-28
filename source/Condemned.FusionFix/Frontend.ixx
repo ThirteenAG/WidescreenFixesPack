@@ -15,6 +15,7 @@ module;
 #include <algorithm>
 #include <string>
 #include "Shared/RWGTA/FixMenu.hpp"
+#include "Shared/RainDroplets.hpp"
 #include <utility>
 #include <atomic>
 #include <limits>
@@ -357,6 +358,11 @@ export namespace CondemnedMenuNative
         float scaleX{}, scaleY{};
         RECT sourceRect{};
         uint32_t selectedColor{}, enabledColor{}, disabledColor{};
+        // The Options list: row spacing and height, the name column and left edge of the rows with a value, and the
+        // line of the screen's help text (beside its Back button)
+        LONG pitch{}, rowHeight{}, column{}, valueRowLeft{};
+        RECT helpLine{};
+        uint32_t helpFont{}, helpColor{};
         static bool Provider(void* object, uintptr_t table)
         {
             if (!object || !table || Read<uintptr_t>(object, 0) != table) return false;
@@ -579,7 +585,7 @@ export namespace CondemnedMenuNative
 // exact native owner and traversal lease are revalidated.
 export namespace CondemnedMenuNative
 {
-    enum class ItemKind { Link, ModelRow, Previous, Next, Back };
+    enum class ItemKind { Link, ModelRow, Back };
     struct Item
     {
         ItemKind kind{ItemKind::Back};
@@ -587,8 +593,9 @@ export namespace CondemnedMenuNative
         RWGTAMenu::Row row{};
         std::string label, value;
         bool enabled{true};
-        std::string description, requiredTail;
+        std::string description;
     };
+    // A page of the menu: the plugins list (no page), a plugin's page or a category's
     struct Location
     {
         std::optional<size_t> page;
@@ -602,6 +609,8 @@ export namespace CondemnedMenuNative
         bool resetsPageState{};
         std::string title;
         std::vector<Item> items;
+        size_t select{};                // the row the window has selected
+        bool above{}, below{};          // rows hidden above or below the window
     };
     class Session
     {
@@ -621,7 +630,44 @@ export namespace CondemnedMenuNative
             return token == revision && model.IsOpen() && current();
         }
     public:
-        static constexpr size_t pageRows = 5;
+        // Rows a page shows at once, Back included; every page is one list that scrolls through them
+        static constexpr size_t slots = 8;
+        static size_t PageOf(const Location& location) { return location.page.value_or(RWGTAMenu::Model::RootPage); }
+        MenuList::Window& Window(const Location& location) { return model.Window(PageOf(location)); }
+        size_t Enter(const RWGTAMenu::Row& row) { return model.Enter(row); }
+        // The parent's location; nothing when Back leaves the menu
+        std::optional<Location> Parent(const Location& location)
+        {
+            const auto parent = model.Back(PageOf(location));
+            if (parent == SIZE_MAX) return {};
+            return parent == RWGTAMenu::Model::RootPage ? Location{} : Location{parent, 0};
+        }
+        // Up/Down: the next selectable row, wrapping at the ends like the game's own lists
+        template<class Current> bool Step(const Location& location, int direction, Current current)
+        {
+            const auto token = revision;
+            std::vector<std::optional<RWGTAMenu::Row>> rows;
+            {
+                ForeignScope scope(*this);
+                for (auto* row : model.ListRows(PageOf(location), true))
+                    rows.push_back(row ? std::optional<RWGTAMenu::Row>(*row) : std::nullopt);
+            }
+            if (!Alive(token, current)) return false;
+            auto& window = Window(location);
+            bool moved = false;
+            for (size_t tries = 0; tries < rows.size(); ++tries)
+            {
+                if (!window.Move(direction)) break;
+                moved = true;
+                const auto& row = rows[(std::min)(window.Selected(), rows.size() - 1)];
+                if (!row || RWGTAMenu::Model::Opens(*row)) break;
+                bool enabled{};
+                { ForeignScope scope(*this); enabled = model.Enabled(*row, pause); }
+                if (!Alive(token, current)) return false;
+                if (enabled) break;
+            }
+            return moved;
+        }
         uint64_t Revision() const { return revision; }
         bool IsOpen() const { return model.IsOpen(); }
         bool RestartRequired() const { return model.RestartRequired(); }
@@ -644,7 +690,7 @@ export namespace CondemnedMenuNative
             const auto token = revision;
             pause = inPause;
             shown = {};
-            { ForeignScope scope(*this); model.OpenPlugins(host, language, pageRows, {}, true); }
+            { ForeignScope scope(*this); model.OpenMenu(host, language, slots); }
             if (!Alive(token, current))
             {
                 if (token == revision) Cancel();
@@ -666,64 +712,45 @@ export namespace CondemnedMenuNative
                 return {};
             };
             Prepared result{token, location, entering, {}, {}};
-            if (!location.page)
+            const auto page = PageOf(location);
+            if (page >= model.Pages().size()) return refuse();
+            result.title = location.page ? model.Pages()[page].title : model.Text("menu.title");
+            std::vector<const RWGTAMenu::Row*> visible;
+            { ForeignScope scope(*this); visible = model.Shown(page, true); }
+            if (!Alive(token, current)) return refuse();
+            // Copy every row before the first subsequent plugin call. A
+            // read can close/reopen the model and invalidate all page rows.
+            std::vector<std::optional<RWGTAMenu::Row>> rows;
+            rows.reserve(visible.size());
+            for (auto row : visible) rows.push_back(row ? std::optional<RWGTAMenu::Row>(*row) : std::nullopt);
+            const auto& window = model.Window(page);
+            result.select = window.Slot();
+            result.above = window.Above();
+            result.below = window.Below();
+            for (const auto& entry : rows)
             {
-                result.title = model.Text("menu.title");
-                const auto& pages = model.Pages();
-                if (location.first > pages.size()) return refuse();
-                const auto end = (std::min)(pages.size(), location.first + pageRows);
-                for (size_t i = location.first; i < end; ++i)
-                    result.items.push_back({ItemKind::Link, i, {}, pages[i].title, {}, true});
-                // Preserve numbered page suffixes if a long sibling name is
-                // shortened. This is generated UI identity, never setting value.
-                for (auto& item : result.items)
+                if (!entry)
                 {
-                    const auto at = item.label.rfind(" (");
-                    if (at != std::string::npos && item.label.ends_with(')')) item.requiredTail = item.label.substr(at);
+                    result.items.push_back({ItemKind::Back, 0, {}, model.Text("menu.back"), {}, true});
+                    continue;
                 }
-                if (location.first)
-                    result.items.push_back({ItemKind::Previous, location.first > pageRows ? location.first - pageRows : 0,
-                        {}, model.Text("menu.previous"), {}, true});
-                if (end < pages.size())
-                    result.items.push_back({ItemKind::Next, end, {}, model.Text("menu.next"), {}, true});
-            }
-            else
-            {
-                const auto page = *location.page;
-                if (page >= model.Pages().size()) return refuse();
-                result.title = model.Pages()[page].title;
-                if (location.page != shown.page) model.PageShown(page);
-                std::vector<const RWGTAMenu::Row*> visible;
-                { ForeignScope scope(*this); visible = model.VisibleRows(page); }
+                const auto& row = *entry;
+                if (RWGTAMenu::Model::Opens(row))
+                {
+                    result.items.push_back({ItemKind::Link, row.target, row, model.Label(row), {}, true});
+                    continue;
+                }
+                Item item{ItemKind::ModelRow, 0, row, {}, {}, false};
+                item.label = model.Label(row);
+                item.description = model.Help(row);
+                bool enabled{};
+                { ForeignScope scope(*this); enabled = model.Enabled(row, pause); }
                 if (!Alive(token, current)) return refuse();
-                // Copy every row before the first subsequent plugin call. A
-                // read can close/reopen the model and invalidate all page rows.
-                std::vector<RWGTAMenu::Row> rows;
-                rows.reserve(visible.size());
-                for (auto row : visible) rows.push_back(*row);
-                if (location.first > rows.size()) return refuse();
-                const auto end = (std::min)(rows.size(), location.first + pageRows);
-                for (size_t i = location.first; i < end; ++i)
-                {
-                    const auto& row = rows[i];
-                    Item item{ItemKind::ModelRow, 0, row, {}, {}, false};
-                    item.label = model.Label(row);
-                    item.description = model.Help(row);
-                    bool enabled{};
-                    { ForeignScope scope(*this); enabled = model.Enabled(row, pause); }
-                    if (!Alive(token, current)) return refuse();
-                    item.enabled = enabled;
-                    { ForeignScope scope(*this); item.value = enabled ? model.Value(row) : model.Text("menu.unavailable"); }
-                    if (!Alive(token, current)) return refuse();
-                    result.items.push_back(std::move(item));
-                }
-                if (location.first)
-                    result.items.push_back({ItemKind::Previous, location.first > pageRows ? location.first - pageRows : 0,
-                        {}, model.Text("menu.previous"), {}, true});
-                if (end < rows.size())
-                    result.items.push_back({ItemKind::Next, end, {}, model.Text("menu.next"), {}, true});
+                item.enabled = enabled;
+                { ForeignScope scope(*this); item.value = enabled ? model.Value(row) : model.Text("menu.unavailable"); }
+                if (!Alive(token, current)) return refuse();
+                result.items.push_back(std::move(item));
             }
-            result.items.push_back({ItemKind::Back, 0, {}, model.Text("menu.back"), {}, true});
             if (!Alive(token, current)) return refuse();
             return result;
         }
@@ -767,10 +794,13 @@ export namespace CondemnedMenuNative
 // strings, plugin API calls or native ownership changes occur here.
 export namespace CondemnedMenuNative
 {
-    enum class CommandKind : uint8_t { Open, Accept, Left, Right, Back };
+    // Up/Down move through a list; Scroll: the wheel (amount: notches, up negative), Page Up/Down (amount +-1000)
+    // and Home/End (+-2000)
+    enum class CommandKind : uint8_t { Open, Accept, Left, Right, Back, Up, Down, Scroll };
     struct Request
     {
         CommandKind kind{};
+        int16_t amount{};
         uint64_t owner{}, pool{};
         uint16_t selected{};
         uintptr_t sender{};
@@ -923,9 +953,10 @@ export namespace CondemnedMenuNative
     static_assert(sizeof(Array) == 12);
     struct Pool
     {
-        static constexpr size_t maxItems = 8; //5 root links+Previous+Next+Back
-        static constexpr size_t helpLines = 5;
-        static constexpr size_t fixedRows = 2 + helpLines;
+        static constexpr size_t maxItems = 8; // the rows of a page's window, Back included
+        static constexpr size_t helpLines = 2;
+        static constexpr size_t fixedRows = 4 + helpLines; // title, help lines, two scroll marks, notice
+        static constexpr LONG layoutWidth = 640; // the width of the interface's layout space
         std::array<void*, fixedRows + 2 * maxItems> nodes{};
         size_t count{};
         Array array;
@@ -984,7 +1015,8 @@ export namespace CondemnedMenuNative
         return row;
     }
     template<class Current> inline bool FitControl(const Bindings& api, const Ready& ready, void* row,
-        const std::string& utf8, int logicalWidth, int logicalHeight, bool whole, Current& current, const std::string& requiredTail = {})
+        const std::string& utf8, int logicalWidth, int logicalHeight, bool whole, Current& current, const std::string& requiredTail = {},
+        bool smaller = false)
     {
         const auto text = Wide(utf8), tail = Wide(requiredTail);
         if (!text || !tail || !current()) return false;
@@ -994,9 +1026,10 @@ export namespace CondemnedMenuNative
             const auto copied = api.calls.Text(row);
             return copied && copied->empty() && current();
         }
-        const auto minHeight = static_cast<uint32_t>((std::max)(1.0, std::ceil(8.0 / ready.scaleY)));
-        if (minHeight > ready.font.height) return false;
-        const auto fitted = Fit(api.calls, row, *text, ready.font.height, minHeight,
+        // The game's own text size: a text too long for its place is shortened; only a value may be made smaller
+        const auto minimum = smaller ? static_cast<uint32_t>((std::max)(1.0, std::ceil(8.0 / ready.scaleY))) : ready.font.height;
+        if (minimum > ready.font.height) return false;
+        const auto fitted = Fit(api.calls, row, *text, ready.font.height, minimum,
             static_cast<int>(logicalWidth * ready.scaleX), static_cast<int>(logicalHeight * ready.scaleY), whole, current, *tail);
         if (!fitted || !current()) return false;
         const auto copied = api.calls.Text(row);
@@ -1008,8 +1041,8 @@ export namespace CondemnedMenuNative
         const auto text = Wide(utf8);
         if (!text || !current()) return false;
         const auto minimum = static_cast<uint32_t>((std::max)(1.0, std::ceil(8.0 / ready.scaleY)));
-        if (minimum > ready.font.height) return false;
-        for (auto font = ready.font.height; ; --font)
+        if (minimum > ready.helpFont) return false;
+        for (auto font = ready.helpFont; ; --font)
         {
             auto fits = [&](const std::wstring& line) -> std::optional<bool>
             {
@@ -1018,17 +1051,18 @@ export namespace CondemnedMenuNative
                     !api.calls.FontSize(node, font) || !current() || !api.calls.BuildString(node) || !current()) return {};
                 const auto bounds = api.calls.Bounds(node);
                 if (!bounds || !current()) return {};
-                return bounds->right - bounds->left <= width * ready.scaleX * CondemnedHud::MenuBoxScale() &&
-                    bounds->bottom - bounds->top <= height * ready.scaleY;
+                return bounds->right - bounds->left <= width * ready.scaleX && bounds->bottom - bounds->top <= height * ready.scaleY;
             };
             const auto lines = WrapHelp(*text, Pool::helpLines, fits);
             if (!current()) return false;
             if (lines)
             {
+                // The last line on the help line, centred like the game's help text
+                const auto first = Pool::helpLines - lines->size();
                 for (size_t i = 0; i < Pool::helpLines; ++i)
                 {
                     auto node = pool.nodes[1 + i];
-                    const auto line = i < lines->size() ? (*lines)[i].c_str() : L"";
+                    const auto line = i >= first ? (*lines)[i - first].c_str() : L"";
                     if (!api.calls.SetText(node, line) || !current() || !api.calls.FontSize(node, font) || !current()) return false;
                     if (*line)
                     {
@@ -1036,6 +1070,24 @@ export namespace CondemnedMenuNative
                         const auto bounds = api.calls.Bounds(node);
                         if (!bounds || !current() || bounds->right - bounds->left > width * ready.scaleX * CondemnedHud::MenuBoxScale() ||
                             bounds->bottom - bounds->top > height * ready.scaleY) return false;
+                        // Centred with leading spaces: the text starts at the line's left edge
+                        const auto measure = [&](const wchar_t* probe) -> std::optional<LONG>
+                        {
+                            if (!api.calls.SetText(node, probe) || !current() || !api.calls.BuildString(node) || !current()) return {};
+                            const auto box = api.calls.Bounds(node);
+                            if (!box || !current()) return {};
+                            return box->right - box->left;
+                        };
+                        const auto tight = measure(L"||"), spaced = measure(L"| |");
+                        if (!tight || !spaced) return false;
+                        const auto space = *spaced - *tight;
+                        const auto room = static_cast<LONG>(width * ready.scaleX) - (bounds->right - bounds->left);
+                        std::wstring centred(space > 0 && room > 0 ? static_cast<size_t>(room / 2 / space) : 0, L' ');
+                        centred += line;
+                        if (!api.calls.SetText(node, centred.c_str()) || !current() || !api.calls.BuildString(node) || !current()) return false;
+                        const auto copied = api.calls.Text(node);
+                        if (!copied || *copied != centred || !current()) return false;
+                        continue;
                     }
                     const auto copied = api.calls.Text(node);
                     if (!copied || *copied != line || !current()) return false;
@@ -1052,41 +1104,98 @@ export namespace CondemnedMenuNative
         const auto client = Client(ready.view);
         const auto count = prepared.items.size();
         if (!client || !count || count > Pool::maxItems || out.count || !current()) return false;
+        // The rows sit at the spacing and height of the game's Options list, from the top of its page; a list that
+        // scrolls has a line above and below it for its marks
+        const auto pitch = ready.pitch, rowHeight = ready.rowHeight;
         const auto width = client->right - client->left;
-        const auto rowHeight = (client->bottom - client->top) / static_cast<LONG>(count + Pool::fixedRows);
-        if (width < 64 || rowHeight < 1 || rowHeight * ready.scaleY < 8) return false;
+        const bool scrolls = prepared.above || prepared.below;
+        const size_t first = scrolls ? 1 : 0;
+        if (width < 64 || rowHeight < 1 || rowHeight * ready.scaleY < 8 || pitch < rowHeight ||
+            client->top + pitch * static_cast<LONG>(count + 2 * first) > client->bottom + pitch - rowHeight) return false;
+        auto rowTop = [&](size_t i) { return client->top + pitch * static_cast<LONG>(i); };
+        // The page title is in the screen's header; the title row stays empty
         const auto title = TextNode(api, ready, out, {client->left, client->top, client->right, client->top + rowHeight},
             nullptr, 0, 0, generation, false, current);
-        if (!title || !FitControl(api, ready, title, prepared.title, width, rowHeight, false, current)) return false;
+        if (!title || !FitControl(api, ready, title, "", width, rowHeight, false, current)) return false;
+        // The help text on the screen's help line beside Back (and the line above it for a second line), the scroll
+        // marks, the restart or update notice below the rows
         for (size_t i = 1; i < Pool::fixedRows; ++i)
         {
-            const auto top = client->top + rowHeight * static_cast<LONG>(count + i);
-            const auto node = TextNode(api, ready, out,
-                {client->left, top, client->right, top + rowHeight}, nullptr, 0, 0, generation, false, current);
-            if (!node || !FitControl(api, ready, node, "", width, rowHeight, true, current)) return false;
+            std::string text;
+            RECT rect{client->left, rowTop(first + count + first), client->right, rowTop(first + count + first) + rowHeight};
+            if (i <= Pool::helpLines)
+            {
+                const auto above = static_cast<LONG>(Pool::helpLines - i) * pitch;
+                rect = {ready.helpLine.right, ready.helpLine.top - above, Pool::layoutWidth - ready.helpLine.right, ready.helpLine.bottom - above};
+            }
+            else if (i == Pool::helpLines + 1 || i == Pool::helpLines + 2)
+            {
+                // The game's font has no arrows: an ellipsis on a line of its own marks the rows hidden that way
+                const bool top = i == Pool::helpLines + 1;
+                const auto line = top ? size_t(0) : first + count;
+                rect = {client->left + pitch, rowTop(line), client->right, rowTop(line) + rowHeight};
+                text = (top ? prepared.above : prepared.below) ? "..." : "";
+            }
+            const auto node = TextNode(api, ready, out, rect, nullptr, 0, 0, generation, false, current);
+            if (!node || !FitControl(api, ready, node, text, rect.right - rect.left, rowHeight, true, current)) return false;
+            // The help text in the colour of the screen's own help line
+            if (i <= Pool::helpLines)
+                for (size_t offset : {size_t(68), size_t(72), size_t(76)})
+                    std::memcpy(reinterpret_cast<uint8_t*>(node) + offset, &ready.helpColor, sizeof(ready.helpColor));
+        }
+        // Rows with a value start where the game's option rows do: the names in full in a column as wide as the
+        // longest one on the page (at least the game's), the values after it
+        const auto valueLeft = ready.column ? ready.valueRowLeft : client->left;
+        const auto gap = pitch / 2;
+        auto measure = [&](const std::string& utf8) -> std::optional<LONG>
+        {
+            const auto scratch = out.nodes[Pool::fixedRows - 1];
+            const auto text = Wide(utf8);
+            if (!text || !current() || !api.calls.SetText(scratch, text->c_str()) || !current() ||
+                !api.calls.FontSize(scratch, ready.font.height) || !current() || !api.calls.BuildString(scratch) || !current()) return {};
+            const auto bounds = api.calls.Bounds(scratch);
+            if (!bounds || !current()) return {};
+            return static_cast<LONG>(std::ceil((bounds->right - bounds->left) / ready.scaleX));
+        };
+        LONG widestLabel = 0;
+        for (const auto& item : prepared.items)
+        {
+            if (item.value.empty()) continue;
+            const auto label = measure(item.label);
+            if (!label) return false;
+            widestLabel = (std::max)(widestLabel, *label);
+        }
+        if (!FitControl(api, ready, out.nodes[Pool::fixedRows - 1], "", width, rowHeight, true, current)) return false;
+        const LONG column = (std::max)(ready.column ? LONG(ready.column) : 0, widestLabel + gap);
+        // The values stay on the paper: one longer than the room the names leave is set smaller
+        const LONG valueRight = client->right;
+        std::array<void*, Pool::maxItems> labels{};
+        for (size_t i = 0; i < count; ++i)
+        {
+            auto& item = prepared.items[i];
+            const bool hasValue = !item.value.empty();
+            const auto left = hasValue ? valueLeft : client->left;
+            const auto labelWidth = hasValue ? column : width;
+            out.indices[i] = static_cast<uint16_t>(out.count);
+            labels[i] = TextNode(api, ready, out, {left, rowTop(first + i), left + labelWidth, rowTop(first + i) + rowHeight},
+                ready.view.screen, firstCommand, static_cast<uint32_t>(i), generation, item.enabled, current);
+            if (!labels[i] || !FitControl(api, ready, labels[i], item.label, labelWidth, rowHeight, false, current)) return false;
         }
         for (size_t i = 0; i < count; ++i)
         {
             auto& item = prepared.items[i];
-            const auto top = client->top + rowHeight * static_cast<LONG>(i + 1);
-            const bool hasValue = !item.value.empty();
-            const auto labelWidth = hasValue ? width * 3 / 5 - 8 : width;
-            const auto valueLeft = hasValue ? labelWidth + 8 : width;
-            const auto valueWidth = width - valueLeft;
-            const RECT labelRect{client->left, top, client->left + labelWidth, top + rowHeight};
-            const RECT valueRect{client->left + valueLeft, top, client->right, top + rowHeight};
-            out.indices[i] = static_cast<uint16_t>(out.count);
-            const auto label = TextNode(api, ready, out, labelRect, ready.view.screen, firstCommand,
-                static_cast<uint32_t>(i), generation, item.enabled, current);
+            if (item.value.empty()) continue;
+            const RECT valueRect{valueLeft + column, rowTop(first + i), valueRight, rowTop(first + i) + rowHeight};
             const auto value = TextNode(api, ready, out, valueRect, nullptr, 0, 0, generation, false, current);
-            if (!label || !value || !FitControl(api, ready, label, item.label, labelWidth, rowHeight, false, current, item.requiredTail)) return false;
-            if (!FitControl(api, ready, value, item.value, (std::max)(1L, valueWidth), rowHeight, true, current))
+            if (!value) return false;
+            if (valueRect.right - valueRect.left < pitch ||
+                !FitControl(api, ready, value, item.value, valueRect.right - valueRect.left, rowHeight, true, current, {}, true))
             {
                 if (!current()) return false;
                 item.enabled = false;
-                if (!api.controls.Enable(api.calls, label, false) || !current() ||
-                    Read<uint8_t>(label, 65).value_or(2) != 0 ||
-                    !FitControl(api, ready, value, unavailable, (std::max)(1L, valueWidth), rowHeight, true, current)) return false;
+                if (!api.controls.Enable(api.calls, labels[i], false) || !current() ||
+                    Read<uint8_t>(labels[i], 65).value_or(2) != 0 ||
+                    !FitControl(api, ready, value, unavailable, valueRect.right - valueRect.left, rowHeight, true, current)) return false;
             }
         }
         out.array.begin = static_cast<void**>(api.Allocate(out.count * sizeof(void*)));
@@ -1176,7 +1285,9 @@ export namespace CondemnedMenuNative
             original = *array; caption = *oldCaption;
             originalSelected = ready.view.Selected().value_or(UINT16_MAX);
             const auto nativeBack = reinterpret_cast<uint8_t*>(ready.view.manager) + 116;
-            LONG lastBottom = client->top, footer = client->bottom;
+            LONG footer = client->bottom;
+            std::optional<RECT> last, back;
+            std::vector<LONG> tops;
             entryIndex = static_cast<uint16_t>(original.Size());
             for (size_t i = 0; i < original.Size(); ++i)
             {
@@ -1186,19 +1297,37 @@ export namespace CondemnedMenuNative
                 {
                     footer = (std::min)(footer, rect->top);
                     entryIndex = static_cast<uint16_t>(i);
+                    back = *rect;
+                    ready.helpFont = Read<uint32_t>(original.begin[i], 208).value_or(0);
+                    // The help line is light on the dark border, as Back's highlighted text
+                    ready.helpColor = Read<uint32_t>(original.begin[i], 68).value_or(0);
+                    continue;
                 }
-                else lastBottom = (std::max)(lastBottom, rect->bottom);
+                tops.push_back(rect->top);
+                if (!last || rect->top > last->top) last = *rect;
+                // The option rows with a value: their names take a column of this width, the value follows
+                const auto column = Read<int32_t>(original.begin[i], 268).value_or(0);
+                if (!api.calls.Row(original.begin[i]) && column > 0 && column < rect->right - rect->left)
+                {
+                    ready.column = column;
+                    ready.valueRowLeft = rect->left;
+                }
             }
-            const auto gap = static_cast<int64_t>(footer) - lastBottom;
-            const auto margin = static_cast<LONG>((std::max)(1.0, std::ceil(2.0 / ready.scaleY)));
-            const auto height = static_cast<LONG>((std::max)(static_cast<double>(ready.font.height), std::ceil(8.0 / ready.scaleY)));
-            if (gap < static_cast<int64_t>(height) + 2 * margin) return false;
+            // The game's own list spacing: the distance between its rows
+            std::sort(tops.begin(), tops.end());
+            for (size_t i = 1; i < tops.size(); ++i)
+                if (tops[i] > tops[i - 1] && (!ready.pitch || tops[i] - tops[i - 1] < ready.pitch)) ready.pitch = tops[i] - tops[i - 1];
+            if (!last || !back || !ready.pitch || !ready.helpFont || ready.helpFont > ready.font.height) return false;
+            ready.rowHeight = last->bottom - last->top;
+            ready.helpLine = *back;
+            if (ready.rowHeight < 1 || ready.pitch < ready.rowHeight || last->top + ready.pitch + ready.rowHeight > footer) return false;
+            // The Plugins row follows the last of the list at its spacing, as wide as the rows above it
             Create params{}; params.command = command; params.handler = ready.view.screen;
             params.parameter2 = static_cast<uint32_t>(identity);
-            params.rect = {client->left, lastBottom + margin, client->right, lastBottom + margin + height};
+            params.rect = {last->left, last->top + ready.pitch, last->right, last->top + ready.pitch + ready.rowHeight};
             entry = api.calls.MakeText(text->c_str(), ready.font, params);
             if (!entry || !current() || !api.controls.Scale(api.calls, entry, ready.scaleX, ready.scaleY) || !current() ||
-                !FitControl(api, ready, entry, label, client->right - client->left, height, true, current)) return false;
+                !FitControl(api, ready, entry, label, last->right - last->left, ready.rowHeight, true, current)) return false;
             for (const auto& color : {std::pair<size_t, uint32_t>{68, ready.selectedColor}, {72, ready.enabledColor}, {76, ready.disabledColor}})
                 std::memcpy(reinterpret_cast<uint8_t*>(entry) + color.first, &color.second, 4);
             std::memcpy(shadow.data(), reinterpret_cast<void*>(ready.view.originalVtable - 4), shadow.size() * 4);
@@ -1235,7 +1364,10 @@ export namespace CondemnedMenuNative
             if (!before || !(before->Same(entryArray) || (active && before->Same(active->array)))) return false;
             std::optional<size_t> preferred;
             const auto oldSelected = SelectedItem();
-            if (oldSelected && active->presented.location == staging->presented.location)
+            // The window's selection
+            if (staging->presented.select < staging->presented.items.size() && staging->presented.items[staging->presented.select].enabled)
+                preferred = staging->presented.select;
+            else if (oldSelected && active->presented.location == staging->presented.location)
             {
                 const auto& old = active->presented.items[*oldSelected];
                 for (size_t i = 0; i < staging->presented.items.size(); ++i)
@@ -1250,7 +1382,10 @@ export namespace CondemnedMenuNative
             // Track suppression before native setter; a forced callback can cancel
             // construction and must still restore this exact source caption.
             headerHidden = true;
-            api.StringText(reinterpret_cast<uint8_t*>(ready.view.screen) + 24, L"");
+            // The page's title in the screen's header, in capitals like the game's own
+            auto heading = Wide(staging->presented.title).value_or(std::wstring{});
+            if (!heading.empty()) CharUpperBuffW(heading.data(), static_cast<DWORD>(heading.size()));
+            api.StringText(reinterpret_cast<uint8_t*>(ready.view.screen) + 24, heading.c_str());
             if (!Current() || token != logical.settings.Revision() || !HasArray(*before)) return false;
             retiring = std::move(active);
             active = std::move(staging);
@@ -1677,9 +1812,29 @@ export namespace CondemnedMenuNative
             const auto item = owner->SelectedItem();
             if (item && owner->active->presented.items[*item].kind == ItemKind::Back) kind = CommandKind::Back;
         }
-        const Request request{kind, owner->logical.identity, owner->logical.pool, *selected, reinterpret_cast<uintptr_t>(row)};
+        const Request request{kind, 0, owner->logical.identity, owner->logical.pool, *selected, reinterpret_cast<uintptr_t>(row)};
         return owner->logical.Queue(request, true);
     }
+    // List movement the game's own lists don't have, or that would wrap inside the shown rows
+    inline bool AdmitScroll(void* receiver, CommandKind kind, int amount)
+    {
+        if (!host || !host->ready || !host->scopes.Here()) return false;
+        const auto owner = host->source;
+        if (!owner || owner->ready.view.screen != receiver || !owner->Current() || !owner->logical.settings.IsOpen() || !owner->active) return false;
+        const auto selected = owner->ready.view.Selected();
+        const auto row = owner->ready.view.SelectedRow();
+        const auto item = owner->SelectedItem();
+        if (!selected || !row || !item) return false;
+        const auto& presented = owner->active->presented;
+        // Up/Down inside the shown rows stay the game's own; at an edge with rows hidden beyond it the list scrolls
+        if (kind == CommandKind::Up && !(*item == 0 && presented.above)) return false;
+        if (kind == CommandKind::Down && !(*item + 1 == presented.items.size() && presented.below)) return false;
+        const Request request{kind, static_cast<int16_t>(amount), owner->logical.identity, owner->logical.pool, *selected, reinterpret_cast<uintptr_t>(row)};
+        return owner->logical.Queue(request, true);
+    }
+    inline std::atomic<int32_t> wheelCounts{};
+    // From the game's window procedure
+    inline void WheelMessage(int32_t delta) { wheelCounts.fetch_add(delta, std::memory_order_relaxed); }
     inline int __fastcall SourceCommand(void* self, void*, uint32_t command, uint32_t parameter1, uint32_t parameter2)
     {
         const auto owner = host ? host->source : nullptr;
@@ -1703,6 +1858,13 @@ export namespace CondemnedMenuNative
         auto scope = host->scopes.Enter(Phase::Input);
         try
         {
+            if (host->source && host->source->ready.view.screen == self && host->source->logical.settings.IsOpen())
+            {
+                const auto kind = key == VK_UP ? CommandKind::Up : key == VK_DOWN ? CommandKind::Down :
+                    key == VK_PRIOR || key == VK_NEXT || key == VK_HOME || key == VK_END ? CommandKind::Scroll : CommandKind::Open;
+                const int amount = key == VK_PRIOR ? -1000 : key == VK_NEXT ? 1000 : key == VK_HOME ? -2000 : key == VK_END ? 2000 : 0;
+                if (kind != CommandKind::Open && AdmitScroll(self, kind, amount)) return 1;
+            }
             if (key == VK_RETURN && host->source && host->source->ready.view.screen == self)
             {
                 if (host->repeatAccept) return 1;
@@ -1805,10 +1967,25 @@ export namespace CondemnedMenuNative
         const auto displayed = owner->active->presented;
         const auto item = displayed.items[*selected];
         auto location = displayed.location;
-        if (request.kind == CommandKind::Back || (request.kind == CommandKind::Accept && item.kind == ItemKind::Back))
+        auto& settings = owner->logical.settings;
+        auto& window = settings.Window(location);
+        // The game's own list moved the selection: the window follows it
+        window.Point(*selected);
+        if (request.kind == CommandKind::Up || request.kind == CommandKind::Down || request.kind == CommandKind::Scroll)
         {
-            if (location.page) location = {};
-            else { Close(owner); return; }
+            bool moved = false;
+            const int amount = request.amount;
+            if (request.kind != CommandKind::Scroll) moved = settings.Step(location, request.kind == CommandKind::Up ? -1 : 1, current);
+            else if (std::abs(amount) == 1000) moved = window.Page(amount < 0 ? -1 : 1);
+            else if (std::abs(amount) == 2000) moved = window.Edge(amount < 0 ? -1 : 1);
+            else for (int left = amount; left; left += left > 0 ? -1 : 1) moved |= window.Scroll(left > 0 ? 1 : -1);
+            if (!moved || !current() || !settings.IsOpen()) return;
+        }
+        else if (request.kind == CommandKind::Back || (request.kind == CommandKind::Accept && item.kind == ItemKind::Back))
+        {
+            const auto parent = settings.Parent(location);
+            if (!parent) { Close(owner); return; }
+            location = *parent;
         }
         else if (item.kind == ItemKind::ModelRow)
         {
@@ -1819,9 +1996,10 @@ export namespace CondemnedMenuNative
         else
         {
             if (request.kind != CommandKind::Accept) return;
-            if (item.kind == ItemKind::Link) location = {item.destination, 0};
-            else if (item.kind == ItemKind::Previous || item.kind == ItemKind::Next) location.first = item.destination;
-            else return;
+            if (item.kind != ItemKind::Link) return;
+            const auto page = settings.Enter(item.row);
+            if (page == SIZE_MAX) return;
+            location = {page, 0};
         }
         if (!Build(owner, location)) { host->diagnostics |= ViewRefused; Close(owner); }
     }
@@ -1866,14 +2044,15 @@ export namespace CondemnedMenuNative
         if (pool->described && pool->description == text && pool->footer == footer) return;
         auto current = [&]() { return host->source == owner && owner->Current() && owner->Private() &&
             owner->active.get() == pool && token == owner->logical.settings.Revision() && physical == owner->ready.view.Selected(); };
-        const auto height = (client->bottom - client->top) / static_cast<LONG>(pool->presented.items.size() + Pool::fixedRows);
+        const auto height = owner->ready.rowHeight;
         const auto width = client->right - client->left;
-        if (!FitHelp(host->api, owner->ready, *pool, text, width, height, current))
+        const auto helpWidth = Pool::layoutWidth - 2 * owner->ready.helpLine.right;
+        if (!FitHelp(host->api, owner->ready, *pool, text, helpWidth, height, current))
         {
             if (!current()) return;
             for (size_t i = 1; i <= Pool::helpLines; ++i)
                 if (!FitControl(host->api, owner->ready, pool->nodes[i],
-                    i == 1 ? owner->logical.settings.Text("menu.unavailable") : "", width, height, true, current)) return;
+                    i == Pool::helpLines ? owner->logical.settings.Text("menu.unavailable") : "", helpWidth, height, true, current)) return;
         }
         if (!FitControl(host->api, owner->ready, pool->nodes[Pool::fixedRows - 1], footer, width, height, true, current)) return;
         pool->description = text;
@@ -1920,6 +2099,12 @@ export namespace CondemnedMenuNative
     {
         auto service = host->scopes.Service();
         if (!service || !host->ready) return;
+        // Fusion Rain Droplets keeps its drops off the game's menus while one is shown
+        const auto manager = Read<void*>((Rva(), ::interfaceManager.get_ptr()), 0).value_or(nullptr);
+        // The interface's state: 5 the pause menu over the game, 6 the menu screens
+        const auto state = manager && Read<uintptr_t>(manager, 0) == host->api.Base() + Rva().interfaceTable ?
+            Read<uint32_t>(manager, 8).value_or(0) : 0;
+        RainDroplets::MenuOpen(state == 5 || state == 6);
         DWORD foreground{};
         GetWindowThreadProcessId(GetForegroundWindow(), &foreground);
         if (foreground != GetCurrentProcessId()) host->acceptDown = host->repeatAccept = false;
@@ -1971,6 +2156,12 @@ export namespace CondemnedMenuNative
         uintptr_t result{};
         if (!host->scopes.BindUpdateThread()) return host->hooks[Update].thiscall<uintptr_t>(self);
         { auto scope = host->scopes.Enter(Phase::Update); result = host->hooks[Update].thiscall<uintptr_t>(self); }
+        if (const int32_t counts = wheelCounts.exchange(0, std::memory_order_relaxed); counts && host->source && host->source->active)
+        {
+            static MenuList::WheelNotches notches;
+            if (const int taken = notches.Take(counts))
+                AdmitScroll(host->source->ready.view.screen, CommandKind::Scroll, -taken);
+        }
         if (host->scopes.MarkCompleteUpdate())
             try { Drain(); } catch (...) { host->diagnostics |= Exception; if (host->source) host->source->logical.returnPending = true; }
         return result;

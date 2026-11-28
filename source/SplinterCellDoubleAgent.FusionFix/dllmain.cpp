@@ -140,7 +140,7 @@ CEXP void InitializeASI()
         CallbackHandler::RegisterCallback(L"Engine.dll", [] { InitEngineConfigReads(); InitEngine(); });
         CallbackHandler::RegisterCallback(L"D3DDrv.dll", InitD3DDrv);
         CallbackHandler::RegisterCallback(L"gear_RD.dll", InitGear);
-        CallbackHandler::RegisterCallback(L"EchelonMenus.dll", [] { InitEchelonMenus(); DAMenu::Init(); NativeWindowsMenuHelp = DAMenu::WindowsHelp; });
+        CallbackHandler::RegisterCallback(L"EchelonMenus.dll", [] { InitEchelonMenus(); DAMenu::Init(); NativeWindowsMenuHelp = DAMenu::WindowsHelp; NativeWindowsMenuWheel = DAMenu::WindowsWheel; });
         CallbackHandler::RegisterCallback(L"Echelon.dll", InitEchelon);
         CallbackHandler::RegisterCallback(L"Core.dll", []() { InitConfigReads(); InitCore(); InitUpdateCheck(); });
         CallbackHandler::RegisterCallback(L"WinDrv.dll", InitWinDrv);

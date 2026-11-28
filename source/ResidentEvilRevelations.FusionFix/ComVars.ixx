@@ -17,6 +17,7 @@ export GameRef<uintptr_t> pPad;          // sPad
 export GameRef<uintptr_t> pSystem;       // the system object: online state
 export GameRef<uintptr_t> pInputManager; // the menu input manager
 export GameRef<uintptr_t> pHelpManager;  // the menu help text manager
+export GameRef<uintptr_t> pGameMouse;    // sGameMouse: this frame's wheel movement at +52 (times the speed factor at +156, up > 0)
 
 // The resolution the game renders at, caught when the game sets it (see Display)
 export int32_t nResX = 0;

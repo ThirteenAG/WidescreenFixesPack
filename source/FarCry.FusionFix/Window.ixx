@@ -11,6 +11,23 @@ export module Window;
 
 export namespace FarCryWindow
 {
+    // Wheel counts of the game's mouse reads not yet taken by the Plugins menu: from immediate state and from
+    // buffered data (the game reads one of them; when it reads data, those counts are used)
+    struct MenuWheelCounts
+    {
+        int32_t state = 0, data = 0;
+        bool dataSeen = false;
+        int32_t Take()
+        {
+            const int32_t counts = dataSeen ? data : state;
+            state = data = 0;
+            return counts;
+        }
+    };
+    inline MenuWheelCounts MenuWheel;
+    // The Plugins page is open: the pad's A accepts its selected row, the shoulders move it by a page (-1, 0, +1)
+    inline bool PluginsOpen = false;
+    inline int PluginsPadPage = 0;
     struct Layout
     {
         size_t width, height, fullscreen, cvarWidth, cvarHeight, cvarFullscreen, window, savedStyle, windowRect, clientRect, device;

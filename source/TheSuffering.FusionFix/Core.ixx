@@ -93,6 +93,7 @@ void InitFrame()
     D3D9Options::frame = [](IDirect3DDevice9* device)
     {
         ApplyFrameLimit();
+        SufferingMenu::Frame();
         CursorConfinement::Suspend(SufferingOverlay::BlocksInput());
         CursorConfinement::Frame(hGameWindow);
         RWGTA::UpdateCheck::Tick();

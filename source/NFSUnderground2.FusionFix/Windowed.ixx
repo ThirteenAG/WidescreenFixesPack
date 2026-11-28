@@ -7,6 +7,18 @@ export module Windowed;
 
 import ComVars;
 
+namespace
+{
+    BOOL WINAPI ClientRectOnScreen(HWND window, LPRECT rect)
+    {
+        POINT origin{};
+        if (!GetClientRect(window, rect) || !ClientToScreen(window, &origin))
+            return FALSE;
+        OffsetRect(rect, origin.x, origin.y);
+        return TRUE;
+    }
+}
+
 class Windowed
 {
 public:
@@ -108,6 +120,12 @@ public:
                         return shSetWindowPos.stdcall<BOOL>(hWnd, insert, x, y, cx, cy, flags);
                     }));
                 }
+
+                // The front end's cursor is measured from the window's corner: from the client area's, so hover and
+                // clicks hit what is under the cursor in a framed window too
+                auto pattern = hook::pattern("50 89 54 24 ? 33 DB 51 89 5C 24 ? 89 54 24 ? FF 15 ? ? ? ? 8D 54 24 ? 52");
+                static auto ClientRectPointer = &ClientRectOnScreen;
+                injector::WriteMemory(pattern.get_first(18), &ClientRectPointer, true);
 
                 // The cursor is hidden in the message loop's focus check (Resolution's focus hook)
             }

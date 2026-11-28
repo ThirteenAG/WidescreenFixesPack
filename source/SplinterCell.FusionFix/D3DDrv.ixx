@@ -5,6 +5,7 @@ module;
 #include "FixSettings.hpp"
 #include "automation/asi_automation_frames.h"
 #include "Shared/SplinterCell/PreferredAdapter.hpp"
+#include "Shared/RainDroplets.hpp"
 #include <minidx8/d3d8.h>
 
 export module D3DDrv;
@@ -610,6 +611,8 @@ export void InitD3DDrv()
                 DrawHiResCutsceneFrame(device, canvas);
         }
         UpdateXidiProfile();
+        // No screen drops over the menus
+        RainDroplets::MenuOpen(UObject::GetState(L"EPCConsole") == L"UWindow");
 
         // The cinematics' side bars (see CutsceneFrame.hpp), over everything but the menus
         if (!bPlayingVideo && !bDisplayingSplash && UObject::GetState(L"EchelonMainHUD") == L"s_Cinematic" &&

@@ -258,6 +258,9 @@ export namespace Input
     };
 
     LookInput Look;
+
+    // The mouse wheel's movement since the menus last took it
+    std::atomic<int> MenuWheel = 0;
     SteadyClock::time_point LastStickUpdate = {};
 
     // Called once per camera update; mouse deltas accumulate between calls. The stick only counts while its pad
@@ -989,6 +992,7 @@ public:
                 }
                 Input::Look.mouseX += state->dx;
                 Input::Look.mouseY += state->dy;
+                Input::MenuWheel += state->wheel;
                 if (state->dx || state->dy || state->wheel)
                     LastKeyboardMouseInput = SteadyClock::now();
             });

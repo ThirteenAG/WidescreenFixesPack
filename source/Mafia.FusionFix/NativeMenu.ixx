@@ -4,6 +4,7 @@ module;
 #include <stdexcept>
 #include "FixSettings.hpp"
 #include "Shared/RWGTA/FixMenu.hpp"
+#include "Shared/RainDroplets.hpp"
 #include <deque>
 #include <memory>
 #include <optional>
@@ -25,6 +26,7 @@ export namespace MafiaMenu
         uintptr_t select, close, push, createButton, allocate, free, measure;
         uintptr_t loaded, process, destroyed, draw, pageDraw, update, refresh, deletePage, controlKey, pageKey;
         uintptr_t loopPopReturn, finalPopReturn;
+        void** selectSound;
         uintptr_t* pageTable;
         uintptr_t* pauseTable;
         uintptr_t* titleTable;
@@ -74,6 +76,7 @@ export namespace MafiaMenu
             // Return addresses of the stack loop's pop and of the final native pop
             a.loopPopReturn = at("E8 ? ? ? ? A1 ? ? ? ? C7 05 ? ? ? ? 00 00 00 00", 5);
             a.finalPopReturn = at("E8 ? ? ? ? A1 ? ? ? ? 85 C0 74 1F 8B 10", 5);
+            a.selectSound = reinterpret_cast<void**>(global("8B CE FF 50 2C A1 ? ? ? ? 85 C0 74 1F 8B 08 6A 01 6A 00 50 FF 91 88 00 00 00", 6));
             a.pageTable = reinterpret_cast<uintptr_t*>(global("C7 06 ? ? ? ? 0D 00 00 08 00 89 46 2C EB 47", 2));
             a.pauseTable = reinterpret_cast<uintptr_t*>(global("C7 06 ? ? ? ? 8B CE EB 02 33 C9 6A 01 32 D2 C7 44 24 30 FF FF FF FF", 2));
             a.titleTable = reinterpret_cast<uintptr_t*>(global("C7 06 ? ? ? ? 0D 00 00 08 00 8B CE 89 46 2C", 2));
@@ -231,6 +234,7 @@ export namespace MafiaMenu
     constexpr uint32_t entryId = 399;
     constexpr uint32_t firstRowId = 0x7F7F8100;
     constexpr uint32_t consumedId = 0x7F7F8FFF;
+    constexpr uint32_t aboveId = firstRowId + 0x200, belowId = firstRowId + 0x201;
     // Native rows of the private page, Back included; as many as fit the screen
     constexpr size_t minRows = 7, maxRows = 12;
     enum class ItemKind { Page, Previous, Next, Back, Setting };
@@ -276,6 +280,17 @@ export namespace MafiaMenu
         Page* returnParent = nullptr;
         Control* title = nullptr;
         Control* description = nullptr;
+        // The help text's second line, and the whole text when it is longer than two lines: it moves on by a line
+        Control* description2 = nullptr;
+        std::string descriptionText2;
+        std::vector<std::string> describedLines;
+        size_t describedFirst = 0;
+        ULONGLONG describedTick = 0;
+        // Scroll marks beside the first and last rows while rows are hidden above or below; clicked (or held) they
+        // scroll the list
+        Control* above = nullptr;
+        Control* below = nullptr;
+        MenuList::Repeat markRepeat;
         std::array<uintptr_t, 13> table{};
         std::deque<Item> items;
         std::array<Control*, maxRows> labels{}, values{};
@@ -285,8 +300,8 @@ export namespace MafiaMenu
         std::string preparedTitle, preparedRestartWarning;
         float labelWidth = 0;
         uint64_t serial = 0;
-        int category = -1;
-        size_t rootOffset = 0, rowOffset = 0;
+        size_t menuPage = RWGTAMenu::Model::RootPage;
+        MenuList::WheelNotches wheel;
         bool retired = false;
         bool nativeAlive = false;
         bool detached = false;
@@ -299,6 +314,8 @@ export namespace MafiaMenu
         Control* helpSelection = nullptr;
         uint32_t legacyHelpSelection = 0;
     };
+    // Up/Down, Page Up/Down, Home/End, the wheel
+    enum class Scroll { None, Step, Page, Edge, Wheel };
     struct Pending
     {
         std::shared_ptr<Source> source;
@@ -308,6 +325,7 @@ export namespace MafiaMenu
         int direction = 0;
         bool back = false;
         bool describe = false;
+        Scroll scroll = Scroll::None;      // a list movement: direction -1/+1
     };
     std::unordered_map<Page*, std::shared_ptr<Source>> sources;
     std::shared_ptr<Context> context;
@@ -474,7 +492,7 @@ export namespace MafiaMenu
     {
         const float scaleY = fMenuScaleY;
         size_t rows = maxRows;
-        while (rows > minRows && RowsHeight(rowHeight, rows) + 72 * scaleY > 540 * scaleY) --rows;
+        while (rows > minRows && RowsHeight(rowHeight, rows) + rowHeight * 1.8f + 72 * scaleY > 540 * scaleY) --rows;
         return rows;
     }
     template<class CurrentPage>
@@ -483,60 +501,40 @@ export namespace MafiaMenu
         if (!current() || !owner->model.IsOpen()) return false;
         RWGTAMenu::Model::Changed().exchange(false);
         std::deque<Item> next;
-        std::string title = owner->model.Text("menu.plugins");
-        const auto links = owner->rowCount - 3;
-        if (owner->category < 0)
+        auto& model = owner->model;
+        if (owner->menuPage >= model.Pages().size()) owner->menuPage = RWGTAMenu::Model::RootPage;
+        std::string title = model.Pages()[owner->menuPage].title;
+        // One continuous list per page, Back its last row as in the game's own lists
+        const auto rows = Foreign([&] { return model.Shown(owner->menuPage, true); });
+        if (!current()) return false;
+        for (auto* entry : rows)
         {
-            // The plugins (the fix first), plus Previous/Next/Back.
-            const auto count = owner->model.Pages().size();
-            if (owner->rootOffset > count) owner->rootOffset = 0;
-            if (owner->rootOffset)
-                next.push_back({ ItemKind::Previous, owner->rootOffset > links ? owner->rootOffset - links : 0, owner->model.Text("menu.previous") });
-            const auto limit = std::min(count, owner->rootOffset + links);
-            for (size_t index = owner->rootOffset; index < limit; ++index)
+            if (!entry)
             {
-                const auto& name = owner->model.Pages()[index].title;
-                next.push_back({ ItemKind::Page, index, name });
-                // The row may use an ellipsis; its selected hint keeps the
-                // complete page name so sibling links remain distinguishable.
-                next.back().description = name;
+                next.push_back({ ItemKind::Back, 0, model.Text("menu.back") });
+                continue;
             }
-            if (limit < count) next.push_back({ ItemKind::Next, limit, owner->model.Text("menu.next") });
-        }
-        else
-        {
-            const auto category = static_cast<size_t>(owner->category);
-            if (category >= owner->model.Pages().size()) return false;
-            title = owner->model.Pages()[category].title;
-            const auto rows = Foreign([&] { return owner->model.VisibleRows(category); });
-            if (!current()) return false;
-            if (owner->rowOffset >= rows.size()) owner->rowOffset = 0;
-            const auto capacity = owner->rowCount - 3;
-            if (owner->rowOffset)
-                next.push_back({ ItemKind::Previous, owner->rowOffset > capacity ? owner->rowOffset - capacity : 0, owner->model.Text("menu.previous") });
-            const auto limit = std::min(rows.size(), owner->rowOffset + capacity);
-            for (size_t index = owner->rowOffset; index < limit; ++index)
+            // A foreign read may Close/Open the model or cover native UI.
+            // Never reuse another old Row* after that boundary.
+            const auto row = *entry;
+            auto label = model.Label(row);
+            if (RWGTAMenu::Model::Opens(row))
             {
-                // A foreign read may Close/Open the model or cover native UI.
-                // Never reuse another old Row* after that boundary.
-                const auto row = *rows[index];
-                const auto enabled = Foreign([&] { return owner->model.Enabled(row, owner->source->pause); });
-                if (!current()) return false;
-                auto label = owner->model.Label(row);
-                auto value = enabled ? Foreign([&] { return owner->model.Value(row); }) : owner->model.Text("menu.unavailable");
-                if (!current()) return false;
-                next.push_back({ ItemKind::Setting, index, std::move(label), std::move(value), enabled });
+                next.push_back({ ItemKind::Page, row.target, label });
                 next.back().row = row;
-                next.back().description = owner->model.Help(row);
+                // The row may use an ellipsis; its selected hint keeps the
+                // complete name so sibling links remain distinguishable.
+                next.back().description = std::move(label);
+                continue;
             }
+            const auto enabled = Foreign([&] { return model.Enabled(row, owner->source->pause); });
+            if (!current()) return false;
+            auto value = enabled ? Foreign([&] { return model.Value(row); }) : model.Text("menu.unavailable");
+            if (!current()) return false;
+            next.push_back({ ItemKind::Setting, 0, std::move(label), std::move(value), enabled });
+            next.back().row = row;
+            next.back().description = model.Help(row);
         }
-        if (owner->category >= 0)
-        {
-            const auto rows = owner->model.VisibleRows(static_cast<size_t>(owner->category));
-            const auto limit = owner->rowOffset + owner->rowCount - 3;
-            if (limit < rows.size()) next.push_back({ ItemKind::Next, limit, owner->model.Text("menu.next") });
-        }
-        next.push_back({ ItemKind::Back, 0, owner->model.Text("menu.back") });
         if (!current() || next.empty() || next.size() > owner->rowCount) return false;
         const bool restartPending = Foreign([&] { return owner->model.RestartRequired(); });
         if (!current()) return false;
@@ -695,11 +693,11 @@ export namespace MafiaMenu
         { Log("private page geometry refused"); return false; }
         const auto rowHeight = std::min(prototype->height, 24 * scaleY);
         const auto gap = rowHeight * 0.35f;
-        const auto clientHeight = RowsHeight(rowHeight, owner->rowCount) + 32 * scaleY;
+        const auto clientHeight = RowsHeight(rowHeight, owner->rowCount) + rowHeight * 1.8f + 32 * scaleY;
         const auto height = clientHeight + 40 * scaleY;
         const auto viewportHeight = 600 * scaleY;
         const auto lastRowBottom = rowHeight * 2 + static_cast<float>(owner->rowCount - 1) * (rowHeight + gap);
-        const auto footerTop = clientHeight - rowHeight * 1.2f;
+        const auto footerTop = clientHeight - rowHeight * 3.1f;
         if (!std::isfinite(lastRowBottom) || !std::isfinite(footerTop) ||
             lastRowBottom + gap * 0.5f > footerTop || footerTop + rowHeight > clientHeight)
         { Log("private row/footer separation refused"); return false; }
@@ -752,8 +750,15 @@ export namespace MafiaMenu
             owner->values[index] = create(firstRowId + 0x20 + static_cast<uint32_t>(index), 30 * scaleX + labelWidth, y, valueWidth, false);
             if (!owner->labels[index] || !owner->values[index]) { Log("private partial row allocation refused"); return false; }
         }
-        owner->description = create(firstRowId + 0x100, 20 * scaleX, clientHeight - rowHeight * 1.2f, available, false);
-        if (!owner->description) { Log("private description allocation refused"); return false; }
+        // The help lines stay clear of the page's Back emblem in its bottom corner
+        owner->description = create(firstRowId + 0x100, 20 * scaleX, clientHeight - rowHeight * 3.1f, available - 60 * scaleX, false);
+        owner->description2 = create(firstRowId + 0x101, 20 * scaleX, clientHeight - rowHeight * 2.0f, available - 60 * scaleX, false);
+        if (!owner->description || !owner->description2) { Log("private description allocation refused"); return false; }
+        // The font has no arrows; its ellipsis marks the hidden rows, as it marks shortened text
+        const auto markX = 20 * scaleX + available - 6 * scaleX;
+        owner->above = create(aboveId, markX, rowHeight, 24 * scaleX, true);
+        owner->below = create(belowId, markX, rowHeight + static_cast<float>(owner->rowCount - 1) * (rowHeight + gap), 24 * scaleX, true);
+        if (!owner->above || !owner->below) { Log("private scroll mark allocation refused"); return false; }
         owner->titleText = std::move(nativeTitle);
         root->text = owner->titleText.c_str();
         return true;
@@ -790,8 +795,7 @@ export namespace MafiaMenu
             }
         }
         if (!Current(owner)) return false;
-        uint32_t selected = firstRowId;
-        if (Contains(owner->page, owner->page->selected)) selected = owner->page->selected->id;
+        uint32_t selected = firstRowId + static_cast<uint32_t>(owner->model.Window(owner->menuPage).Slot());
         owner->serial = ++generation;
         owner->items = std::move(owner->prepared);
         owner->titleText = std::move(title);
@@ -799,6 +803,9 @@ export namespace MafiaMenu
         owner->page->root->text = owner->titleText.c_str();
         owner->descriptionText.clear();
         owner->description->text = owner->descriptionText.c_str();
+        owner->descriptionText2.clear();
+        if (Contains(owner->page, owner->description2)) owner->description2->text = owner->descriptionText2.c_str();
+        owner->describedLines.clear();
         for (size_t index = 0; index < owner->rowCount; ++index)
         {
             auto* label = owner->labels[index];
@@ -817,6 +824,14 @@ export namespace MafiaMenu
             label->flags |= item.enabled ? 0x30u : 0x10u;
             value->flags |= item.enabled ? 0x30u : 0x10u;
         }
+        const auto& window = owner->model.Window(owner->menuPage);
+        for (auto [mark, shown, glyph] : { std::tuple{ owner->above, window.Above(), "..." }, std::tuple{ owner->below, window.Below(), "..." } })
+        {
+            if (!Contains(owner->page, mark)) continue;
+            mark->flags &= ~(0x80000000u | 0x30u);
+            mark->text = shown ? glyph : "";
+            if (shown) mark->flags |= 0x30u;
+        }
         owner->rebuildPending = false;
         if (selected < firstRowId || selected >= firstRowId + owner->items.size()) selected = firstRowId;
         Select(owner->page, selected);
@@ -832,25 +847,68 @@ export namespace MafiaMenu
         if (NativePageIdentity(owner) && Top() == owner->page && !owner->page->closed)
             Close(owner->page, -1);
     }
+    // The words of a text in lines no wider than width
+    std::vector<std::string> WrapLines(const std::string& text, float height, float width, unsigned int font)
+    {
+        std::vector<std::string> lines;
+        std::string line;
+        size_t position = 0;
+        while (position < text.size())
+        {
+            const auto end = std::min(text.find(' ', position), text.size());
+            const auto word = text.substr(position, end - position);
+            position = end + 1;
+            if (word.empty()) continue;
+            const auto candidate = line.empty() ? word : line + " " + word;
+            if (line.empty() || Measure(candidate, height, font) <= width) { line = candidate; continue; }
+            lines.push_back(std::move(line));
+            line = word;
+        }
+        if (!line.empty()) lines.push_back(std::move(line));
+        return lines;
+    }
+    void ShowDescription(const std::shared_ptr<Context>& owner)
+    {
+        const auto& lines = owner->describedLines;
+        owner->descriptionText = owner->describedFirst < lines.size() ? lines[owner->describedFirst] : std::string{};
+        owner->descriptionText2 = owner->describedFirst + 1 < lines.size() ? lines[owner->describedFirst + 1] : std::string{};
+        owner->description->text = owner->descriptionText.c_str();
+        if (Contains(owner->page, owner->description2)) owner->description2->text = owner->descriptionText2.c_str();
+        owner->describedTick = GetTickCount64();
+    }
     void Describe(const std::shared_ptr<Context>& owner, uint32_t selected)
     {
-        if (!Active(owner, selected) || !Contains(owner->page, owner->description)) return;
+        if (!Active(owner, selected) || !Contains(owner->page, owner->description) ||
+            !Contains(owner->page, owner->description2)) return;
         if (owner->help) return;
         for (const auto& item : owner->items)
         {
             if (item.native->id != selected) continue;
             const bool restartPending = !owner->restartWarning.empty();
             auto description = restartPending ? owner->restartWarning : item.description;
-            if (!restartPending && item.kind == ItemKind::Setting)
+            if (!restartPending && item.kind == ItemKind::Setting && !description.empty())
                 description = "F1: " + description;
-            auto height = owner->source->prototype->height;
-            if (!Fit(description, height, owner->description->width, owner->description->flags & 15,
-                restartPending || item.kind == ItemKind::Page)) return;
-            owner->descriptionText = std::move(description);
-            owner->description->height = height;
-            owner->description->text = owner->descriptionText.c_str();
+            const auto height = owner->source->prototype->height;
+            auto lines = WrapLines(description, height, owner->description->width, owner->description->flags & 15);
+            for (const auto& line : lines)
+                if (Measure(line, height, owner->description->flags & 15) > owner->description->width + 0.01f) return;
+            owner->description->height = owner->description2->height = height;
+            owner->describedLines = std::move(lines);
+            owner->describedFirst = 0;
+            ShowDescription(owner);
             return;
         }
+    }
+    // A help text longer than its two lines moves on by a line after a while, back to its start after the end
+    void ScrollDescription(const std::shared_ptr<Context>& owner)
+    {
+        if (!owner || owner->help || owner->describedLines.size() <= 2 || !Current(owner) ||
+            !Contains(owner->page, owner->description) || !Contains(owner->page, owner->description2)) return;
+        const auto last = owner->describedLines.size() - 2;
+        const auto wait = owner->describedFirst == 0 || owner->describedFirst == last ? 4000u : 2500u;
+        if (GetTickCount64() - owner->describedTick < wait) return;
+        owner->describedFirst = owner->describedFirst >= last ? 0 : owner->describedFirst + 1;
+        ShowDescription(owner);
     }
     bool Help(const std::shared_ptr<Context>& owner, int scroll = 0,
         const std::string* content = nullptr, const std::string* title = nullptr);
@@ -923,6 +981,8 @@ export namespace MafiaMenu
         owner->helpOffset = static_cast<size_t>(std::clamp<int64_t>(
             static_cast<int64_t>(owner->helpOffset) + scroll, 0, static_cast<int64_t>(maximum)));
         owner->page->root->text = owner->helpTitle.c_str();
+        for (auto* mark : { owner->above, owner->below })
+            if (Contains(owner->page, mark)) { mark->flags &= ~(0x80000000u | 0x30u); mark->text = ""; }
         for (size_t index = 0; index < owner->rowCount; ++index)
         {
             auto* label = owner->labels[index];
@@ -944,6 +1004,9 @@ export namespace MafiaMenu
         owner->descriptionText = "F1 / Esc";
         if (maximum) owner->descriptionText += "   " + std::to_string(owner->helpOffset + 1) + "/" + std::to_string(maximum + 1);
         owner->description->text = owner->descriptionText.c_str();
+        owner->describedLines.clear();
+        owner->descriptionText2.clear();
+        if (Contains(owner->page, owner->description2)) owner->description2->text = owner->descriptionText2.c_str();
         Select(owner->page, firstRowId + static_cast<uint32_t>(visible));
         return true;
     }
@@ -966,7 +1029,7 @@ export namespace MafiaMenu
         if (language.empty() || language == "auto")
             language = Language();
         owner->rowCount = FittingRows(std::min(source->prototype->height, 24 * fMenuScaleY));
-        Foreign([&] { owner->model.OpenPlugins(module, language, 4096, {}, true); });
+        Foreign([&] { owner->model.OpenMenu(module, language, owner->rowCount); });
         if (!ReadScope(owner) || !PrepareItems(owner))
         {
             Retire(owner);
@@ -1038,7 +1101,7 @@ export namespace MafiaMenu
     {
         auto owner = context;
         Depth scope(lifecycleDepth);
-        if (command == static_cast<int>(consumedId)) return 0;
+        if (command == static_cast<int>(consumedId) || command == static_cast<int>(aboveId) || command == static_cast<int>(belowId)) return 0;
         if (owner && owner->page == page) Queue(owner, static_cast<uint32_t>(command), 0, false);
         return 0;
     }
@@ -1050,6 +1113,37 @@ export namespace MafiaMenu
             pending.push_back({ {}, owner, owner->serial, selected->id, 0, false, true });
         return 0;
     }
+    // The game's selection sound, as when its own lists move
+    void PlaySelectSound()
+    {
+        auto* sound = *Address().selectSound;
+        if (!sound) return;
+        auto play = reinterpret_cast<void (__stdcall*)(void*, int, int)>((*reinterpret_cast<uintptr_t**>(sound))[34]);
+        play(sound, 0, 1);
+        play(sound, 1, 1);
+    }
+    // Up/Down: the next selectable row, wrapping at the ends; disabled settings are passed over
+    bool Step(const std::shared_ptr<Context>& owner, int direction)
+    {
+        auto& model = owner->model;
+        std::vector<std::optional<RWGTAMenu::Row>> rows;
+        for (auto* row : Foreign([&] { return model.ListRows(owner->menuPage, true); }))
+            rows.push_back(row ? std::optional<RWGTAMenu::Row>(*row) : std::nullopt);
+        if (!Current(owner)) return false;
+        auto& window = model.Window(owner->menuPage);
+        bool moved = false;
+        for (size_t tries = 0; tries < rows.size(); ++tries)
+        {
+            if (!window.Move(direction)) break;
+            moved = true;
+            const auto& row = rows[std::min(window.Selected(), rows.size() - 1)];
+            if (!row || RWGTAMenu::Model::Opens(*row)) break;
+            const bool enabled = Foreign([&] { return model.Enabled(*row, owner->source->pause); });
+            if (!Current(owner)) return false;
+            if (enabled) break;
+        }
+        return moved;
+    }
     void Act(const Pending& action)
     {
         auto owner = action.owner;
@@ -1059,47 +1153,76 @@ export namespace MafiaMenu
             if (!action.describe) CloseHelp(owner);
             return;
         }
-        if (action.back)
+        auto& window = owner->model.Window(owner->menuPage);
+        if (action.scroll != Scroll::None)
+        {
+            if (!Current(owner) || owner->help) return;
+            window.Point(action.selected - firstRowId);
+            bool moved = false;
+            switch (action.scroll)
+            {
+                case Scroll::Step: moved = Step(owner, action.direction); break;
+                case Scroll::Page: moved = window.Page(action.direction); break;
+                case Scroll::Edge: moved = window.Edge(action.direction); break;
+                case Scroll::Wheel:
+                    for (int left = action.direction; left; left += left > 0 ? -1 : 1)
+                        moved |= window.Scroll(left > 0 ? 1 : -1);
+                    break;
+                default: break;
+            }
+            if (!moved || !Current(owner) || owner->serial != action.serial) return;
+            PlaySelectSound();
+        }
+        else if (action.back)
         {
             if (action.direction != 0) return;
-            if (owner->category < 0) { RequestReturn(owner); return; }
-            owner->category = -1;
+            const auto parent = owner->model.Back(owner->menuPage);
+            if (parent == SIZE_MAX) { RequestReturn(owner); return; }
+            owner->menuPage = parent;
         }
         else
         {
             if (!Active(owner, action.selected)) return;
-            if (action.describe) { Describe(owner, action.selected); return; }
+            if (action.describe)
+            {
+                // The game's hover (or a click) selected this row
+                window.Point(action.selected - firstRowId);
+                Describe(owner, action.selected);
+                return;
+            }
             Item item;
             bool found = false;
             for (const auto& row : owner->items)
                 if (row.native->id == action.selected) { item = row; found = true; break; }
             if (!found) return;
             if (item.kind != ItemKind::Setting && action.direction != 0) return;
+            window.Point(action.selected - firstRowId);
             switch (item.kind)
             {
                 case ItemKind::Page:
-                    owner->category = static_cast<int>(item.index);
-                    owner->rowOffset = 0;
-                    owner->model.PageShown(item.index);
+                {
+                    if (!item.row) return;
+                    const auto target = owner->model.Enter(*item.row);
+                    if (target == SIZE_MAX) return;
+                    owner->menuPage = target;
                     break;
+                }
                 case ItemKind::Previous:
-                    if (owner->category >= 0) owner->rowOffset = item.index;
-                    else owner->rootOffset = item.index;
-                    break;
                 case ItemKind::Next:
-                    if (owner->category >= 0) owner->rowOffset = item.index;
-                    else owner->rootOffset = item.index;
-                    break;
+                    return;
                 case ItemKind::Back:
-                    if (owner->category < 0) { RequestReturn(owner); return; }
-                    owner->category = -1;
+                {
+                    const auto parent = owner->model.Back(owner->menuPage);
+                    if (parent == SIZE_MAX) { RequestReturn(owner); return; }
+                    owner->menuPage = parent;
                     break;
+                }
                 case ItemKind::Setting:
                 {
-                    if (!item.row || owner->category < 0) return;
+                    if (!item.row) return;
                     const auto row = *item.row;
                     if (action.direction && row.kind != RWGTAMenu::RowKind::Setting && row.kind != RWGTAMenu::RowKind::Preset) return;
-                    const auto visible = Foreign([&] { return owner->model.VisibleRows(static_cast<size_t>(owner->category)); });
+                    const auto visible = Foreign([&] { return owner->model.VisibleRows(owner->menuPage); });
                     if (!Active(owner, action.selected) || owner->serial != action.serial) return;
                     bool present = false;
                     for (auto* current : visible)
@@ -1238,6 +1361,8 @@ export namespace MafiaMenu
                 }
                 else if (!Populate(owner)) RequestReturn(owner);
             }
+            else if (!owner->help)
+                ScrollDescription(owner);
         }
         Collect();
     }
@@ -1254,6 +1379,39 @@ export namespace MafiaMenu
         if (!key && controller) { key = controller; modifiers = 0; }
         if (blocksInput && blocksInput())
             dx = dy = wheel = buttons = key = modifiers = 0;
+        // List movement on the Plugins pages: the game's own lists only step through their rows
+        auto owner = context;
+        if (owner && owner->page == page && Current(owner) && !owner->help)
+        {
+            const uint32_t row = firstRowId + static_cast<uint32_t>(owner->model.Window(owner->menuPage).Slot());
+            // A held click on a scroll mark repeats
+            const bool onMark = page->selected && (page->selected == owner->above || page->selected == owner->below) &&
+                (page->selected->flags & 0x30u) == 0x30u;
+            const bool held = onMark && (GetAsyncKeyState(VK_LBUTTON) & 0x8000) && GetForegroundWindow() == WindowedModeWrapper::GameHWND;
+            if (owner->markRepeat.Step(held, GetTickCount64()) && pending.size() < 32)
+                pending.push_back({ {}, owner, owner->serial, row, page->selected == owner->above ? -1 : 1, false, false, Scroll::Wheel });
+            auto scroll = Scroll::None;
+            int direction = 0;
+            switch (key)
+            {
+                case 200: scroll = Scroll::Step; direction = -1; break;
+                case 208: scroll = Scroll::Step; direction = 1; break;
+                case 201: scroll = Scroll::Page; direction = -1; break;
+                case 209: scroll = Scroll::Page; direction = 1; break;
+                case 199: scroll = Scroll::Edge; direction = -1; break;
+                case 207: scroll = Scroll::Edge; direction = 1; break;
+                default: break;
+            }
+            if (scroll != Scroll::None && pending.size() < 32)
+            {
+                pending.push_back({ {}, owner, owner->serial, row, direction, false, false, scroll });
+                key = modifiers = 0;
+            }
+            // All notches of a frame go as one movement (a page rebuild ends the actions queued before it)
+            if (const int notches = owner->wheel.Take(std::exchange(MenuWheel, 0)); notches && pending.size() < 32)
+                pending.push_back({ {}, owner, owner->serial, row, -notches, false, false, Scroll::Wheel });
+        }
+        else MenuWheel = 0;
         int result;
         { Depth scope(processDepth); result = processHook.thiscall<int>(page, dx, dy, wheel, buttons, key, modifiers, delta); }
         //5EBD27 onward reads fresh globals, world update/render; no old page
@@ -1401,6 +1559,8 @@ export namespace MafiaMenu
         uint32_t command;
         int direction;
         bool back, showHelp;
+        Scroll scroll = Scroll::None;
+        int scrollDirection = 0;
         unsigned int depth;
         SafetyHookInline destroy;
         std::shared_ptr<Context> session;
@@ -1464,6 +1624,21 @@ export namespace MafiaMenu
         int __fastcall Handle(uintptr_t menu, void*, int modifiers, uint8_t key, int x, int y, int wheel, int buttons, int dt)
         {
             const bool owned = menu == page && session;
+            // List movement on the Plugins pages: the game's own lists only step through their rows
+            if (owned && scroll == Scroll::None)
+            {
+                switch (key)
+                {
+                    case 200: scroll = Scroll::Step; scrollDirection = -1; break;
+                    case 208: scroll = Scroll::Step; scrollDirection = 1; break;
+                    case 201: scroll = Scroll::Page; scrollDirection = -1; break;
+                    case 209: scroll = Scroll::Page; scrollDirection = 1; break;
+                    case 199: scroll = Scroll::Edge; scrollDirection = -1; break;
+                    case 207: scroll = Scroll::Edge; scrollDirection = 1; break;
+                    default: break;
+                }
+                if (scroll != Scroll::None) return consumedId;
+            }
             const int step = owned && key == 203 ? -1 : owned && key == 205 ? 1 : 0;
             const int id = step ? 0 : process(menu, modifiers, key, x, y, wheel, buttons, dt);
             if (!owned)
@@ -1554,22 +1729,23 @@ export namespace MafiaMenu
             owner->items = std::move(owner->prepared);
             owner->titleText = std::move(owner->preparedTitle);
             owner->restartWarning = std::move(owner->preparedRestartWarning);
-            return Display(owner);
+            if (!Display(owner)) return false;
+            auto control = ControlById(page, firstRowId + static_cast<uint32_t>(owner->model.Window(owner->menuPage).Slot()));
+            if (control && (Field<uint32_t>(control, 8) & 1)) SelectControl(control);
+            return true;
         }
         bool DisplayHelp(const std::shared_ptr<Context>& owner)
         {
-            const auto count = owner->rowCount - 3;
+            // The text scrolls by a line with Up/Down; Back stays the last row
+            const auto count = owner->rowCount - 1;
+            const auto last = owner->helpLines.size() > count ? owner->helpLines.size() - count : 0;
+            owner->helpOffset = std::min(owner->helpOffset, last);
             const auto begin = owner->helpOffset;
             const auto end = std::min(begin + count, owner->helpLines.size());
             owner->items.clear();
             owner->titleText = owner->helpTitle;
             for (size_t i = begin; i < end; ++i)
                 owner->items.push_back({ ItemKind::Setting, i, owner->helpLines[i], {}, false });
-            if (begin)
-                owner->items.push_back({ ItemKind::Previous, begin >= count ? begin - count : 0,
-                    NativeText(owner->model.Text("menu.previous")).value_or("Previous") });
-            if (end < owner->helpLines.size())
-                owner->items.push_back({ ItemKind::Next, end, NativeText(owner->model.Text("menu.next")).value_or("Next") });
             owner->items.push_back({ ItemKind::Back, 0, NativeText(owner->model.Text("menu.back")).value_or("Back") });
             return Display(owner);
         }
@@ -1613,7 +1789,7 @@ export namespace MafiaMenu
                 page = construct(memory, source, entryId);
                 *stack = page;
                 auto language = FixSettings().Get("MAIN.TextLanguage");
-                owner->model.OpenPlugins(module, language, 4096, {}, true);
+                owner->model.OpenMenu(module, language, owner->rowCount);
                 if (!Publish(owner)) ClosePrivate();
             }
             auto owner = session;
@@ -1623,10 +1799,31 @@ export namespace MafiaMenu
             const auto step = std::exchange(direction, 0);
             bool goBack = std::exchange(back, false);
             const bool help = std::exchange(showHelp, false);
+            const auto scrolled = std::exchange(scroll, Scroll::None);
+            const auto scrolledDirection = std::exchange(scrollDirection, 0);
+            const int notches = owner->wheel.Take(std::exchange(MenuWheel, 0));
             const auto selected = Field<uintptr_t>(page, 0x2C);
             if (!selected) return;
             auto slot = Field<uint32_t>(selected, 4) - firstRowId;
             if (slot >= owner->items.size()) return;
+            auto& window = owner->model.Window(owner->menuPage);
+            if (!owner->help && (scrolled != Scroll::None || notches))
+            {
+                window.Point(slot);
+                bool moved = false;
+                switch (scrolled)
+                {
+                    case Scroll::Step: moved = Step(owner, scrolledDirection); break;
+                    case Scroll::Page: moved = window.Page(scrolledDirection); break;
+                    case Scroll::Edge: moved = window.Edge(scrolledDirection); break;
+                    default: break;
+                }
+                for (int left = notches; left; left += left > 0 ? -1 : 1)
+                    moved |= window.Scroll(left > 0 ? -1 : 1);
+                if (!page || page != *stack || session != owner) return;
+                if (moved && !Publish(owner)) ClosePrivate();
+                return;
+            }
             if (owner->help)
             {
                 const auto& row = owner->items[slot];
@@ -1645,10 +1842,11 @@ export namespace MafiaMenu
                             SelectControl(control);
                     }
                 }
-                else if (id == firstRowId + slot && (row.kind == ItemKind::Previous || row.kind == ItemKind::Next))
+                else if (scrolled != Scroll::None)
                 {
-                    owner->helpOffset = row.index;
-                    if (!DisplayHelp(owner)) ClosePrivate();
+                    const auto offset = owner->helpOffset;
+                    owner->helpOffset = scrolledDirection < 0 ? (offset ? offset - 1 : 0) : offset + 1;
+                    if (owner->helpOffset != offset && !DisplayHelp(owner)) ClosePrivate();
                 }
                 return;
             }
@@ -1673,15 +1871,18 @@ export namespace MafiaMenu
                     switch (row.kind)
                     {
                         case ItemKind::Page:
-                            owner->category = static_cast<int>(row.index);
-                            owner->rowOffset = 0;
-                            owner->model.PageShown(row.index);
+                            if (row.row)
+                            {
+                                window.Point(slot);
+                                const auto target = owner->model.Enter(*row.row);
+                                if (target != SIZE_MAX) owner->menuPage = target;
+                            }
                             break;
                         case ItemKind::Previous:
                         case ItemKind::Next:
-                            (owner->category < 0 ? owner->rootOffset : owner->rowOffset) = row.index;
                             break;
                         case ItemKind::Setting:
+                            window.Point(slot);
                             if (row.enabled && row.row && owner->model.Enabled(*row.row, owner->source->pause) &&
                                 page && page == *stack && session == owner)
                                 owner->model.Change(*row.row, step, owner->source->pause);
@@ -1695,8 +1896,9 @@ export namespace MafiaMenu
             if (!page || page != *stack || session != owner) return;
             if (goBack)
             {
-                if (owner->category < 0) { ClosePrivate(); return; }
-                owner->category = -1;
+                const auto parent = owner->model.Back(owner->menuPage);
+                if (parent == SIZE_MAX) { ClosePrivate(); return; }
+                owner->menuPage = parent;
                 refresh = true;
             }
             if ((refresh || RWGTAMenu::Model::Changed()) && !Publish(owner))
@@ -1745,6 +1947,12 @@ export namespace MafiaMenu
         buttonTable[11] = reinterpret_cast<uintptr_t>(&PrivateKeyboard);
         initHook = safetyhook::create_inline(reinterpret_cast<void*>(Address().loaded), &Loaded);
         processHook = safetyhook::create_inline(reinterpret_cast<void*>(Address().process), &Process);
+        // Fusion Rain Droplets keeps its drops off the game's menus while one is shown
+        WFP::onGameProcessEvent() += []()
+        {
+            const auto page = Top();
+            RainDroplets::MenuOpen(page && !page->closed);
+        };
         destroyHook = safetyhook::create_inline(reinterpret_cast<void*>(Address().destroyed), &Destroyed);
         drawHook = safetyhook::create_inline(reinterpret_cast<void*>(Address().draw), &Draw);
         pageDrawHook = safetyhook::create_inline(reinterpret_cast<void*>(Address().pageDraw), &PageDraw);

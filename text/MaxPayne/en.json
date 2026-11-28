@@ -19,6 +19,8 @@
   "WFP_PRESET_APPLY": "Apply Preset",
   "WFP_PRESET_APPLY_DESCRIPTION": "Sets the values of the preset picked above",
   "WFP_RESTOREDEFAULTS_DESCRIPTION": "Sets the settings on this page to their defaults",
+  "WFP_SETTINGS": "Settings",
+  "WFP_SETTINGS_DESCRIPTION": "The settings of this plugin",
   "page.widescreen": "Widescreen",
   "page.graphics": "Graphics",
   "page.controls": "Controls",

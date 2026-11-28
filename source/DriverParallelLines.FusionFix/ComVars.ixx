@@ -60,6 +60,12 @@ export class FrontendInputManager;
 
 export bool BlockGameInput = false;
 
+// The mouse as the Plugins menu reads it: wheel counts not yet taken
+export namespace MenuMouse
+{
+    int32_t Wheel = 0;
+}
+
 export GameRef<HWND> hWnd;
 export GameRef<void*> GuiService;
 export GameRef<void*> FontService;

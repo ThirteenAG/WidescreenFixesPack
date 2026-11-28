@@ -3,7 +3,10 @@ module;
 #include <stdafx.h>
 #include "FixSettings.hpp"
 #include "Shared/RWGTA/FixMenu.hpp"
+#include "Shared/PadInput.hpp"
+#include "Shared/RainDroplets.hpp"
 #include <array>
+#include <atomic>
 #include <memory>
 
 export module NativeMenu;
@@ -44,6 +47,7 @@ export namespace SufferingMenu
         int escape;
         bool joinedGraphics;
         int left, right, accept, back; // the sequel numbers its menu messages differently; it has no Back message
+        // (Up and Down are the two messages before Left)
         // The page's rows, title and help line as fractions of the Options page. The sequel's page is the whole title
         // screen: its rows go in two columns on the paper strip below the logo, the title and help line on the logo's
         // paper, where its dark text reads.
@@ -55,13 +59,15 @@ export namespace SufferingMenu
         float rowStep, columnStep;
         int rowsPerColumn;
         Box title, help;
+        int helpTemplate{ -1 };    // the template of the game's help lines (the Graphics page's), -1: the rows' one
     };
     inline constexpr MenuLayout Retail{ 29, 23, 12, 1027, true, 1006, 1007, 1020, 1021,
-        { 0.12f, 0.18f, 0.76f }, 0.075f, 0.0f, 8, { 0.08f, 0.06f, 0.84f }, { 0.08f, 0.84f, 0.84f } };
+        { 0.12f, 0.29f, 0.76f }, 0.075f, 0.0f, 7, { 0.08f, 0.185f, 0.84f }, { 0.1f, 0.85f, 0.8f }, 1017 };
     inline constexpr MenuLayout TiesThatBind{ 32, 26, 12, 1057, false, 1036, 1037, 1050, 0,
         { 0.12f, 0.735f, 0.38f }, 0.047f, 0.4f, 4, { 0.62f, 0.245f, 0.25f }, { 0.2f, 0.458f, 1.05f } };
     inline const MenuLayout* Layout = &Retail;
     inline Bindings api;
+    inline Object* menuStack{}; // the game's menu stack: its pages at +80, their count at +88, flags at +4
     inline HMODULE host{};
     inline std::string notice; // an update notice, shown in the fix page's help line while the row has no help
     inline std::string Language()
@@ -79,20 +85,11 @@ export namespace SufferingMenu
         }
     }
     inline SafetyHookInline optionsHook, videoHook, defaultsHook;
-    enum class Kind
-    {
-        Plugin,
-        Setting,
-        Back,
-        Previous,
-        Next
-    };
+    // A row of the shown window: a model row, or Back (no row)
     struct Item
     {
-        Kind kind{};
-        size_t index{};
+        bool back{};
         RWGTAMenu::Row row{};
-        std::string label;
     };
     struct Page;
     struct Listener
@@ -102,7 +99,7 @@ export namespace SufferingMenu
     };
     struct Page
     {
-        Object root{}, entry{}, help{}, title{};
+        Object root{}, entry{}, help{}, title{}, up{}, down{}, nativeTitle{};
         uintptr_t* originalTable{};
         std::array<uintptr_t, TiesThatBind.tableSize> table{};
         Listener listener;
@@ -112,13 +109,35 @@ export namespace SufferingMenu
         std::vector<std::pair<Object, int>> stockStates;
         Object stockChildren{};
         int stockCapacity{}, stockCount{}, stockSelection{}, stockOrientation{};
-        int page{ -1 }, command{ -1 }, direction{};
-        size_t start{}, selected{};
+        size_t page{ RWGTAMenu::Model::RootPage };
+        int command{ -1 }, direction{};
         bool open{}, video{}, escapeHeld{};
+        MenuList::Repeat shoulders[2], held[2];
+        MenuList::StickAxis stick;
         std::string shownHelp;
         std::vector<std::pair<Object, RWGTAMenu::Row>> joined;
     };
     inline std::map<Object, std::unique_ptr<Page>> pages;
+    // Wheel notches from the game's DirectInput mouse (its raw lZ, the remainder kept); Page Up/Down and Home/End
+    // from the window procedure
+    inline std::atomic<int> wheel{}, pageKeys{}, edgeKeys{};
+    inline MenuList::WheelNotches notches;
+    inline SafetyHookInline mouseHook;
+    inline int __fastcall PollMouse(Object mouse, void*, float elapsed, int reset)
+    {
+        const int result = mouseHook.thiscall<int>(mouse, elapsed, reset);
+        // 2: read; the DIMOUSESTATE at +16 (lZ +24)
+        if (result == 2 && std::any_of(pages.begin(), pages.end(), [](const auto& page) { return page.second->open; }))
+            wheel += notches.Take(Field<int>(mouse, 24));
+        return result;
+    }
+    inline void Message(UINT message, WPARAM wParam)
+    {
+        if (message == WM_KEYDOWN && (wParam == VK_PRIOR || wParam == VK_NEXT))
+            pageKeys += wParam == VK_NEXT ? 1 : -1;
+        else if (message == WM_KEYDOWN && (wParam == VK_HOME || wParam == VK_END))
+            edgeKeys = wParam == VK_END ? 1 : -1;
+    }
     inline std::wstring FontText(std::string text, bool label = true)
     {
         if (label && Language() == "en")
@@ -169,12 +188,13 @@ export namespace SufferingMenu
         SetField<float>(object, 64, width);
         SetField<float>(object, 68, height);
     }
-    inline Object Create(Page& page, Object source, bool button)
+    // A control made from a template of the menu data (font, size, colour): the source control's, or the one given
+    inline Object Create(Page& page, Object source, bool button, int templateIndex = -1)
     {
         auto memory = reinterpret_cast<Object>(api.allocate(0, button ? 0xC4 : 0xC0));
         if (!memory)
             return 0;
-        auto object = (button ? api.button : api.text)(memory, Field<int>(source, 12));
+        auto object = (button ? api.button : api.text)(memory, templateIndex >= 0 ? templateIndex : Field<int>(source, 12));
         SetField<Object>(object, 96, reinterpret_cast<Object>(&page.listener));
         SetField<Object>(object, 100, page.root);
         SetField<int>(object, 36, 4);
@@ -187,8 +207,12 @@ export namespace SufferingMenu
     {
         if (!Layout->joinedGraphics)
             return { Field<Object>(root, 124), Field<Object>(root, 144) };
+        // The pause menu's page creates Credits but doesn't list it
         const auto credits = Field<Object>(root, 144);
-        return { credits ? credits : Field<Object>(root, 132), Field<Object>(root, 148) };
+        const auto children = Field<Object*>(root, 80);
+        const auto end = children + std::max(0, Field<int>(root, 88));
+        const bool listed = credits && children && std::find(children, end, credits) != end;
+        return { listed ? credits : Field<Object>(root, 132), Field<Object>(root, 148) };
     }
     // The sequel lays its rows out after the constructor, so its entry follows its neighbours every frame
     inline void Place(Page& page)
@@ -226,69 +250,61 @@ export namespace SufferingMenu
         api.select(page.root, page.stockSelection);
         page.model.Close();
     }
-    inline void Build(Page& page)
+    // Back is the last row where the game's Options has one (the sequel goes back with Escape)
+    inline bool BackRow()
+    {
+        return Layout->back != 0;
+    }
+    inline std::string Title(const Page& page)
+    {
+        const auto& pages = page.model.Pages();
+        if (page.page == RWGTAMenu::Model::RootPage || page.page >= pages.size())
+            return Text("menu.plugins");
+        const auto& shown = pages[page.page];
+        // The fix's own page is named after the game; its categories keep their titles
+        if (shown.plugin && shown.plugin->module == host && shown.parent == RWGTAMenu::Model::RootPage)
+            return "The Suffering";
+        return shown.title;
+    }
+    inline std::string Label(const Page& page, const Item& item)
+    {
+        if (item.back)
+            return Text("menu.back");
+        if (item.row.kind == RWGTAMenu::RowKind::Plugin && item.row.plugin && item.row.plugin->module == host)
+            return "The Suffering";
+        auto label = page.model.Label(item.row);
+        auto value = page.model.Value(item.row);
+        return value.empty() ? label : label + ": " + value;
+    }
+    // The rows of the page's window in the controls; sound: the move sound even when the selected control stays
+    inline void Build(Page& page, bool sound = false)
     {
         page.items.clear();
-        if (page.page < 0)
-        {
-            // One entry per plugin, opening its first page; its other pages are reached inside it
-            auto& plugins = page.model.Pages();
-            std::vector<size_t> firsts;
-            for (size_t i = 0; i < plugins.size(); ++i)
-                if (!i || plugins[i].plugin != plugins[i - 1].plugin)
-                    firsts.push_back(i);
-            for (size_t n = page.start; n < firsts.size() && n < page.start + 5; ++n)
-            {
-                const auto i = firsts[n];
-                page.items.push_back({ Kind::Plugin, i, {}, plugins[i].plugin && plugins[i].plugin->module == host ? "The Suffering" : plugins[i].title });
-            }
-            if (page.start)
-                page.items.push_back({ Kind::Previous, 0, {}, Text("menu.previous") });
-            if (page.start + 5 < firsts.size())
-                page.items.push_back({ Kind::Next, 0, {}, Text("menu.next") });
-        }
-        else
-        {
-            for (auto row : page.model.VisibleRows(page.page))
-                page.items.push_back({ Kind::Setting, 0, *row, page.model.Label(*row) });
-            auto& plugins = page.model.Pages();
-            const auto current = static_cast<size_t>(page.page);
-            if (current + 1 < plugins.size() && plugins[current + 1].plugin == plugins[current].plugin)
-                page.items.push_back({ Kind::Next, current + 1, {}, Text("menu.next") });
-            if (current > 0 && plugins[current - 1].plugin == plugins[current].plugin)
-                page.items.push_back({ Kind::Previous, current - 1, {}, Text("menu.previous") });
-        }
-        page.items.push_back({ Kind::Back, 0, {}, Text("menu.back") });
+        for (auto row : page.model.Shown(page.page, BackRow()))
+            page.items.push_back(row ? Item{ false, *row } : Item{ true });
+        const auto& window = page.model.Window(page.page);
         const auto count = std::min(page.items.size(), page.controls.size());
         for (size_t i = 0; i < page.controls.size(); ++i)
         {
             SetField<int>(page.controls[i], 36, i < count ? 4 : 1);
-            if (i >= count)
-                continue;
-            auto& item = page.items[i];
-            auto label = item.label;
-            if (item.kind == Kind::Setting)
-            {
-                auto value = page.model.Value(item.row);
-                if (!value.empty())
-                    label += ": " + value;
-            }
-            SetText(page.controls[i], label);
+            if (i < count)
+                SetText(page.controls[i], Label(page, page.items[i]));
         }
-        auto title = page.page < 0 ? Text("menu.plugins") : page.model.Pages()[page.page].title;
-        if (page.page >= 0 && page.model.Pages()[page.page].plugin->module == host)
-            title = "The Suffering";
-        SetText(page.title, title);
-        page.selected = std::min(page.selected, count - 1);
-        SetField<int>(page.root, 8, -1);
-        api.select(page.root, static_cast<int>(page.selected));
+        SetText(page.title, Title(page));
+        // The marks of more rows above and below, in the rows' font, centred over the list
+        SetField<int>(page.up, 36, window.Above() ? 4 : 1);
+        SetField<int>(page.down, 36, window.Below() ? 4 : 1);
+        const auto slot = static_cast<int>(std::min(window.Slot(), count ? count - 1 : 0));
+        if (sound || Field<int>(page.root, 8) != slot)
+            SetField<int>(page.root, 8, -1);
+        api.select(page.root, slot);
     }
     inline void Open(Page& page)
     {
         if (Layout->joinedGraphics)
-            page.model.OpenPlugins(host, Language(), 5, { "MAIN.FOVFactor", "MAIN.CutsceneBorders" });
+            page.model.OpenMenu(host, Language(), page.controls.size(), { "MAIN.FOVFactor", "MAIN.CutsceneBorders" });
         else
-            page.model.OpenPlugins(host, Language(), 5);
+            page.model.OpenMenu(host, Language(), page.controls.size());
         page.stockChildren = Field<Object>(page.root, 80);
         page.stockCapacity = Field<int>(page.root, 84);
         page.stockCount = Field<int>(page.root, 88);
@@ -298,6 +314,8 @@ export namespace SufferingMenu
         auto stock = reinterpret_cast<Object*>(page.stockChildren);
         for (int i = 0; i < page.stockCount; ++i)
         {
+            if (stock[i] == page.nativeTitle)
+                continue;
             page.stockStates.emplace_back(stock[i], Field<int>(stock[i], 36));
             SetField<int>(stock[i], 36, 1);
         }
@@ -305,9 +323,23 @@ export namespace SufferingMenu
         SetField<int>(page.root, 84, static_cast<int>(page.privateChildren.size()));
         SetField<int>(page.root, 88, static_cast<int>(page.privateChildren.size()));
         page.open = true;
-        page.page = -1;
-        page.start = page.selected = 0;
+        page.page = RWGTAMenu::Model::RootPage;
+        page.model.Window(page.page).Reset();
+        notches.Clear();
+        wheel = pageKeys = edgeKeys = 0;
         Build(page);
+    }
+    // Esc, B or the Back row: the list it came from, on the row it came from; the game's Options from the plugins list
+    inline void Back(Page& page)
+    {
+        const auto parent = page.model.Back(page.page);
+        if (parent == SIZE_MAX)
+        {
+            Restore(page);
+            return;
+        }
+        page.page = parent;
+        Build(page, true);
     }
     inline void Act(Page& page, int index, int direction)
     {
@@ -325,42 +357,81 @@ export namespace SufferingMenu
         }
         if (index < 0 || static_cast<size_t>(index) >= page.items.size())
             return;
-        page.selected = index;
         auto item = page.items[index];
-        switch (item.kind)
+        page.model.Window(page.page).Point(index);
+        if (item.back)
         {
-            case Kind::Plugin:
-                page.page = static_cast<int>(item.index);
-                page.model.PageShown(item.index);
-                page.selected = 0;
-                break;
-            case Kind::Setting:
-                page.model.Change(item.row, direction, true);
-                break;
-            case Kind::Back:
-                if (page.page < 0)
-                {
-                    Restore(page);
-                    return;
-                }
-                page.page = -1;
-                page.selected = 0;
-                break;
-            case Kind::Previous:
-            case Kind::Next:
-                if (page.page >= 0)
-                {
-                    page.page = static_cast<int>(item.index);
-                    page.model.PageShown(item.index);
-                }
-                else if (item.kind == Kind::Next)
-                    page.start += 5;
-                else
-                    page.start -= std::min<size_t>(5, page.start);
-                page.selected = 0;
-                break;
+            if (!direction)
+                Back(page);
+            return;
         }
+        if (RWGTAMenu::Model::Opens(item.row))
+        {
+            if (direction)
+                return;
+            const auto target = page.model.Enter(item.row);
+            if (target == SIZE_MAX)
+                return;
+            page.page = target;
+            Build(page, true);
+            return;
+        }
+        page.model.Change(item.row, direction, true);
         Build(page);
+    }
+    // Up/Down: one row, the window following by one row; the game's own wrap
+    inline void Move(Page& page, int direction)
+    {
+        auto& window = page.model.Window(page.page);
+        const auto first = window.First();
+        if (window.Move(direction, (Field<int>(page.root, 4) & 2) != 0))
+            Build(page, window.First() != first);
+    }
+    // The input the game's menu has no use for: wheel, page keys, shoulder buttons
+    inline void ListInput(Page& page)
+    {
+        auto& window = page.model.Window(page.page);
+        // The selection follows a row the mouse picked
+        const int selected = Field<int>(page.root, 8);
+        if (selected >= 0 && static_cast<size_t>(selected) < page.items.size() && static_cast<size_t>(selected) != window.Slot())
+            window.Point(selected);
+        auto scrolled = [&](bool changed)
+        {
+            if (changed)
+                Build(page, true);
+        };
+        const int notchesNow = wheel.exchange(0);
+        for (int i = 0; i < std::abs(notchesNow); ++i)
+            scrolled(window.Scroll(notchesNow > 0 ? -1 : 1));
+        const int pagesNow = pageKeys.exchange(0);
+        for (int i = 0; i < std::abs(pagesNow); ++i)
+            scrolled(window.Page(pagesNow > 0 ? 1 : -1));
+        if (const int edge = edgeKeys.exchange(0))
+            scrolled(window.Edge(edge));
+        XINPUT_STATE pad{};
+        DWORD slot{};
+        DWORD process{};
+        GetWindowThreadProcessId(GetForegroundWindow(), &process);
+        const bool focused = process == GetCurrentProcessId();
+        const bool read = focused && PadInput::Read(pad, slot);
+        const auto now = GetTickCount64();
+        for (int i = 0; i < 2; ++i)
+        {
+            const WORD button = i ? XINPUT_GAMEPAD_RIGHT_SHOULDER : XINPUT_GAMEPAD_LEFT_SHOULDER;
+            if (page.shoulders[i].Step(read && (pad.Gamepad.wButtons & button), now))
+                scrolled(window.Page(i ? 1 : -1));
+        }
+        // A held Up/Down (keys, d-pad, stick) repeats; the game acts on the press itself only
+        const int axis = read ? page.stick.Direction(pad.Gamepad.sThumbLY) : 0;
+        for (int i = 0; i < 2; ++i)
+        {
+            // The menu stack's input: Up or Down waiting while its key or button is held
+            const bool waiting = api.pending(Field<Object>(page.root, 100) + 108, Layout->left - 2 + i, 1) > 0;
+            const bool down = waiting || (pad.Gamepad.wButtons & (i ? XINPUT_GAMEPAD_DPAD_DOWN : XINPUT_GAMEPAD_DPAD_UP)) ||
+                axis == (i ? -1 : 1);
+            if (page.held[i].Step(focused && down, now, false))
+                Move(page, i ? 1 : -1);
+        }
     }
     inline int __fastcall Notify(Listener* listener, void*, Object control)
     {
@@ -370,6 +441,14 @@ export namespace SufferingMenu
             auto found = std::find(page.controls.begin(), page.controls.end(), control);
             if (found != page.controls.end())
                 page.command = static_cast<int>(found - page.controls.begin());
+            else if (control == page.up || control == page.down)
+            {
+                // A click on a mark scrolls the list by a row
+                auto& window = page.model.Window(page.page);
+                if (window.Scroll(control == page.up ? -1 : 1))
+                    Build(page, true);
+                return 0;
+            }
         }
         else if (control == page.entry)
             page.command = 0;
@@ -406,12 +485,16 @@ export namespace SufferingMenu
         {
             if (Layout->back && message == Layout->back)
             {
-                page.command = static_cast<int>(page.items.size() - 1);
-                page.direction = 0;
+                page.command = -2;
+                return 1;
+            }
+            if (message == Layout->left - 2 || message == Layout->left - 1)
+            {
+                Move(page, message == Layout->left - 2 ? -1 : 1);
                 return 1;
             }
             if ((message == Layout->left || message == Layout->right) && index >= 0 && static_cast<size_t>(index) < page.items.size()
-                && page.items[index].kind == Kind::Setting)
+                && !page.items[index].back)
             {
                 page.command = index;
                 page.direction = message == Layout->left ? -1 : 1;
@@ -440,13 +523,15 @@ export namespace SufferingMenu
             // Escape on the open fix page is its Back; the stack keeps the page until the key is let go
             const bool pressed = api.pending(Field<Object>(self, 100) + 108, Layout->escape, 1) > 0;
             if (pressed && page.open && !page.escapeHeld)
-            {
-                page.command = static_cast<int>(page.items.size() - 1);
-                page.direction = 0;
-            }
+                page.command = -2;
             page.escapeHeld = pressed;
         }
         int result = reinterpret_cast<int(__thiscall*)(Object)>(page.originalTable[Layout->updateSlot])(self);
+        if (page.command == -2)
+        {
+            page.command = -1;
+            Back(page);
+        }
         if (page.command >= 0)
         {
             int command = std::exchange(page.command, -1);
@@ -492,12 +577,13 @@ export namespace SufferingMenu
         {
             if (RWGTAMenu::Model::Changed().exchange(false))
                 Build(page);
+            ListInput(page);
             int selected = Field<int>(self, 8);
             std::string help;
             if (selected >= 0 && static_cast<size_t>(selected) < page.items.size())
             {
                 auto& item = page.items[selected];
-                if (item.kind == Kind::Setting)
+                if (!item.back && !RWGTAMenu::Model::Opens(item.row))
                     help = Help(page.model, item.row);
             }
             if (page.model.RestartRequired())
@@ -538,7 +624,7 @@ export namespace SufferingMenu
             return;
         if (video)
         {
-            page->model.OpenPlugins(host, Language(), 5, { "MAIN.FOVFactor", "MAIN.CutsceneBorders" });
+            page->model.OpenMenu(host, Language(), 5, { "MAIN.FOVFactor", "MAIN.CutsceneBorders" });
             auto rows = page->model.JoinedRows();
             float x = Field<float>(root, 56) + Field<float>(root, 64) * 0.12f;
             float width = Field<float>(root, 64) * 0.76f;
@@ -600,7 +686,7 @@ export namespace SufferingMenu
                 return;
             Place(*page);
             SetText(page->entry, Text("menu.plugins"));
-            for (int i = 0; i < 8; ++i)
+            for (int i = 0; i < Layout->rowsPerColumn * (Layout->columnStep > 0.0f ? 2 : 1); ++i)
             {
                 auto control = Create(*page, source, true);
                 if (!control)
@@ -612,19 +698,40 @@ export namespace SufferingMenu
                 page->controls.push_back(control);
                 page->privateChildren.push_back(control);
             }
-            page->help = Create(*page, source, false);
+            page->help = Create(*page, source, false, Layout->helpTemplate);
+            // The page's title is a picture of its name ("Options Menu", its first control; the game has no font for
+            // it): it stays over the Plugins pages, which are part of Options, and their names go under it. The
+            // sequel's title screen has none.
+            page->nativeTitle = Layout->joinedGraphics && Field<int>(root, 88) > 0 ? Field<Object*>(root, 80)[0] : 0;
             page->title = Create(*page, source, false);
-            if (!page->help || !page->title)
+            page->up = Create(*page, source, true);
+            page->down = Create(*page, source, true);
+            if (!page->help || !page->title || !page->up || !page->down)
                 return;
+            // The marks: an ellipsis (the font has no arrows) above the first and below the last row, clickable, not
+            // reached by the keys
+            const auto& first = Layout->rows;
+            const auto lastRow = (Layout->rowsPerColumn - 1) * Layout->rowStep;
+            for (auto [mark, y] : { std::pair{ page->up, first.y - Layout->rowStep * 0.55f }, std::pair{ page->down, first.y + lastRow + Layout->rowStep * 0.55f } })
+            {
+                SetText(mark, "...", false);
+                Geometry(mark, Field<float>(root, 56) + Field<float>(root, 64) * (first.x + first.width * 0.45f),
+                    Field<float>(root, 60) + Field<float>(root, 68) * y, Field<float>(root, 64) * first.width * 0.1f, Field<float>(source, 68) * 0.6f);
+                SetField<int>(mark, 36, 1);
+            }
             SetText(page->help, "", false);
             Geometry(page->help, Field<float>(root, 56) + Field<float>(root, 64) * Layout->help.x,
                 Field<float>(root, 60) + Field<float>(root, 68) * Layout->help.y,
-                Field<float>(root, 64) * Layout->help.width, Field<float>(root, 68) * 0.12f);
+                Field<float>(root, 64) * Layout->help.width, Field<float>(root, 68) * (Layout->helpTemplate >= 0 ? 0.18f : 0.12f));
             Geometry(page->title, Field<float>(root, 56) + Field<float>(root, 64) * Layout->title.x,
                 Field<float>(root, 60) + Field<float>(root, 68) * Layout->title.y,
                 Field<float>(root, 64) * Layout->title.width, Field<float>(source, 68));
+            if (page->nativeTitle)
+                page->privateChildren.push_back(page->nativeTitle);
             page->privateChildren.push_back(page->help);
             page->privateChildren.push_back(page->title);
+            page->privateChildren.push_back(page->up);
+            page->privateChildren.push_back(page->down);
 
             api.addChild(root, page->entry);
             children = Field<Object*>(root, 80);
@@ -640,6 +747,15 @@ export namespace SufferingMenu
         page->table[Layout->escapeSlot] = reinterpret_cast<uintptr_t>(CanEscape);
         SetField<uintptr_t*>(root, 0, page->table.data());
         pages.emplace(root, std::move(page));
+    }
+    // Every frame: while a menu page (title, pause, options...) is the menu stack's top page, which takes the input
+    // (flag 1; the HUD's pages under it don't), no drops are drawn over it
+    inline void Frame()
+    {
+        const auto stack = menuStack ? *menuStack : 0;
+        const int count = stack ? Field<int>(stack, 88) : 0;
+        const auto top = count > 0 ? Field<Object*>(stack, 80)[count - 1] : 0;
+        RainDroplets::MenuOpen(top && (Field<int>(top, 4) & 1));
     }
     inline Object __fastcall Options(Object self, void*, int object)
     {
@@ -687,6 +803,14 @@ export namespace SufferingMenu
             reinterpret_cast<const wchar_t*>(module), &pinned))
             return;
         optionsHook = safetyhook::create_inline(options, Options);
+        // The game's mouse poll (both exes)
+        auto mouse = hook::pattern("83 EC 08 53 56 8B F1 E8 ? ? ? ? 8B D8 83 FB 02 74 08 5E 5B 83 C4 08 C2 08 00 8B 46 0C 8B 08 57 8D 7E 10 57 6A 14 50 FF 51 24").get_first();
+        mouseHook = safetyhook::create_inline(mouse, PollMouse);
+        // The menu stack is made at start and kept in a global
+        auto stack = static_cast<uint8_t*>(find_pattern(module, Layout->joinedGraphics
+            ? "E8 ? ? ? ? EB 02 33 C0 C7 84 24 ? ? 00 00 FF FF FF FF A3"
+            : "68 DC 00 00 00 6A 00 E8 ? ? ? ? 83 C4 08 85 C0 74 EC 8B C8 E8 ? ? ? ? A3"));
+        menuStack = *reinterpret_cast<Object**>(stack + (Layout->joinedGraphics ? 21 : 27));
         if (!Layout->joinedGraphics)
             return;
         auto video = find_pattern(module, "6A FF 68 ? ? ? ? 64 A1 00 00 00 00 50 64 89 25 00 00 00 00 51 8B 44 24 14 53 56 57 8B F1 50 89 74 24 10 E8 ? ? ? ? C7 46 6C ? ? ? ? 33 DB C7 06");

@@ -4,6 +4,7 @@ module;
 #include "Shared/SplinterCell/Window.hpp"
 #include "FixSettings.hpp"
 #include "Shared/SplinterCell/PreferredAdapter.hpp"
+#include "Shared/RainDroplets.hpp"
 #include <minidx8/d3d8.h>
 #include <stdexcept>
 
@@ -732,6 +733,9 @@ export void InitD3DDrv()
     static auto EndSceneHook = safetyhook::create_mid(pattern.get_first(), [](SafetyHookContext& regs)
     {
         UpdateXidiProfile();
+        // No screen drops over the menus
+        const auto hudState = UObject::GetState(L"EchelonMainHUD");
+        RainDroplets::MenuOpen(hudState == L"s_MainMenu" || hudState == L"s_GameMenu");
 
         // The cinematics' side bars (see CutsceneFrame.hpp); the menus are a HUD state of their own
         if (!bPlayingVideo && !bDisplayingBackground && UObject::GetState(L"EchelonMainHUD") == L"s_Cinematic")

@@ -16,6 +16,8 @@ module;
 #include <array>
 #include <unordered_map>
 #include "Shared/RWGTA/UpdateCheck.hpp"
+#include "Shared/RainDroplets.hpp"
+#include "Shared/PadInput.hpp"
 #include <set>
 
 export module Frontend;
@@ -260,7 +262,7 @@ export namespace DeerMenu
 
 export namespace DeerMenu
 {
-    enum class Kind { Link, Row, Previous, Next, Back };
+    enum class Kind { Link, Row, Back };
 
     struct Item
     {
@@ -271,12 +273,14 @@ export namespace DeerMenu
         bool enabled = true;
     };
 
+    // A page of the menu: its rows in a window that scrolls a row at a time (window: the rows shown; all of them in the
+    // launcher's list box, which scrolls itself), then Back
     struct View
     {
-        // Keep two content lines plus Previous/Next/Back within five rows.
-        static constexpr size_t ContentRows = 2;
-        int page = -1;
-        size_t physical = 0;
+        size_t page = RWGTAMenu::Model::RootPage;
+        size_t first = 0;
+        size_t window = SIZE_MAX;
+        size_t count = 0;           // the rows of the page
         std::string title;
         std::vector<std::string> headings;
         std::vector<Item> items;
@@ -296,20 +300,11 @@ export namespace DeerMenu
                 content.push_back(std::move(item));
                 return true;
             };
-            if (page < 0)
             {
-                title = model.Text("menu.plugins");
-                const auto pages = model.Pages();
-                for (size_t i = 0; i < pages.size(); ++i)
-                    if (!append(Item{Kind::Link, {}, {}, i, true}, pages[i].title))
-                        return false;
-            }
-            else
-            {
-                if (size_t(page) >= model.Pages().size())
+                if (page >= model.Pages().size())
                     return false;
-                title = model.Pages()[size_t(page)].title;
-                const auto visible = model.VisibleRows(size_t(page));
+                title = model.Pages()[page].title;
+                const auto visible = model.VisibleRows(page);
                 if (!current())
                     return false;
                 std::vector<RWGTAMenu::Row> copied;
@@ -320,6 +315,12 @@ export namespace DeerMenu
                     auto label = model.Label(row);
                     if (!current())
                         return false;
+                    if (RWGTAMenu::Model::Opens(row))
+                    {
+                        if (!append(Item{Kind::Link, {}, row, row.target, true}, label))
+                            return false;
+                        continue;
+                    }
                     if (!row.plugin && (row.kind == RWGTAMenu::RowKind::Preset ||
                         row.kind == RWGTAMenu::RowKind::ApplyPreset))
                         continue;
@@ -345,23 +346,24 @@ export namespace DeerMenu
                 title = model.Text("menu.restartwarning");
             if (!current() || !SplitText(title, width, headings) || headings.size() > 4)
                 return false;
-            const auto count = std::max(size_t(1), (content.size() + ContentRows - 1) / ContentRows);
-            physical = std::min(physical, count - 1);
+            count = content.size();
+            first = count > window ? std::min(first, count - window) : 0;
             items.clear();
-            for (size_t i = physical * ContentRows; i < content.size() && i < (physical + 1) * ContentRows; ++i)
+            for (size_t i = first; i < content.size() && i - first < window; ++i)
                 items.push_back(std::move(content[i]));
-            if (physical)
-                items.push_back(Item{Kind::Previous, model.Text("menu.previous"), {}, 0, true});
-            if (physical + 1 < count)
-                items.push_back(Item{Kind::Next, model.Text("menu.next"), {}, 0, true});
             items.push_back(Item{Kind::Back, model.Text("menu.back"), {}, 0, true});
             for (auto& item : items)
             {
                 item.text = PlainText(item.text);
                 if (!TextFits(item.text, width, Native::GlyphHeight)) return false;
             }
-            return current() && !items.empty() && items.size() <= 5;
+            return current() && !items.empty() && (window == SIZE_MAX || items.size() <= window + 1);
         }
+
+        // The rows of the page in the window
+        size_t Shown() const { return items.empty() ? 0 : items.size() - 1; }
+        bool Above() const { return first > 0; }
+        bool Below() const { return window != SIZE_MAX && first + window < count; }
     };
 }
 
@@ -373,8 +375,8 @@ export namespace DeerMenu
         {
             uint64_t generation = 0;
             uint64_t serial = 0;
-            int page = -1;
-            size_t physical = 0;
+            size_t page = RWGTAMenu::Model::RootPage;
+            size_t first = 0;
             size_t selected = 0;
             int direction = 0;
             bool back = false;
@@ -492,10 +494,10 @@ export namespace DeerMenu
             open = opening = true;
             ready = false;
             selected = 0;
-            view = {};
+            view = View{ RWGTAMenu::Model::RootPage, 0, view.window };
             const auto expected = generation;
             Busy discovery(busy);
-            model.OpenPlugins(module, language, 4096);
+            model.OpenMenu(module, language, 4096);
             if (!Current(expected) || !model.IsOpen() || !Populate(false))
             {
                 if (generation == expected)
@@ -530,18 +532,49 @@ export namespace DeerMenu
             }
             if (pending.size() >= 32 || (physicalBack && direction))
                 return false;
-            pending.push_back(Pending{expected, serial, view.page, view.physical, selected, direction, back, item});
+            pending.push_back(Pending{expected, serial, view.page, view.first, selected, direction, back, item});
             return true;
         }
 
+        // Up/Down: past the first or last row shown the list scrolls a row; from the first row up and from Back down
+        // the list wraps to its other end
         bool Move(int direction)
         {
             if (!Current(generation) || !ready || busy || view.items.empty())
                 return false;
-            if (direction < 0 && selected)
-                --selected;
-            else if (direction > 0 && selected + 1 < view.items.size())
-                ++selected;
+            const size_t shown = view.Shown(), back = view.items.size() - 1;
+            auto show = [&](size_t first, size_t row)
+            {
+                view.first = first;
+                if (!Populate(false))
+                    return false;
+                selected = std::min(row, view.items.size() - 1);
+                return true;
+            };
+            if (direction < 0)
+            {
+                if (selected == back && view.Below())
+                    return show(view.count - view.window, back);
+                if (selected)
+                    --selected;
+                else if (view.Above())
+                    return show(view.first - 1, 0);
+                else if (view.Below())
+                    return show(view.count - view.window, back);
+                else
+                    selected = back;
+            }
+            else if (direction > 0)
+            {
+                if (selected + 1 == shown && view.Below())
+                    return show(view.first + 1, selected);
+                if (selected < back)
+                    ++selected;
+                else if (view.Above())
+                    return show(0, 0);
+                else
+                    selected = 0;
+            }
             return true;
         }
 
@@ -556,36 +589,34 @@ export namespace DeerMenu
             {
                 if (command.direction)
                     return true;
-                if (view.page < 0)
+                const auto parent = model.Back(view.page);
+                if (parent == SIZE_MAX)
                 {
                     Close();
                     return true;
                 }
-                model.PageShown(size_t(view.page));
-                if (!Current(expected))
+                // Back on the row of the page it was opened from
+                const auto rows = model.VisibleRows(parent);
+                const auto found = std::find_if(rows.begin(), rows.end(), [&](const RWGTAMenu::Row* row)
+                    { return row && row->target == view.page; });
+                const size_t index = found == rows.end() ? 0 : size_t(found - rows.begin());
+                view.page = parent;
+                view.first = view.window != SIZE_MAX && index >= view.window ? index - view.window + 1 : 0;
+                if (!Populate(false))
                     return false;
-                view.page = -1;
-                view.physical = 0;
-                return Populate(false);
+                selected = std::min(index - view.first, view.items.size() - 1);
+                return true;
             }
             if (item.kind != Kind::Row && command.direction)
                 return true;
             if (item.kind == Kind::Link)
             {
-                if (item.target >= model.Pages().size())
+                const auto target = model.Enter(item.row);
+                if (target == SIZE_MAX)
                     return false;
-                view.page = int(item.target);
-                view.physical = 0;
-                model.PageShown(item.target);
+                view.page = target;
+                view.first = 0;
                 return Current(expected) && Populate(false);
-            }
-            if (item.kind == Kind::Previous || item.kind == Kind::Next)
-            {
-                if (item.kind == Kind::Previous && view.physical)
-                    --view.physical;
-                else if (item.kind == Kind::Next)
-                    ++view.physical;
-                return Populate(false);
             }
             if (item.kind == Kind::Row && item.enabled)
             {
@@ -593,10 +624,10 @@ export namespace DeerMenu
                 const auto expectedSerial = serial;
                 const auto expectedSelected = selected;
                 const auto expectedPage = view.page;
-                const auto expectedPhysical = view.physical;
+                const auto expectedFirst = view.first;
                 const bool enabled = model.Enabled(item.row, pause);
                 if (!Current(expected) || serial != expectedSerial || selected != expectedSelected ||
-                    view.page != expectedPage || view.physical != expectedPhysical)
+                    view.page != expectedPage || view.first != expectedFirst)
                     return false;
                 if (!enabled)
                     return Populate(true);
@@ -623,7 +654,7 @@ export namespace DeerMenu
             for (const auto& command : commands)
             {
                 if (!Current(command.generation) || command.serial != serial ||
-                    command.page != view.page || command.physical != view.physical ||
+                    command.page != view.page || command.first != view.first ||
                     command.selected != selected || selected >= view.items.size() ||
                     !Same(command.item, view.items[selected]))
                     continue;
@@ -736,12 +767,14 @@ export namespace DeerMenu
         TitleContext source;
         HMODULE module = nullptr;
         HWND window = nullptr;
-        HWND heading = nullptr;
+        HWND heading = nullptr;     // the group box of the list, titled with the page
         HWND help = nullptr;
+        HWND helpBox = nullptr;     // the group box of the help
+        HWND confirm = nullptr;     // OK, like the launcher's own dialogs
         uint64_t helpSerial = 0;
         size_t helpSelected = SIZE_MAX;
         HWND list = nullptr;
-        HFONT font = nullptr; // Stock GDI object; never deleted by this host.
+        HFONT font = nullptr; // the launcher's own control font (or a stock object); never deleted by this host
         std::shared_ptr<Session> session;
         uint64_t paintedSerial = 0;
         HWND expectedFocus = nullptr;
@@ -840,15 +873,18 @@ export namespace DeerMenu
                 fits = fits && Measure(dc, item.text, width - 8, metrics.tmHeight + 2);
             if (!fits || !current())
                 return false;
-            const int headingHeight = int(snapshot.headings.size()) * rowHeight;
-            const int listHeight = int(snapshot.items.size()) * rowHeight + 8;
-            const int top = 12 + headingHeight + 8;
-            if (top + listHeight + 12 > client.bottom || width < 80)
+            // Like the launcher's own dialogs: group boxes in the dialog's font, OK centred at the bottom. The list's
+            // group takes the room the help and OK leave; the list box scrolls the rows that don't fit.
+            const Layout layout = Arrange(client, metrics.tmHeight);
+            const int top = layout.list.top + metrics.tmHeight + 6;
+            const int listHeight = layout.list.bottom - 8 - top;
+            if (listHeight < 3 * rowHeight || width < 80)
                 return false;
             Session::Busy building(publishing);
             const auto next = CreateWindowExW(WS_EX_CLIENTEDGE, L"LISTBOX", L"",
-                WS_CHILD | WS_TABSTOP | LBS_NOTIFY | LBS_NOINTEGRALHEIGHT,
-                12, top, client.right - 24, listHeight, window, reinterpret_cast<HMENU>(0x7100), module, nullptr);
+                WS_CHILD | WS_TABSTOP | WS_VSCROLL | LBS_NOTIFY | LBS_NOINTEGRALHEIGHT,
+                layout.list.left + 8, top, layout.list.right - layout.list.left - 16, listHeight, window,
+                reinterpret_cast<HMENU>(0x7100), module, nullptr);
             struct PendingWindow
             {
                 HWND value;
@@ -890,11 +926,16 @@ export namespace DeerMenu
             for (const auto& line : snapshot.headings)
             {
                 if (!title.empty())
-                    title += L"\r\n";
+                    title += L" ";
                 title.append(line.begin(), line.end());
             }
-            MoveWindow(heading, 12, 12, client.right - 24, headingHeight, TRUE);
+            MoveWindow(heading, layout.list.left, layout.list.top, layout.list.right - layout.list.left,
+                layout.list.bottom - layout.list.top, TRUE);
             SetWindowTextW(heading, title.c_str());
+            MoveWindow(helpBox, layout.help.left, layout.help.top, layout.help.right - layout.help.left,
+                layout.help.bottom - layout.help.top, TRUE);
+            MoveWindow(confirm, layout.confirm.left, layout.confirm.top, layout.confirm.right - layout.confirm.left,
+                layout.confirm.bottom - layout.confirm.top, TRUE);
             if (!current())
             {
                 return false;
@@ -910,6 +951,25 @@ export namespace DeerMenu
             return current() && GetFocus() == next;
         }
 
+        struct Layout
+        {
+            RECT list{}, help{}, confirm{};
+        };
+
+        // The places of the list's group, the help's group (four lines) and OK in the client area
+        static Layout Arrange(const RECT& client, int textHeight)
+        {
+            constexpr int Margin = 8;
+            Layout layout;
+            const int buttonHeight = textHeight + 10, buttonWidth = 6 * textHeight;
+            layout.confirm = { (client.right - buttonWidth) / 2, client.bottom - Margin - buttonHeight,
+                (client.right + buttonWidth) / 2, client.bottom - Margin };
+            layout.help = { Margin, layout.confirm.top - Margin - (4 * textHeight + textHeight + 14), client.right - Margin,
+                layout.confirm.top - Margin };
+            layout.list = { Margin, Margin / 2, client.right - Margin, layout.help.top - Margin / 2 };
+            return layout;
+        }
+
         bool PublishHelp()
         {
             if (!Current() || !session || !session->ready || !list || !help)
@@ -921,15 +981,23 @@ export namespace DeerMenu
             std::string text;
             if (!session->ReadHelp(text) || !Current() || session->serial != serial || session->selected != selected)
                 return false;
-            RECT client{}, bounds{};
-            if (!GetClientRect(window, &client) || !GetWindowRect(list, &bounds))
+            RECT client{};
+            if (!GetClientRect(window, &client))
                 return false;
-            MapWindowPoints(nullptr, window, reinterpret_cast<POINT*>(&bounds), 2);
-            const int top = bounds.bottom + 12;
-            if (client.right < 104 || client.bottom - top < 24)
+            TEXTMETRICW metrics{};
+            HDC dc = GetDC(window);
+            if (!dc)
                 return false;
+            const auto previous = SelectObject(dc, font);
+            const bool metricOK = GetTextMetricsW(dc, &metrics) != FALSE;
+            SelectObject(dc, previous);
+            ReleaseDC(window, dc);
+            if (!metricOK || client.right < 104)
+                return false;
+            const auto box = Arrange(client, metrics.tmHeight).help;
             const std::wstring wide(text.begin(), text.end());
-            MoveWindow(help, 12, top, client.right - 24, client.bottom - top - 12, TRUE);
+            MoveWindow(help, box.left + 8, box.top + metrics.tmHeight + 4, box.right - box.left - 16,
+                box.bottom - box.top - metrics.tmHeight - 10, TRUE);
             SetWindowTextW(help, wide.c_str());
             if (!Current() || session->serial != serial || session->selected != selected)
                 return false;
@@ -1045,24 +1113,42 @@ export namespace DeerMenu
                 popup = reinterpret_cast<Popup*>(lParam)->shared_from_this();
                 popup->window = window;
                 popups.emplace(window, popup);
-                popup->font = reinterpret_cast<HFONT>(GetStockObject(DEFAULT_GUI_FONT));
-                popup->heading = CreateWindowExW(0, L"STATIC", L"Plugins", WS_CHILD | WS_VISIBLE | SS_NOPREFIX,
-                    12, 12, 300, 24, window, nullptr, popup->module, nullptr);
-                popup->help = CreateWindowExW(0, L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_MULTILINE | ES_READONLY,
-                    12, 160, 300, 80, window, reinterpret_cast<HMENU>(0x7102), popup->module, nullptr);
-                if (!popup->font || !popup->heading || !popup->help || !popup->source.Alive())
+                // The dialog font of the launcher's own dialogs, from the template
+                popup->font = reinterpret_cast<HFONT>(SendMessageW(window, WM_GETFONT, 0, 0));
+                if (!popup->font)
+                    popup->font = reinterpret_cast<HFONT>(GetStockObject(DEFAULT_GUI_FONT));
+                popup->heading = CreateWindowExW(0, L"BUTTON", L"Plugins", WS_CHILD | WS_VISIBLE | BS_GROUPBOX,
+                    8, 4, 300, 200, window, nullptr, popup->module, nullptr);
+                popup->helpBox = CreateWindowExW(0, L"BUTTON", L"", WS_CHILD | WS_VISIBLE | BS_GROUPBOX,
+                    8, 210, 300, 60, window, nullptr, popup->module, nullptr);
+                popup->help = CreateWindowExW(0, L"STATIC", L"", WS_CHILD | WS_VISIBLE | SS_LEFT | SS_NOPREFIX,
+                    16, 224, 284, 40, window, reinterpret_cast<HMENU>(0x7102), popup->module, nullptr);
+                popup->confirm = CreateWindowExW(0, L"BUTTON", L"OK", WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_PUSHBUTTON,
+                    120, 280, 75, 23, window, reinterpret_cast<HMENU>(IDOK), popup->module, nullptr);
+                if (!popup->font || !popup->heading || !popup->helpBox || !popup->help || !popup->confirm ||
+                    !popup->source.Alive())
                 {
                     popup->Finish();
                     return TRUE;
                 }
-                SendMessageW(popup->heading, WM_SETFONT, reinterpret_cast<WPARAM>(popup->font), FALSE);
-                SendMessageW(popup->help, WM_SETFONT, reinterpret_cast<WPARAM>(popup->font), FALSE);
+                for (auto control : { popup->heading, popup->helpBox, popup->help, popup->confirm })
+                    SendMessageW(control, WM_SETFONT, reinterpret_cast<WPARAM>(popup->font), FALSE);
                 RECT client{};
                 GetClientRect(window, &client);
                 popup->session = std::make_shared<Session>();
                 popup->session->module = popup->module;
                 popup->session->pause = false;
-                popup->session->width = client.right - 48;
+                // Rows are fitted in letters of the game's 8-pixel font: the list's width in the dialog font's letters
+                {
+                    HDC dc = GetDC(window);
+                    const auto previous = dc ? SelectObject(dc, popup->font) : nullptr;
+                    TEXTMETRICW metrics{};
+                    const bool measured = dc && GetTextMetricsW(dc, &metrics) && metrics.tmAveCharWidth > 0;
+                    if (previous) SelectObject(dc, previous);
+                    if (dc) ReleaseDC(window, dc);
+                    const int letters = measured ? (client.right - 40) / (metrics.tmAveCharWidth + 1) : (client.right - 48) / Native::GlyphWidth;
+                    popup->session->width = letters * Native::GlyphWidth;
+                }
                 popup->session->owner = [weak = std::weak_ptr<Popup>(popup)]
                 {
                     const auto current = weak.lock();
@@ -1082,6 +1168,12 @@ export namespace DeerMenu
             if (message == WM_COMMAND && LOWORD(wParam) == IDCANCEL)
             {
                 popup->Queue(0, true);
+                return TRUE;
+            }
+            // OK closes the dialog like the launcher's own
+            if (message == WM_COMMAND && LOWORD(wParam) == IDOK && reinterpret_cast<HWND>(lParam) == popup->confirm)
+            {
+                popup->Finish();
                 return TRUE;
             }
             if (message == WM_COMMAND && reinterpret_cast<HWND>(lParam) == popup->list && popup->Input(popup->list))
@@ -1264,14 +1356,18 @@ export namespace DeerMenu
             std::vector<WORD> bytes;
             bytes.resize((sizeof(DLGTEMPLATE) + 1) / 2);
             auto* definition = reinterpret_cast<DLGTEMPLATE*>(bytes.data());
-            definition->style = WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_MODALFRAME;
+            // The font and size of the launcher's own Options dialog (MS Sans Serif 8, 186 x 151 dialog units)
+            definition->style = WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_MODALFRAME | DS_SETFONT | DS_CENTER;
             definition->dwExtendedStyle = 0;
             definition->cdit = 0;
             definition->x = 0; definition->y = 0;
-            definition->cx = 330; definition->cy = 230;
+            definition->cx = 230; definition->cy = 190;
             bytes.push_back(0); // no menu
             bytes.push_back(0); // native dialog class
             for (const wchar_t c : std::wstring(L"Plugins")) bytes.push_back(WORD(c));
+            bytes.push_back(0);
+            bytes.push_back(8);
+            for (const wchar_t c : std::wstring(L"MS Sans Serif")) bytes.push_back(WORD(c));
             bytes.push_back(0);
             if (!Alive())
                 return;
@@ -1285,6 +1381,306 @@ export namespace DeerMenu
     inline std::unordered_map<HWND, std::shared_ptr<Launcher>> launchers;
 }
 
+export namespace DeerMenu::Sprites
+{
+    // Letters of the game's own menu words (menu texture) and its digits (interface2 texture, three quarters size),
+    // cut in three bands that follow the italic slant; letters the words lack are put together from parts of others
+    struct GlyphPiece { uint8_t texture, x0, y0, x1, y1; float dx, dy, scale; };
+    struct Glyph { char code; uint8_t first, count; float advance; };
+    inline constexpr GlyphPiece GlyphPieces[] =
+    {
+        { 0, 22, 105, 26, 111, 0.0f, 0.0f, 1.0f }, { 0, 20, 111, 27, 115, -2.0f, 6.0f, 1.0f },
+        { 0, 165, 219, 170, 224, 0.0f, 8.0f, 1.0f }, { 1, 233, 0, 247, 16, -1.5f, 1.5f, 0.75f },
+        { 0, 22, 105, 26, 111, 0.0f, 0.0f, 1.0f }, { 0, 130, 165, 136, 171, -1.0f, 0.0f, 1.0f },
+        { 0, 129, 171, 135, 175, -2.0f, 6.0f, 1.0f }, { 0, 129, 175, 135, 180, -2.0f, 10.0f, 1.0f },
+        { 0, 10, 210, 15, 216, 1.0f, 0.0f, 1.0f }, { 0, 10, 216, 14, 220, 1.0f, 6.0f, 1.0f },
+        { 0, 9, 220, 14, 225, 0.0f, 10.0f, 1.0f }, { 0, 165, 219, 170, 224, 0.0f, 8.0f, 1.0f },
+        { 0, 7, 111, 14, 115, 0.0f, 6.0f, 1.0f }, { 0, 165, 219, 170, 224, 0.0f, 8.0f, 1.0f },
+        { 0, 7, 111, 14, 115, 0.0f, 6.0f, 1.0f }, { 1, 49, 0, 65, 16, -1.5f, 1.5f, 0.75f },
+        { 1, 68, 0, 77, 16, -1.5f, 1.5f, 0.75f }, { 1, 79, 0, 95, 16, -1.5f, 1.5f, 0.75f },
+        { 1, 98, 0, 114, 16, -1.5f, 1.5f, 0.75f }, { 1, 118, 0, 134, 16, -1.5f, 1.5f, 0.75f },
+        { 1, 137, 0, 153, 16, -1.5f, 1.5f, 0.75f }, { 1, 156, 0, 172, 16, -1.5f, 1.5f, 0.75f },
+        { 1, 175, 0, 190, 16, -1.5f, 1.5f, 0.75f }, { 1, 194, 0, 210, 16, -1.5f, 1.5f, 0.75f },
+        { 1, 212, 0, 228, 16, -1.5f, 1.5f, 0.75f }, { 0, 165, 219, 170, 224, 0.0f, 3.0f, 1.0f },
+        { 0, 165, 219, 170, 224, 0.0f, 8.0f, 1.0f }, { 0, 166, 210, 175, 216, 0.0f, 0.0f, 1.0f },
+        { 0, 164, 216, 175, 220, -2.0f, 6.0f, 1.0f }, { 0, 164, 220, 170, 225, -2.0f, 10.0f, 1.0f },
+        { 0, 156, 120, 165, 126, 0.0f, 0.0f, 1.0f }, { 0, 155, 126, 166, 130, -1.0f, 6.0f, 1.0f },
+        { 0, 155, 130, 166, 135, -1.0f, 10.0f, 1.0f }, { 0, 40, 165, 52, 173, -1.0f, 0.0f, 1.0f },
+        { 0, 3, 218, 14, 225, -2.0f, 8.0f, 1.0f }, { 0, 130, 165, 141, 171, -1.0f, 0.0f, 1.0f },
+        { 0, 129, 171, 140, 175, -2.0f, 6.0f, 1.0f }, { 0, 129, 175, 140, 180, -2.0f, 10.0f, 1.0f },
+        { 0, 4, 210, 15, 216, -1.0f, 0.0f, 1.0f }, { 0, 3, 216, 14, 220, -2.0f, 6.0f, 1.0f },
+        { 0, 3, 220, 14, 225, -2.0f, 10.0f, 1.0f }, { 0, 3, 105, 14, 111, -1.0f, 0.0f, 1.0f },
+        { 0, 2, 111, 14, 115, -2.0f, 6.0f, 1.0f }, { 0, 2, 115, 13, 120, -2.0f, 10.0f, 1.0f },
+        { 0, 3, 105, 14, 111, -1.0f, 0.0f, 1.0f }, { 0, 2, 111, 14, 115, -2.0f, 6.0f, 1.0f },
+        { 0, 21, 115, 26, 120, -1.0f, 10.0f, 1.0f }, { 0, 40, 225, 53, 231, -1.0f, 0.0f, 1.0f },
+        { 0, 40, 231, 51, 235, -1.0f, 6.0f, 1.0f }, { 0, 39, 235, 50, 240, -2.0f, 10.0f, 1.0f },
+        { 0, 101, 90, 111, 96, 0.0f, 0.0f, 1.0f }, { 0, 100, 96, 112, 100, -1.0f, 6.0f, 1.0f },
+        { 0, 99, 100, 111, 105, -2.0f, 10.0f, 1.0f }, { 0, 22, 105, 26, 111, 0.0f, 0.0f, 1.0f },
+        { 0, 20, 111, 27, 115, -2.0f, 6.0f, 1.0f }, { 0, 21, 115, 26, 120, -1.0f, 10.0f, 1.0f },
+        { 0, 53, 210, 59, 216, 5.0f, 0.0f, 1.0f }, { 0, 52, 216, 58, 220, 4.0f, 6.0f, 1.0f },
+        { 0, 47, 220, 58, 225, -1.0f, 10.0f, 1.0f }, { 0, 22, 105, 26, 111, 0.0f, 0.0f, 1.0f },
+        { 0, 20, 111, 27, 115, -2.0f, 6.0f, 1.0f }, { 0, 21, 115, 26, 120, -1.0f, 10.0f, 1.0f },
+        { 0, 19, 195, 24, 201, 5.0f, 0.0f, 1.0f }, { 0, 18, 201, 23, 205, 4.0f, 6.0f, 1.0f },
+        { 0, 18, 205, 23, 210, 4.0f, 10.0f, 1.0f }, { 0, 136, 75, 142, 81, -1.0f, 0.0f, 1.0f },
+        { 0, 136, 81, 146, 85, -1.0f, 6.0f, 1.0f }, { 0, 136, 85, 146, 90, -1.0f, 10.0f, 1.0f },
+        { 0, 42, 180, 55, 186, -1.0f, 0.0f, 1.0f }, { 0, 42, 186, 55, 190, -1.0f, 6.0f, 1.0f },
+        { 0, 41, 190, 54, 195, -2.0f, 10.0f, 1.0f }, { 0, 187, 120, 198, 126, 0.0f, 0.0f, 1.0f },
+        { 0, 186, 126, 198, 130, -1.0f, 6.0f, 1.0f }, { 0, 186, 130, 197, 135, -1.0f, 10.0f, 1.0f },
+        { 0, 119, 210, 130, 216, 1.0f, 0.0f, 1.0f }, { 0, 117, 216, 129, 220, -1.0f, 6.0f, 1.0f },
+        { 0, 116, 220, 128, 225, -2.0f, 10.0f, 1.0f }, { 0, 41, 165, 51, 171, 0.0f, 0.0f, 1.0f },
+        { 0, 40, 171, 52, 175, -1.0f, 6.0f, 1.0f }, { 0, 40, 175, 45, 180, -1.0f, 10.0f, 1.0f },
+        { 0, 132, 210, 144, 216, -1.0f, 0.0f, 1.0f }, { 0, 132, 216, 143, 220, -1.0f, 6.0f, 1.0f },
+        { 0, 131, 220, 143, 225, -2.0f, 10.0f, 1.0f }, { 0, 234, 195, 244, 201, 0.0f, 0.0f, 1.0f },
+        { 0, 233, 201, 244, 205, -1.0f, 6.0f, 1.0f }, { 0, 233, 205, 244, 210, -1.0f, 10.0f, 1.0f },
+        { 0, 198, 135, 210, 141, -1.0f, 0.0f, 1.0f }, { 0, 198, 141, 209, 145, -1.0f, 6.0f, 1.0f },
+        { 0, 197, 145, 209, 150, -2.0f, 10.0f, 1.0f }, { 0, 43, 75, 54, 81, -2.0f, 0.0f, 1.0f },
+        { 0, 45, 81, 52, 85, 0.0f, 6.0f, 1.0f }, { 0, 45, 85, 51, 90, 0.0f, 10.0f, 1.0f },
+        { 0, 48, 210, 59, 216, 0.0f, 0.0f, 1.0f }, { 0, 47, 216, 58, 220, -1.0f, 6.0f, 1.0f },
+        { 0, 47, 220, 58, 225, -1.0f, 10.0f, 1.0f }, { 0, 3, 75, 13, 81, -2.0f, 0.0f, 1.0f },
+        { 0, 3, 81, 12, 85, -2.0f, 6.0f, 1.0f }, { 0, 3, 85, 12, 90, -2.0f, 10.0f, 1.0f },
+        { 0, 101, 105, 118, 111, -2.0f, 0.0f, 1.0f }, { 0, 101, 111, 116, 115, -2.0f, 6.0f, 1.0f },
+        { 0, 101, 115, 115, 120, -2.0f, 10.0f, 1.0f }, { 0, 14, 195, 24, 201, 0.0f, 0.0f, 1.0f },
+        { 0, 14, 201, 23, 205, 0.0f, 6.0f, 1.0f }, { 0, 13, 205, 23, 210, -1.0f, 10.0f, 1.0f },
+        { 0, 28, 210, 39, 216, -2.0f, 0.0f, 1.0f }, { 0, 29, 216, 37, 220, -1.0f, 6.0f, 1.0f },
+        { 0, 29, 220, 36, 225, -1.0f, 10.0f, 1.0f }, { 1, 79, 0, 95, 16, -1.5f, 1.5f, 0.75f },
+    };
+    inline constexpr Glyph Glyphs[] =
+    {
+        { '!', 0, 3, 4.0f }, { '%', 3, 1, 7.5f }, { '\'', 4, 1, 4.0f }, { '(', 5, 3, 5.0f }, { ')', 8, 3, 5.0f },
+        { ',', 11, 1, 3.0f }, { '-', 12, 1, 6.0f }, { '.', 13, 1, 3.0f }, { '/', 14, 1, 6.0f }, { '0', 15, 1, 9.0f },
+        { '1', 16, 1, 3.75f }, { '2', 17, 1, 9.0f }, { '3', 18, 1, 9.0f }, { '4', 19, 1, 9.0f }, { '5', 20, 1, 9.0f },
+        { '6', 21, 1, 9.0f }, { '7', 22, 1, 8.25f }, { '8', 23, 1, 9.0f }, { '9', 24, 1, 9.0f }, { ':', 25, 2, 3.0f },
+        { '?', 27, 3, 7.0f }, { 'A', 30, 3, 8.0f }, { 'B', 33, 2, 9.0f }, { 'C', 35, 3, 9.0f }, { 'D', 38, 3, 9.0f },
+        { 'E', 41, 3, 9.0f }, { 'F', 44, 3, 9.0f }, { 'G', 47, 3, 10.0f }, { 'H', 50, 3, 9.0f }, { 'I', 53, 3, 4.0f },
+        { 'J', 56, 3, 9.0f }, { 'K', 59, 6, 10.0f }, { 'L', 65, 3, 7.0f }, { 'M', 68, 3, 11.0f }, { 'N', 71, 3, 9.0f },
+        { 'O', 74, 3, 10.0f }, { 'P', 77, 3, 9.0f }, { 'Q', 80, 3, 10.0f }, { 'R', 83, 3, 9.0f }, { 'S', 86, 3, 10.0f },
+        { 'T', 89, 3, 8.0f }, { 'U', 92, 3, 9.0f }, { 'V', 95, 3, 8.0f }, { 'W', 98, 3, 13.0f }, { 'X', 101, 3, 9.0f },
+        { 'Y', 104, 3, 7.0f }, { 'Z', 107, 1, 9.0f },
+    };
+
+    // The game's menu sprites: a record names a texture, its place and size (x scaled by 4:3), four texture corners
+    // and a colour; setup applies the parts the flags name, draw fills it
+    constexpr size_t RecordSize = 124;
+    constexpr int SetPosition = 1, SetColour = 2, SetShape = 4, SetTexture = 8, SetCorners = 16;
+    constexpr size_t MenuTexture = 0, InterfaceTexture = 1;
+    // One texel of the pause panel on screen
+    constexpr float TexelX = 0.399f / 256.0f, TexelY = 0.203f / 96.0f;
+    // The pause panel in its texture: the column and row that stretch, and the inside where its words are
+    constexpr float PanelTop = 160.0f, StretchX = 123.0f, StretchY = 213.0f;
+    constexpr float InsideX0 = 56.0f, InsideY0 = 177.0f, InsideX1 = 190.0f, InsideY1 = 232.0f;
+    constexpr float RowPitch = 20.0f, FirstRow = 16.0f, LetterGap = 1.0f, SpaceWidth = 6.0f;
+
+    struct Api
+    {
+        int (__cdecl* setup)(uint8_t*, int){};
+        int (__cdecl* draw)(uint8_t*, int){};
+        int (__cdecl* state)(int, int){};
+        uint8_t* panel{};
+        std::array<uint8_t*, 3> buttons{};      // up, down, enter
+        std::array<uint8_t*, 3> highlights{};   // the bright words of the three items
+    };
+    inline Api api;
+    alignas(16) inline uint8_t records[2][RecordSize]{};
+    inline void* textures[2]{};
+
+    inline float& Value(uint8_t* record, size_t offset)
+    {
+        return *reinterpret_cast<float*>(record + offset);
+    }
+
+    constexpr uint32_t Colour(uint8_t r, uint8_t g, uint8_t b, uint8_t a)
+    {
+        return uint32_t(r) | uint32_t(g) << 8 | uint32_t(b) << 16 | uint32_t(a) << 24;
+    }
+    constexpr uint32_t Bright = Colour(255, 255, 255, 255);
+    // The game's unselected words: grey green on the panel
+    constexpr uint32_t Dim = Colour(209, 222, 209, 178);
+    constexpr uint32_t Unavailable = Colour(209, 222, 209, 100);
+
+    // Our two records take the textures the game's own pause records loaded
+    inline bool Ready()
+    {
+        void* const sources[2] = { *reinterpret_cast<void**>(api.buttons[0] + 100), *reinterpret_cast<void**>(api.panel + 100) };
+        for (size_t i = 0; i < 2; ++i)
+        {
+            if (!sources[i])
+                return false;
+            if (textures[i] == sources[i])
+                continue;
+            auto record = records[i];
+            std::memcpy(record, i == MenuTexture ? api.buttons[0] : api.panel, 32);
+            *reinterpret_cast<void**>(record + 100) = sources[i];
+            Value(record, 40) = 0.1f;
+            Value(record, 44) = 0.1f;
+            api.setup(record, SetPosition | SetColour | SetShape | SetTexture | SetCorners);
+            textures[i] = sources[i];
+        }
+        return true;
+    }
+
+    // A texel rectangle of a texture to a rectangle on screen (top left, size)
+    inline void Quad(size_t texture, float u0, float v0, float u1, float v1, float x, float y, float w, float h, uint32_t colour)
+    {
+        auto record = records[texture];
+        Value(record, 32) = x;
+        Value(record, 36) = y;
+        Value(record, 40) = w;
+        Value(record, 44) = h;
+        Value(record, 48) = 0.0f;
+        const float corners[8] = { u0 / 256.0f, v1 / 256.0f, u1 / 256.0f, v1 / 256.0f, u1 / 256.0f, v0 / 256.0f, u0 / 256.0f, v0 / 256.0f };
+        std::memcpy(record + 52, corners, sizeof(corners));
+        std::memcpy(record + 84, &colour, 4);
+        api.setup(record, SetPosition | SetColour | SetShape | SetCorners);
+        api.draw(record, 1);
+    }
+
+    // A game record moved up or down
+    inline void Moved(const uint8_t* source, float dy)
+    {
+        alignas(16) uint8_t copy[RecordSize];
+        std::memcpy(copy, source, RecordSize);
+        Value(copy, 36) += dy;
+        api.setup(copy, SetPosition);
+        api.draw(copy, 1);
+    }
+
+    // A panel like the game's pause panel, wider and taller by stretching its middle column and row; empty or with
+    // the game's own three words
+    struct Panel
+    {
+        float left{}, top{}, wider{}, taller{};
+
+        float X(float local) const { return left + local * TexelX; }
+        float Y(float local) const { return top - local * TexelY; }
+        float Width() const { return 256.0f + wider; }
+
+        void Piece(size_t texture, float u0, float v0, float u1, float v1, float x0, float y0, float x1, float y1, uint32_t colour) const
+        {
+            if (x1 > x0 && y1 > y0)
+                Quad(texture, u0, v0, u1, v1, X(x0), Y(y0), (x1 - x0) * TexelX, (y1 - y0) * TexelY, colour);
+        }
+
+        void Draw(bool empty) const
+        {
+            struct Segment { float s0, s1, d0, d1; };
+            struct Rect { float x0, y0, x1, y1; };
+            const Segment columns[3] = { { 0.0f, StretchX, 0.0f, StretchX }, { StretchX, StretchX + 1.0f, StretchX, StretchX + wider },
+                { StretchX, 256.0f, StretchX + wider, 256.0f + wider } };
+            const float row = StretchY - PanelTop;
+            const Segment rows[3] = { { PanelTop, StretchY, 0.0f, row }, { StretchY, StretchY + 1.0f, row, row + taller },
+                { StretchY, 256.0f, row + taller, 96.0f + taller } };
+            const auto map = [](const Segment& segment, float s)
+            {
+                return segment.d0 + (s - segment.s0) * (segment.d1 - segment.d0) / (segment.s1 - segment.s0);
+            };
+            for (const auto& c : columns)
+            {
+                for (const auto& r : rows)
+                {
+                    if (c.d1 <= c.d0 || r.d1 <= r.d0)
+                        continue;
+                    // The parts of this cell outside the panel's words
+                    std::array<Rect, 4> parts{};
+                    size_t count = 0;
+                    const Rect cell{ c.s0, r.s0, c.s1, r.s1 };
+                    if (!empty || cell.x0 >= InsideX1 || cell.x1 <= InsideX0 || cell.y0 >= InsideY1 || cell.y1 <= InsideY0)
+                        parts[count++] = cell;
+                    else
+                    {
+                        const float y0 = std::max(cell.y0, InsideY0), y1 = std::min(cell.y1, InsideY1);
+                        if (cell.y0 < InsideY0)
+                            parts[count++] = { cell.x0, cell.y0, cell.x1, InsideY0 };
+                        if (cell.y1 > InsideY1)
+                            parts[count++] = { cell.x0, InsideY1, cell.x1, cell.y1 };
+                        if (cell.x0 < InsideX0)
+                            parts[count++] = { cell.x0, y0, InsideX0, y1 };
+                        if (cell.x1 > InsideX1)
+                            parts[count++] = { InsideX1, y0, cell.x1, y1 };
+                    }
+                    for (size_t i = 0; i < count; ++i)
+                    {
+                        const auto& p = parts[i];
+                        Piece(InterfaceTexture, p.x0, p.y0, p.x1, p.y1, map(c, p.x0), map(r, p.y0), map(c, p.x1), map(r, p.y1), Bright);
+                    }
+                }
+            }
+            // The inside is one even colour: a single texel of it fills the stretched inside
+            if (empty)
+                Piece(InterfaceTexture, 100.25f, 213.25f, 100.75f, 213.75f, InsideX0, InsideY0 - PanelTop,
+                    InsideX1 + wider, InsideY1 - PanelTop + taller, Bright);
+        }
+    };
+
+    inline const Glyph& Find(char code)
+    {
+        if (code >= 'a' && code <= 'z')
+            code = char(code - 'a' + 'A');
+        const Glyph* dash = nullptr;
+        for (const auto& glyph : Glyphs)
+        {
+            if (glyph.code == code)
+                return glyph;
+            if (glyph.code == '-')
+                dash = &glyph;
+        }
+        return *dash;
+    }
+
+    inline float TextWidth(std::string_view text)
+    {
+        float width = 0.0f;
+        for (char ch : text)
+            width += ch == ' ' ? SpaceWidth : Find(ch).advance + LetterGap;
+        return std::max(0.0f, width - LetterGap);
+    }
+
+    // Text with its letter cells' top at a panel row (panel texels), centred at a panel column
+    inline void Text(const Panel& panel, std::string_view text, float centre, float top, float scale, uint32_t colour)
+    {
+        float pen = centre - TextWidth(text) * scale * 0.5f;
+        for (char ch : text)
+        {
+            if (ch == ' ')
+            {
+                pen += SpaceWidth * scale;
+                continue;
+            }
+            const auto& glyph = Find(ch);
+            for (size_t i = glyph.first; i < size_t(glyph.first + glyph.count); ++i)
+            {
+                const auto& piece = GlyphPieces[i];
+                const float x = pen + piece.dx * scale, y = top + piece.dy * scale;
+                panel.Piece(piece.texture, piece.x0, piece.y0, piece.x1, piece.y1, x, y,
+                    x + (piece.x1 - piece.x0) * piece.scale * scale, y + (piece.y1 - piece.y0) * piece.scale * scale, colour);
+            }
+            pen += (glyph.advance + LetterGap) * scale;
+        }
+    }
+
+    // A key cap of the menu texture (the up or down arrow) at a panel spot, a row high
+    inline void Arrow(const Panel& panel, bool up, float x, float top)
+    {
+        const float* corners = reinterpret_cast<const float*>(api.buttons[up ? 0 : 1] + 52);
+        constexpr float size = 13.0f;
+        panel.Piece(MenuTexture, corners[0] * 256.0f, corners[5] * 256.0f, corners[2] * 256.0f, corners[1] * 256.0f,
+            x, top + 1.0f, x + size, top + 1.0f + size, Bright);
+    }
+
+    inline void Init(uintptr_t menuDraw)
+    {
+        api.state = reinterpret_cast<decltype(api.state)>(injector::GetBranchDestination(menuDraw + 0x16).as_int());
+        auto page = hook::pattern("6A 01 68 ? ? ? ? E8 ? ? ? ? 6A 01 68 ? ? ? ? E8 ? ? ? ? 6A 01 68 ? ? ? ? E8 ? ? ? ? "
+            "6A 01 68 ? ? ? ? E8 ? ? ? ? A1 ? ? ? ? 83 C4 20 2B C7 74 32 48 74 1B 48 0F 85 ? ? ? ? "
+            "6A 01 68 ? ? ? ? E8 ? ? ? ? 83 C4 08 E9 ? ? ? ? 6A 01 68 ? ? ? ? E8 ? ? ? ? 83 C4 08 E9 ? ? ? ? 6A 01 68");
+        api.panel = *page.get_first<uint8_t*>(3);
+        api.draw = reinterpret_cast<decltype(api.draw)>(injector::GetBranchDestination(page.get_first(7)).as_int());
+        api.buttons = { *page.get_first<uint8_t*>(15), *page.get_first<uint8_t*>(27), *page.get_first<uint8_t*>(39) };
+        api.highlights = { *page.get_first<uint8_t*>(0x71), *page.get_first<uint8_t*>(0x5D), *page.get_first<uint8_t*>(0x49) };
+        auto setup = hook::pattern("6A 02 68 ? ? ? ? A2 ? ? ? ? A2 ? ? ? ? A2 ? ? ? ? A2 ? ? ? ? E8");
+        api.setup = reinterpret_cast<decltype(api.setup)>(injector::GetBranchDestination(setup.get_first(27)).as_int());
+    }
+}
+
 export namespace DeerMenu
 {
     struct Pause : std::enable_shared_from_this<Pause>
@@ -1296,6 +1692,7 @@ export namespace DeerMenu
         bool requested = false;
         bool retired = false;
         bool entryPainted = false;
+        bool padBack = false;
         std::string notice;
         uint64_t paintedGeneration = 0, paintedSerial = 0;
 
@@ -1306,7 +1703,7 @@ export namespace DeerMenu
 
         bool Current() const
         {
-            return !retired && font && context.Current();
+            return !retired && context.Current();
         }
 
         bool Private() const
@@ -1339,21 +1736,14 @@ export namespace DeerMenu
             auto lease = shared_from_this();
             module = owner;
             if (retired || !owner || !context.Current()) return false;
-            if (!font)
-            {
-                // RwRGBA bytes (r, g, b, a): opaque white text on a dark, translucent background.
-                // The constructor copies these values into its own raster.
-                const uint32_t foreground = 0xffffffff;
-                const uint32_t background = 0xb0000000;
-                font = Native::CreateTypeface(&foreground, &background);
-            }
-            if (!Current()) return false;
             if (!session)
             {
                 session = std::make_shared<Session>();
                 session->module = module;
                 session->pause = true;
-                session->width = context.width - 48;
+                // Rows are fitted in letters; the panel grows to the longest
+                session->width = 44 * Native::GlyphWidth;
+                session->view.window = 5;
                 session->owner = [weak = std::weak_ptr<Pause>(lease)]
                 {
                     const auto host = weak.lock();
@@ -1399,7 +1789,10 @@ export namespace DeerMenu
             if (nativeSelection < 0 || nativeSelection > 3) return false;
             if (key == 147 || key == 148)
             {
-                Write((Game(), reinterpret_cast<uintptr_t>(game_menuSelection.get_ptr())), std::clamp(nativeSelection + (key == 147 ? -1 : 1), 0, 3));
+                // Shown in the order 0, 1, Plugins (3), 2
+                constexpr int order[4] = { 0, 1, 3, 2 };
+                const auto place = int(std::find(std::begin(order), std::end(order), nativeSelection) - std::begin(order));
+                Write((Game(), reinterpret_cast<uintptr_t>(game_menuSelection.get_ptr())), order[std::clamp(place + (key == 147 ? -1 : 1), 0, 3)]);
                 return true;
             }
             if (key == 171 && nativeSelection == 3)
@@ -1427,66 +1820,119 @@ export namespace DeerMenu
             }
             else if (session && session->open)
                 session->Frame();
+            // The pad's back button goes up a level in our pages, as Esc does
+            XINPUT_STATE pad{};
+            DWORD slot = 0;
+            const bool back = PadInput::Read(pad, slot) && (pad.Gamepad.wButtons & XINPUT_GAMEPAD_B);
+            if (back && !padBack && Private())
+                Key(128);
+            padBack = back;
         }
 
-        bool Draw()
+        // The pause page in the game's menu sprites: its panel and words with Plugins added between its second and
+        // third items, or our pages in a panel like it grown to their rows; the game's arrow and Enter keys below
+        bool Paint()
         {
             auto lease = shared_from_this();
-            if (!Current() || !context.Rendering()) return false;
+            if (!Current())
+                return false;
+            using namespace Sprites;
+            const float nativeLeft = Value(api.panel, 32), nativeTop = Value(api.panel, 36);
+            const auto frame = [&](float wider, float taller)
+            {
+                Panel result;
+                result.wider = wider;
+                result.taller = taller;
+                result.left = nativeLeft - wider * TexelX * 0.5f;
+                result.top = nativeTop + taller * TexelY * 0.5f;
+                return result;
+            };
+            const auto keys = [&](const Panel& shown)
+            {
+                const float dy = shown.top - nativeTop - shown.taller * TexelY;
+                for (auto button : api.buttons)
+                    Moved(button, dy);
+            };
+            const float centre = (InsideX0 + InsideX1) * 0.5f;
             if (!Private())
             {
-                const std::string caption = (Game(), game_menuSelection.get()) == 3 ? "> Plugins" : "  Plugins";
-                const int y = context.height - Native::GlyphHeight - 16;
-                const int x = (context.width - int(caption.size()) * Native::GlyphWidth) / 2;
-                const bool result = x >= 16 && y >= 16 && Native::DrawText(font, caption.c_str(), x, y) && Current();
-                entryPainted = result;
-                return result;
+                const auto shown = frame(0.0f, RowPitch);
+                shown.Draw(false);
+                const int selection = (Game(), game_menuSelection.get());
+                const float dy = shown.top - nativeTop;
+                if (selection >= 0 && selection < 3)
+                    Moved(api.highlights[selection], dy - (selection == 2 ? RowPitch * TexelY : 0.0f));
+                // Where the third item was before the panel grew
+                Text(shown, PlainText(RWGTAMenu::PluginText(FixSettings(), Language(), "menu.plugins")), centre,
+                    FirstRow + 2.0f * RowPitch, 1.0f, selection == 3 ? Bright : Dim);
+                keys(shown);
+                entryPainted = true;
+                return true;
             }
-            if (!session->ready || session->view.items.size() > 5 || session->view.headings.size() > 4)
+            if (!session->ready || session->view.items.size() > session->view.window + 1)
                 return false;
             const auto serial = session->serial;
             const auto generation = session->generation;
-            View snapshot = session->view;
+            const View view = session->view;
             const size_t selected = session->selected;
-            const auto current = [&] { return Private() && context.Rendering() &&
-                session->Current(generation) && session->serial == serial; };
-            std::string help;
-            std::vector<std::string> helpLines;
-            if (notice.empty())
+            struct Line
             {
-                if (!session->ReadHelp(help)) return false;
+                std::string text;
+                uint32_t colour;
+                float scale;
+            };
+            std::vector<Line> lines;
+            size_t firstItem = 0;
+            if (!notice.empty())
+            {
+                std::vector<std::string> pieces;
+                if (!SplitText(notice, session->width, pieces))
+                    return false;
+                for (auto& piece : pieces)
+                    lines.push_back({ piece, Dim, 1.0f });
             }
             else
             {
-                help = notice;
-                snapshot.headings.clear();
-                snapshot.items.clear();
+                // Only the restart warning stands above the rows, smaller; the game's lists have no titles
+                if (session->model.RestartRequired())
+                    for (const auto& heading : view.headings)
+                        lines.push_back({ heading, Dim, 0.8f });
+                firstItem = lines.size();
+                for (size_t i = 0; i < view.items.size(); ++i)
+                {
+                    const auto& item = view.items[i];
+                    lines.push_back({ item.text, i == selected ? Bright : item.enabled ? Dim : Unavailable, 1.0f });
+                }
             }
-            if (!current() ||
-                (!help.empty() && !SplitText(help, context.width - 32 - 2 * Native::GlyphWidth, helpLines)))
-                return false;
-            const auto lines = snapshot.headings.size() + snapshot.items.size() + helpLines.size();
-            if (32 + 20 + int(lines) * (Native::GlyphHeight + 4) > context.height)
-                return false;
-            int y = 16;
-            const auto line = [&](const std::string& text, bool focused)
+            float widest = 0.0f;
+            for (const auto& line : lines)
+                widest = std::max(widest, TextWidth(line.text) * line.scale);
+            const bool marks = notice.empty() && (view.Above() || view.Below());
+            const float room = InsideX1 - InsideX0 - (marks ? 44.0f : 12.0f);
+            // The panel grows at most to keep its whole frame inside the picture with the game's margin; wider rows
+            // get smaller letters
+            constexpr float most = 200.0f;
+            float scale = 1.0f, wider = std::max(0.0f, widest - room);
+            if (wider > most)
             {
-                const std::string display = focused ? "> " + text : "  " + text;
-                if (!current() || !TextFits(display, context.width - 32, Native::GlyphHeight) ||
-                    y + Native::GlyphHeight > context.height - 16) return false;
-                const bool result = Native::DrawText(font, display.c_str(), 16, y);
-                y += Native::GlyphHeight + 4;
-                return result && current();
-            };
-            for (const auto& heading : snapshot.headings)
-                if (!line(heading, false)) return false;
-            y += 8;
-            for (size_t i = 0; i < snapshot.items.size(); ++i)
-                if (!line(snapshot.items[i].text, i == selected)) return false;
-            y += 12;
-            for (const auto& helpLine : helpLines)
-                if (!line(helpLine, false)) return false;
-            if (!current()) return false;
+                scale = (room + most) / widest;
+                wider = most;
+            }
+            const float taller = lines.size() > 3 ? float(lines.size() - 3) * RowPitch : 0.0f;
+            const auto shown = frame(wider, taller);
+            shown.Draw(true);
+            const float top = FirstRow + (lines.size() < 3 ? float(3 - lines.size()) * RowPitch * 0.5f : 0.0f);
+            for (size_t i = 0; i < lines.size(); ++i)
+                Text(shown, lines[i].text, centre + wider * 0.5f, top + float(i) * RowPitch, scale * lines[i].scale, lines[i].colour);
+            if (marks)
+            {
+                const float x = InsideX1 + wider - 18.0f;
+                if (view.Above())
+                    Arrow(shown, true, x, top + float(firstItem) * RowPitch);
+                if (view.Below())
+                    Arrow(shown, false, x, top + float(firstItem + view.Shown() - 1) * RowPitch);
+            }
+            keys(shown);
             paintedGeneration = generation;
             paintedSerial = serial;
             return true;
@@ -1660,13 +2106,19 @@ export namespace DeerMenu
     {
         Depth depth(drawDepth);
         auto host = pauseHost;
-        // This function draws only menu sprites; hide the pause pane while our page replaces it.
-        if (!stopping && host && host->Private() && host->session->ready)
-            return 0;
-        if (PauseContext::PauseShown())
+        // The pause page in the game's sprites: its panel with our Plugins item, or our pages in a panel like it
+        if (!stopping && host && host->Current() && PauseContext::PauseShown() && Sprites::Ready())
         {
             Depth pauseSprites(pauseSpriteDepth);
-            return menuDrawHook.unsafe_ccall<int>();
+            Sprites::api.state(6, 0);
+            Sprites::api.state(8, 0);
+            bool painted = false;
+            try { painted = host->Paint(); }
+            catch (...) { Cancel("pause sprite failure"); }
+            Sprites::api.state(6, 1);
+            Sprites::api.state(8, 1);
+            if (painted)
+                return 0;
         }
         return menuDrawHook.unsafe_ccall<int>();
     }
@@ -1695,8 +2147,8 @@ export namespace DeerMenu
                 host->Retire();
                 return result;
             }
-            if (!host->Prepare(module) || !host->Draw())
-                Cancel("pause source/font/viewport/text contract refused");
+            if (!host->Prepare(module))
+                Cancel("pause source/viewport contract refused");
         }
         catch (...) { Cancel("pause font/draw failure"); }
         return result;
@@ -1707,6 +2159,8 @@ export namespace DeerMenu
         static std::once_flag once;
         std::call_once(once, []() { WFP::onGameInitEvent().executeAll(); });
         WFP::onGameProcessEvent().executeAll();
+        // The droplets stay off the game's menus while one shows
+        RainDroplets::MenuOpen((DeerMenu::Game(), game_menuOpen.get()) == 1);
         if (Outside() && (DeerMenu::Game(), game_worldState.get()) != 1)
         {
             try { ReleasePause(); } catch (...) { Cancel("pre-world retirement failure"); }
@@ -1791,6 +2245,7 @@ export namespace DeerMenu
         titleHook = safetyhook::create_inline(reinterpret_cast<void*>(Game().title), Title);
         keyHook = safetyhook::create_inline(reinterpret_cast<void*>(Game().key), Key);
         menuHook = safetyhook::create_inline(reinterpret_cast<void*>(Game().menu), Menu);
+        Sprites::Init(Game().menuDraw);
         menuDrawHook = safetyhook::create_inline(reinterpret_cast<void*>(Game().menuDraw), MenuDraw);
         drawHook = safetyhook::create_inline(reinterpret_cast<void*>(Game().draw), Draw);
         frameHook = safetyhook::create_inline(reinterpret_cast<void*>(Game().frame), Frame);

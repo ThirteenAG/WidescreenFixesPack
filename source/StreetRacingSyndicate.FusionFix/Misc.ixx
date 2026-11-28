@@ -2,6 +2,7 @@ module;
 
 #include <stdafx.h>
 #include "FixSettings.hpp"
+#include "Shared/RainDroplets.hpp"
 
 export module Misc;
 
@@ -105,6 +106,8 @@ public:
             {
                 const auto deepest = SRSStates::Deepest();
                 SRSHud::Driving = deepest && std::string_view(SRSStates::Name(deepest)) == "MP2Game";
+                // Off the road the frontend, the pause menu or a video is on the screen: no drops over it
+                RainDroplets::MenuOpen(!SRSHud::Driving);
             };
             SRSWindow::FrameCallback = []() { SRSPad::UpdateDevice(); WFP::onGameProcessEvent().executeAll(); };
             SRSWindow::InputMessage = SRSPad::InputMessage;

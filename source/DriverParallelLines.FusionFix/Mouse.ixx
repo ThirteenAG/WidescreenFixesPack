@@ -65,6 +65,7 @@ export namespace DPLMouse
         }
         if (!success || blocked) input = {};
         current = { static_cast<int32_t>(input.lX), static_cast<int32_t>(input.lY), static_cast<int32_t>(input.lZ), {} };
+        MenuMouse::Wheel += input.lZ;
         std::copy(std::begin(input.rgbButtons), std::end(input.rgbButtons), current.buttons);
         auto& totals = *accumulation.get_ptr();
         const bool raw = rawInput.load(std::memory_order_relaxed);

@@ -10,12 +10,23 @@
 #include <shellapi.h>
 #include "Shared/AsiSettings/asi_settings.hpp"
 #include "Shared/OtherPlugins.hpp"
+#include "Shared/MenuList.hpp"
 
 // The settings of the fix and of the other plugins with an ASI Settings description, as pages
 // of the game's own frontend. Nothing here knows the game: each fix's menu module puts the rows into its menu screens
 // and converts the text (UTF-8) to its font.
 //
-// Plugins layout (the one row "Plugins" added to the game's options):
+// Menu layout (the one row "Plugins" added to the game's options; scrolling lists, categories as submenus):
+//   model.OpenMenu(module, language, slots, { "MAIN.FOVFactor", ... });
+// - Pages()[RootPage] is the plugins list: a Plugin row per plugin (the fix first), each opening the plugin's page.
+// - A plugin's page: its Preset row (when it has presets), then either its settings (one category) or a Category row
+//   per page of its description, each opening that category's page; Restore defaults last (the whole plugin).
+// - Every page is one continuous list: Shown(page, back) gives the rows in its window (a null row is Back, when the
+//   host lists it), Window(page) moves through it (MenuList.hpp), Enter(row) opens a row's page, Parent(page) is where
+//   Back goes (SIZE_MAX: leave the menu). Rows that hide leave no gap and the selection stays on its row.
+// - Label, Value, Change, Help and the ids passed (joined rows) work as in the Plugins layout below.
+//
+// Plugins layout (older hosts; one page per plugin):
 //   model.OpenPlugins(module, language, pageRows, { "MAIN.FOVFactor", ... }, true);
 // - Pages() are the entries of the Plugins list: the fix first, then every other plugin with settings, one page each
 //   with a scrolling window of rows, including Back as its last row (scrolling = true).
@@ -39,7 +50,7 @@ namespace RWGTAMenu
     using asi_settings::LoadedPlugin;
     using asi_settings::Setting;
 
-    enum class RowKind { Setting, Action, Preset, ApplyPreset, SettingsFile, RestoreDefaults };
+    enum class RowKind { Setting, Action, Preset, ApplyPreset, SettingsFile, RestoreDefaults, Plugin, Category };
 
     // Resets the settings of the given ids to their defaults (the game's own Restore Defaults on a page with the fix's
     // rows); true when one of the changed settings applies after a restart
@@ -67,6 +78,7 @@ namespace RWGTAMenu
         RowKind kind = RowKind::Setting;
         const LoadedPlugin* plugin = nullptr;
         const Setting* setting = nullptr;
+        size_t target{ SIZE_MAX };      // Plugin and Category rows (menu layout): the page they open
     };
 
     struct Page
@@ -75,6 +87,8 @@ namespace RWGTAMenu
         const LoadedPlugin* plugin = nullptr;
         std::vector<Row> rows;
         size_t scroll{ 0 };
+        size_t parent{ SIZE_MAX };      // menu layout: the page Back returns to (none for the plugins list)
+        MenuList::Window window;        // menu layout: the selection and the rows shown
     };
 
     class Model
@@ -112,6 +126,86 @@ namespace RWGTAMenu
                 SplitPluginPages(pageRows);
         }
 
+        // The menu layout (see the top of the file); slots: the rows the host shows at once, Back included when it
+        // lists Back; joined: ids of the fix's settings shown on the game's own pages
+        void OpenMenu(HMODULE hostModule, const std::string& language, size_t slots, const std::set<std::string>& joined = {})
+        {
+            Open(hostModule, language, std::max<size_t>(3, slots), Layout::Menu, joined);
+        }
+
+        bool MenuLayout() const { return layout == Layout::Menu; }
+
+        static constexpr size_t RootPage = 0;
+
+        // Menu layout: the page Back returns to; SIZE_MAX for the plugins list (Back leaves the menu)
+        size_t Parent(size_t page) const
+        {
+            return page < pages.size() ? pages[page].parent : SIZE_MAX;
+        }
+
+        // A Plugin or Category row: accepting it opens its page
+        static bool Opens(const Row& row)
+        {
+            return row.kind == RowKind::Plugin || row.kind == RowKind::Category;
+        }
+
+        MenuList::Window& Window(size_t page)
+        {
+            static MenuList::Window none;
+            return page < pages.size() ? pages[page].window : none;
+        }
+
+        // Menu layout: every shown row of a page, Back last (a null row) when back; the page's window follows them
+        std::vector<const Row*> ListRows(size_t page, bool back)
+        {
+            auto rows = VisibleRows(page);
+            if (page >= pages.size())
+                return {};
+            if (back)
+                rows.push_back(nullptr);
+            std::vector<MenuList::Key> keys;
+            keys.reserve(rows.size());
+            for (auto row : rows)
+                keys.push_back(row ? reinterpret_cast<MenuList::Key>(row) : MenuList::Key(1));
+            pages[page].window.Update(keys);
+            return rows;
+        }
+
+        // Menu layout: the rows in the page's window, slot by slot
+        std::vector<const Row*> Shown(size_t page, bool back)
+        {
+            auto rows = ListRows(page, back);
+            auto& window = Window(page);
+            size_t first = std::min(window.First(), rows.size());
+            size_t end = std::min(rows.size(), first + window.Shown());
+            return { rows.begin() + first, rows.begin() + end };
+        }
+
+        // Menu layout: the row's page is shown from its top; SIZE_MAX when the row opens nothing
+        size_t Enter(const Row& row)
+        {
+            if (!Opens(row) || row.target >= pages.size())
+                return SIZE_MAX;
+            restoreConfirm = nullptr;
+            confirm = nullptr;
+            confirmActive = restartActive = false;
+            restartNeeded = nullptr;
+            auto& page = pages[row.target];
+            page.window.Reset();
+            if (row.kind == RowKind::Plugin)
+                presetShown.erase(page.plugin);
+            return row.target;
+        }
+
+        // Menu layout: leaving a page for its parent drops pending confirmations; the parent keeps its selection
+        size_t Back(size_t page)
+        {
+            restoreConfirm = nullptr;
+            confirm = nullptr;
+            confirmActive = false;
+            return Parent(page);
+        }
+
         // The open pages in another language (an editor changed the menu's language): their texts are selected again
         // and the pages built again, keeping their scroll. True when it changed; rows taken before are then invalid.
         bool SelectLanguage(const std::string& tag)
@@ -123,9 +217,17 @@ namespace RWGTAMenu
             for (auto& plugin : *snapshot)
                 plugin.file.texts.Select(tag);
             std::vector<size_t> scroll;
+            std::vector<MenuList::Window> windows;
             for (auto& page : pages)
+            {
                 scroll.push_back(page.scroll);
-            if (layout == Layout::Plugins)
+                windows.push_back(page.window);
+            }
+            if (layout == Layout::Menu)
+            {
+                BuildMenu();
+            }
+            else if (layout == Layout::Plugins)
             {
                 BuildPlugins(openRows);
                 if (splitPages)
@@ -138,7 +240,10 @@ namespace RWGTAMenu
             if (pages.size() == scroll.size())
             {
                 for (size_t i = 0; i < pages.size(); ++i)
+                {
                     pages[i].scroll = scroll[i];
+                    pages[i].window = windows[i];
+                }
             }
             return true;
         }
@@ -149,7 +254,7 @@ namespace RWGTAMenu
             Open(hostModule, language, pageRows, Layout::Pages, {});
         }
 
-        bool PluginsLayout() const { return layout == Layout::Plugins; }
+        bool PluginsLayout() const { return layout != Layout::Pages; }
 
         // The rows of the fix's settings passed to OpenPlugins, in their order (Plugins layout)
         const std::vector<Row>& JoinedRows() const { return joinedRows; }
@@ -193,7 +298,7 @@ namespace RWGTAMenu
         }
 
     private:
-        enum class Layout { Pages, Plugins };
+        enum class Layout { Pages, Plugins, Menu };
 
         void Open(HMODULE hostModule, const std::string& language, size_t pageRows, Layout chosen, const std::set<std::string>& joined)
         {
@@ -247,7 +352,9 @@ namespace RWGTAMenu
                 if (plugin.module == hostModule)
                     host = &plugin;
             }
-            if (layout == Layout::Plugins)
+            if (layout == Layout::Menu)
+                BuildMenu();
+            else if (layout == Layout::Plugins)
                 BuildPlugins(pageRows);
             else
                 Build(pageRows);
@@ -296,6 +403,15 @@ namespace RWGTAMenu
             {
                 auto& row = described[i];
                 bool visible = (row.kind != RowKind::Setting && row.kind != RowKind::Action) || OtherPlugins::Visible(*row.plugin, *row.setting);
+                // A category whose settings are all hidden now isn't listed
+                if (row.kind == RowKind::Category && row.target < pages.size())
+                {
+                    auto& rows = pages[row.target].rows;
+                    visible = std::any_of(rows.begin(), rows.end(), [&](const Row& entry)
+                    {
+                        return (entry.kind != RowKind::Setting && entry.kind != RowKind::Action) || OtherPlugins::Visible(*entry.plugin, *entry.setting);
+                    });
+                }
                 if (snapshot != plugins)
                     return {};
                 if (!visible)
@@ -371,6 +487,7 @@ namespace RWGTAMenu
                 case RowKind::ApplyPreset: return Text("menu.applypreset");
                 case RowKind::SettingsFile: return Text("menu.settingsfile");
                 case RowKind::RestoreDefaults: return Text("menu.restoredefaults");
+                case RowKind::Plugin: case RowKind::Category: return row.target < pages.size() ? pages[row.target].title : std::string{};
                 default: break;
             }
             auto label = OtherPlugins::Text(*row.plugin, row.setting->label);
@@ -394,7 +511,7 @@ namespace RWGTAMenu
                         return OtherPlugins::ValueText(*row.plugin, *row.setting, Text("menu.on"), Text("menu.off"));
                     case RowKind::Preset:
                     {
-                        if (layout == Layout::Plugins && confirmActive && confirm == row.plugin)
+                        if (layout != Layout::Pages && confirmActive && confirm == row.plugin)
                             return Text("menu.confirm");
                         int shown = PresetShown(row.plugin);
                         return Text(shown < 0 ? "menu.custom" : PresetNames[shown]);
@@ -446,7 +563,7 @@ namespace RWGTAMenu
             auto current = [&]() { return snapshot && snapshot == plugins; };
             if (!current())
                 return false;
-            bool presetAccept = layout == Layout::Plugins && row.kind == RowKind::Preset && direction == 0;
+            bool presetAccept = layout != Layout::Pages && row.kind == RowKind::Preset && direction == 0;
             if (row.kind != RowKind::ApplyPreset && !presetAccept)
             {
                 confirm = nullptr;
@@ -715,6 +832,71 @@ namespace RWGTAMenu
                 ShellExecuteW(nullptr, L"open", L"explorer.exe", arguments.c_str(), nullptr, SW_SHOWNORMAL);
                 CoUninitialize();
             }).detach();
+        }
+
+        // Menu layout: the plugins list, a page per plugin and a page per category of a plugin with several
+        void BuildMenu()
+        {
+            pages.clear();
+            joinedRows.clear();
+            pages.push_back({ Text("menu.plugins"), nullptr, {} });
+            for (auto& plugin : *plugins)
+            {
+                bool isHost = &plugin == host;
+                if (isHost && !joinedIds.empty())
+                {
+                    for (auto& category : OtherPlugins::Categories(plugin))
+                    {
+                        for (auto setting : category.settings)
+                        {
+                            if (joinedIds.count(setting->id))
+                                joinedRows.push_back({ setting->type == asi_settings::Type::Action ? RowKind::Action : RowKind::Setting, &plugin, setting });
+                        }
+                    }
+                }
+                auto categories = OtherPlugins::Categories(plugin, [&](const Setting& setting) { return !(isHost && joinedIds.count(setting.id)); });
+                bool presets = OtherPlugins::HasPresets(plugin);
+                if (categories.empty() && !presets)
+                    continue;
+
+                size_t top = pages.size();
+                pages.push_back({ OtherPlugins::Name(plugin), &plugin, {}, 0, RootPage });
+                pages[RootPage].rows.push_back({ RowKind::Plugin, &plugin, nullptr, top });
+                std::vector<Row> rows;
+                if (presets)
+                    rows.push_back({ RowKind::Preset, &plugin });
+                bool resettable = false;
+                auto settingRows = [&](const OtherPlugins::Category& category)
+                {
+                    std::vector<Row> list;
+                    for (auto setting : category.settings)
+                    {
+                        Row row{ setting->type == asi_settings::Type::Action ? RowKind::Action : RowKind::Setting, &plugin, setting };
+                        resettable |= row.kind == RowKind::Setting;
+                        list.push_back(row);
+                    }
+                    return list;
+                };
+                if (categories.size() == 1)
+                {
+                    auto list = settingRows(categories.front());
+                    rows.insert(rows.end(), list.begin(), list.end());
+                }
+                else
+                {
+                    for (auto& category : categories)
+                    {
+                        size_t index = pages.size();
+                        pages.push_back({ category.title, &plugin, settingRows(category), 0, top });
+                        rows.push_back({ RowKind::Category, &plugin, nullptr, index });
+                    }
+                }
+                if (resettable)
+                    rows.push_back({ RowKind::RestoreDefaults, &plugin });
+                pages[top].rows = std::move(rows);
+            }
+            for (auto& page : pages)
+                page.window.SetSlots(openRows);
         }
 
         // Plugins layout: one scrolling page per plugin

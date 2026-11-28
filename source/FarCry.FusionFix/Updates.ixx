@@ -36,7 +36,7 @@ export namespace FarCryUpdates
         config.playable = []()
         {
             const auto owner = FarCryMenu::context;
-            return owner && owner->open && !owner->details && FarCryMenu::pending.empty() && FarCryMenu::Available(owner);
+            return owner && owner->open && FarCryMenu::pending.empty() && FarCryMenu::Available(owner);
         };
         config.format = [](const std::string& version, bool hub)
         {
@@ -59,21 +59,9 @@ export namespace FarCryUpdates
             const auto owner = FarCryMenu::context;
             if (!FarCryMenu::Available(owner) || !owner->open || !FarCryMenu::Snapshot(owner, "private"))
                 return false;
-            auto lines = FarCryMenu::Wrap(FarCryMenu::FontService(owner), FarCryMenu::fontModule, asi_settings::text::Narrow(text));
-            if (lines.empty() || !FarCryMenu::Available(owner) || !FarCryMenu::Snapshot(owner, "private"))
-                return false;
-            owner->helpLines = std::move(lines);
-            owner->helpTitle = owner->model.Text("update.title");
-            owner->helpSelected = owner->selected;
-            owner->helpPage = owner->selected = 0;
-            owner->details = true;
-            if (!FarCryMenu::Build(owner))
-            {
-                owner->returnPending = true;
-                FarCryMenu::Retire(owner);
-                return false;
-            }
-            return FarCryMenu::Available(owner) && FarCryMenu::Snapshot(owner, "private");
+            // The notice stays in the help box until the selection moves
+            return FarCryMenu::Help(owner, owner->selected, asi_settings::text::Narrow(text)) &&
+                FarCryMenu::Available(owner) && FarCryMenu::Snapshot(owner, "private");
         };
         RWGTA::UpdateCheck::Init(std::move(config));
         FarCryMenu::Tick = []() { RWGTA::UpdateCheck::Tick(); };

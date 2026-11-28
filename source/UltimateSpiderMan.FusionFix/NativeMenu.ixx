@@ -5,6 +5,7 @@ module;
 #include <d3d9.h>
 #include "Shared/RWGTA/FixMenu.hpp"
 #include "Shared/RWGTA/UpdateCheck.hpp"
+#include "Shared/RainDroplets.hpp"
 
 export module NativeMenu;
 
@@ -20,10 +21,15 @@ export namespace USMMenu
     inline std::vector<uintptr_t> Widgets;
     inline std::vector<std::pair<uintptr_t, bool>> Hidden, SavedVisibility;
     inline bool Opened = false, Details = false;
-    inline int Page = -1, Selected = 0, HelpOffset = 0, HelpLines = 0;
+    // The list shown (the plugins list, a plugin's page or a category); every list scrolls through the 7 row slots
+    inline size_t Page = RWGTAMenu::Model::RootPage;
+    inline int HelpOffset = 0, HelpLines = 0;
     inline constexpr int VisibleSlots = 7;
-    inline int PluginSelection = 0, PluginOffset = 0, VisibleRows = 0;
-    inline std::array<std::optional<RWGTAMenu::Row>, VisibleSlots> RenderedRows;
+    inline int VisibleRows = 0;
+    inline std::array<const RWGTAMenu::Row*, VisibleSlots> RenderedRows{};
+    inline MenuList::WheelNotches Notches;
+    // Widgets: 0-6 rows, 7 Back, 8 Details, 9 title, 10-16 values, 17 help, 18 restart notice, 19/20 scroll marks
+    inline constexpr int UpMark = 19, DownMark = 20;
     inline std::array<int, 24> MenuKeys{};
     inline bool PadShortcutsEnabled = false;
     inline std::string Language;
@@ -112,6 +118,18 @@ export namespace USMMenu
 
     inline void __cdecl Click(uintptr_t widget, int event, uintptr_t)
     {
+        // 3: the mouse came onto a button; a row it comes onto is selected, like the game's own rows
+        if (event == 3 && Opened && !Details && !Notice)
+        {
+            const auto found = std::find(Widgets.begin(), Widgets.end(), widget);
+            const auto index = static_cast<int>(found - Widgets.begin());
+            if (found != Widgets.end() && (index < 7 || (index >= 10 && index < 17)))
+            {
+                const auto slot = index < 7 ? index : index - 10;
+                if (slot < VisibleRows && Model.Window(Page).Point(slot))
+                    Refresh();
+            }
+        }
         if (event != 2)
             return;
         if (widget == Tab)
@@ -133,12 +151,12 @@ export namespace USMMenu
                 }
                 for (const auto& [widget, visible] : Hidden)
                     Call(widget, 6, 0);
-                Model.OpenPlugins(Module(), Language, 6, {}, true);
+                Model.OpenMenu(Module(), Language, VisibleSlots);
                 RememberRestartValues();
                 Opened = true;
-                Page = -1;
-                Selected = 0;
-                PluginSelection = PluginOffset = 0;
+                Page = RWGTAMenu::Model::RootPage;
+                Model.Window(Page).Reset();
+                Notches.Clear();
             }
             Refresh();
             return;
@@ -152,11 +170,14 @@ export namespace USMMenu
             const auto slot = index < 7 ? index : index - 10;
             if (slot >= VisibleRows)
                 return;
-            if (Page < 0)
-                PluginSelection = PluginOffset + slot;
-            else
-                Selected = slot;
+            Model.Window(Page).Point(slot);
             Activate(0);
+        }
+        else if (index == UpMark || index == DownMark)
+        {
+            // The marks scroll the list by a row; the selection stays unless it would leave the window
+            if (Model.Window(Page).Scroll(index == UpMark ? -1 : 1))
+                Refresh();
         }
         else if (index == 7)
             Back();
@@ -183,9 +204,10 @@ export namespace USMMenu
         return widget;
     }
 
+    // The rows in the window of the shown list
     inline std::vector<const RWGTAMenu::Row*> Rows()
     {
-        return Page >= 0 ? Model.WindowRows(Page) : std::vector<const RWGTAMenu::Row*>{};
+        return Model.Shown(Page, false);
     }
 
     inline bool RestartPending()
@@ -223,11 +245,12 @@ export namespace USMMenu
     {
         if (Notice)
             return NoticeText(*Notice);
-        if (Page < 0)
+        if (Page == RWGTAMenu::Model::RootPage)
             return Words("menu.pluginshelp");
         const auto rows = Rows();
-        if (Selected < static_cast<int>(rows.size()) && rows[Selected])
-            return Model.Help(*rows[Selected]);
+        const auto slot = static_cast<size_t>(Model.Window(Page).Slot());
+        if (slot < rows.size() && rows[slot] && !RWGTAMenu::Model::Opens(*rows[slot]))
+            return Model.Help(*rows[slot]);
         return {};
     }
 
@@ -237,37 +260,30 @@ export namespace USMMenu
             return;
         for (const auto widget : Widgets)
             Call(widget, 6, 0);
+        if (Page >= Model.Pages().size())
+            Page = RWGTAMenu::Model::RootPage;
         const auto rows = Rows();
-        const auto pluginCount = static_cast<int>(Model.Pages().size());
-        PluginSelection = std::clamp(PluginSelection, 0, std::max(0, pluginCount - 1));
-        PluginOffset = std::clamp(PluginOffset, std::max(0, PluginSelection - VisibleSlots + 1),
-            std::min(PluginSelection, std::max(0, pluginCount - VisibleSlots)));
-        Selected = std::clamp(Selected, 0, std::max(0, static_cast<int>(rows.size()) - 1));
-        const auto count = Page < 0 ? pluginCount - PluginOffset : static_cast<int>(rows.size());
-        RenderedRows.fill(std::nullopt);
-        VisibleRows = Details || Notice ? 0 : std::min(VisibleSlots, count);
-        if (Page >= 0)
-        {
-            for (int i = 0; i < VisibleRows; ++i)
-                if (rows[i])
-                    RenderedRows[i] = *rows[i];
-        }
+        const auto& window = Model.Window(Page);
+        RenderedRows.fill(nullptr);
+        VisibleRows = Details || Notice ? 0 : std::min(VisibleSlots, static_cast<int>(rows.size()));
         for (int i = 0; i < VisibleRows; ++i)
         {
-            const auto& row = RenderedRows[i];
-            auto label = Page < 0 ? Model.Pages()[PluginOffset + i].title : row ? Model.Label(*row) : Words("menu.back");
-            auto value = row ? Model.Value(*row) : "";
-            Caption(Widgets[i], label);
-            Call(Widgets[i], 24, i == (Page < 0 ? PluginSelection - PluginOffset : Selected) ? 1 : 0);
+            const auto row = rows[i];
+            RenderedRows[i] = row;
+            const auto value = Model.Value(*row);
+            Caption(Widgets[i], Model.Label(*row));
+            Call(Widgets[i], 24, static_cast<size_t>(i) == window.Slot() ? 1 : 0);
             Call(Widgets[i], 6, 1);
             Caption(Widgets[10 + i], value);
             Call(Widgets[10 + i], 6, value.empty() ? 0 : 1);
         }
+        Call(Widgets[UpMark], 6, VisibleRows && window.Above() ? 1 : 0);
+        Call(Widgets[DownMark], 6, VisibleRows && window.Below() ? 1 : 0);
         Caption(Widgets[7], Words("menu.back"));
         Call(Widgets[7], 6, 1);
         Caption(Widgets[8], Words(Details ? "menu.back" : "menu.details"));
         Call(Widgets[8], 6, Notice ? 0 : 1);
-        Caption(Widgets[9], Page < 0 ? Words("menu.plugins") : Model.Pages()[Page].title);
+        Caption(Widgets[9], Page == RWGTAMenu::Model::RootPage ? Words("menu.plugins") : Model.Pages()[Page].title);
         Call(Widgets[9], 6, 1);
         auto help = Help();
         std::istringstream words(help);
@@ -288,7 +304,8 @@ export namespace USMMenu
         if (!line.empty())
             helpLines.push_back(line);
         HelpLines = static_cast<int>(helpLines.size());
-        const auto visibleLines = full ? 10 : 2;
+        // Under the rows there is room for four lines, the whole help of a row or of the plugins list
+        const auto visibleLines = full ? 10 : 4;
         HelpOffset = full ? std::clamp(HelpOffset, 0, std::max(0, HelpLines - visibleLines)) : 0;
         for (int i = HelpOffset; i < std::min(HelpLines, HelpOffset + visibleLines); ++i)
         {
@@ -297,7 +314,7 @@ export namespace USMMenu
             wrapped += helpLines[i];
         }
         Caption(Widgets[17], wrapped);
-        Call(Widgets[17], 9, 48, full ? 170 : 347, 548, full ? 220 : 70);
+        Call(Widgets[17], 9, 48, full ? 170 : 347, 548, full ? 220 : 84);
         Call(Widgets[17], 6, 1);
         Caption(Widgets[18], RestartPending() ? Words("menu.restartwarning") : "");
         Call(Widgets[18], 6, RestartPending() ? 1 : 0);
@@ -310,13 +327,14 @@ export namespace USMMenu
         {
             Notice.reset();
             Details = false;
-            Page = -1;
+            Page = RWGTAMenu::Model::RootPage;
         }
         else if (Details)
             Details = false;
-        else if (Page >= 0)
+        else if (const auto parent = Model.Back(Page); parent != SIZE_MAX)
         {
-            Page = -1;
+            // The list it came from, on the row it came from
+            Page = parent;
         }
         else
         {
@@ -336,42 +354,41 @@ export namespace USMMenu
     {
         if (Details || Notice)
             return;
-        if (Page < 0)
+        const auto rows = Rows();
+        const auto slot = static_cast<int>(Model.Window(Page).Slot());
+        if (slot >= VisibleRows || slot >= static_cast<int>(rows.size()) || rows[slot] != RenderedRows[slot])
+            return;
+        const auto row = rows[slot];
+        if (RWGTAMenu::Model::Opens(*row))
         {
-            if (!direction && PluginSelection < static_cast<int>(Model.Pages().size()))
-            {
-                Page = PluginSelection;
-                Selected = 0;
-            }
+            if (direction)
+                return;
+            const auto target = Model.Enter(*row);
+            if (target != SIZE_MAX)
+                Page = target;
         }
         else
-        {
-            const auto rows = Rows();
-            if (Selected < VisibleRows && Selected < static_cast<int>(rows.size()))
-            {
-                const auto current = rows[Selected];
-                const auto rendered = RenderedRows[Selected];
-                if (current && rendered && current->kind == rendered->kind && current->plugin == rendered->plugin &&
-                    current->setting == rendered->setting)
-                    Model.Change(*rendered, direction, true);
-                else if (!current && !rendered && !direction)
-                {
-                    Back();
-                    return;
-                }
-            }
-        }
+            Model.Change(*row, direction, true);
         Refresh();
     }
 
+    // Up/Down: one row, the window following by one row, wrapping at the ends like the game's lists
     inline void Navigate(int direction)
     {
         if (Details || Notice)
             HelpOffset += direction;
-        else if (Page >= 0)
-            Selected = Model.Move(Page, Selected, direction);
-        else if (const auto count = static_cast<int>(Model.Pages().size()))
-            PluginSelection = (PluginSelection + direction + count) % count;
+        else
+            Model.Window(Page).Move(direction);
+        Refresh();
+    }
+
+    // The wheel (one row per notch), Page Up/Down, Home/End
+    inline void Scroll(int direction)
+    {
+        if (Details || Notice)
+            HelpOffset += direction;
+        else if (!Model.Window(Page).Scroll(direction))
+            return;
         Refresh();
     }
 
@@ -426,7 +443,20 @@ export namespace USMMenu
     {
         if (Opened && message == WM_MOUSEWHEEL && IsOptionsManager(Manager) && !USMOverlayBlocksInput())
         {
-            Navigate(GET_WHEEL_DELTA_WPARAM(key) > 0 ? -1 : 1);
+            const auto notches = Notches.Take(GET_WHEEL_DELTA_WPARAM(key));
+            for (int i = 0; i < std::abs(notches); ++i)
+                Scroll(notches > 0 ? -1 : 1);
+            return true;
+        }
+        if (Opened && message == WM_KEYDOWN && (key == VK_PRIOR || key == VK_NEXT || key == VK_HOME || key == VK_END) &&
+            IsOptionsManager(Manager) && !USMOverlayBlocksInput())
+        {
+            if (!Details && !Notice)
+            {
+                auto& window = Model.Window(Page);
+                if (key == VK_PRIOR || key == VK_NEXT ? window.Page(key == VK_NEXT ? 1 : -1) : window.Edge(key == VK_END ? 1 : -1))
+                    Refresh();
+            }
             return true;
         }
         // The native input loop synthesizes navigation keys only.
@@ -467,6 +497,11 @@ export namespace USMMenu
             for (int i = 0; i < 7; ++i) Widgets.push_back(Button(1011 + i, 400, 165 + i * 24, 195));
             Widgets.push_back(Button(1018, 48, 347, 548, 0.6f));
             Widgets.push_back(Button(1019, 48, 435, 548, 0.6f));
+            // Scroll marks, an ellipsis in the rows' font over the rows' column, clickable
+            Widgets.push_back(Button(1020, 48, 151, 350, 0.6f));
+            Widgets.push_back(Button(1021, 48, 331, 350, 0.6f));
+            Caption(Widgets[UpMark], "...");
+            Caption(Widgets[DownMark], "...");
         }
         if (manager == Manager)
         {
@@ -477,9 +512,8 @@ export namespace USMMenu
                 Caption(Tab, Words("menu.plugins"));
                 if (Opened)
                 {
-                    Model.OpenPlugins(Module(), Language, 6, {}, true);
+                    Model.SelectLanguage(Language);
                     RememberRestartValues();
-                    Page = std::clamp(Page, -1, static_cast<int>(Model.Pages().size()) - 1);
                     Refresh();
                 }
             }
@@ -491,7 +525,11 @@ export namespace USMMenu
             }
         }
         if (manager == Manager)
+        {
             RWGTA::UpdateCheck::Tick();
+            // The Options screen is up: no drops over it
+            RainDroplets::MenuOpen(true);
+        }
         return LoopHook.thiscall<char>(manager);
     }
 
@@ -499,6 +537,7 @@ export namespace USMMenu
     {
         if (manager == Manager)
         {
+            RainDroplets::MenuOpen(false);
             Model.Close();
             Manager = Tab = 0;
             Opened = Details = false;

@@ -87,6 +87,7 @@ export namespace MouseRead
 {
     int32_t X = 0;
     int32_t Y = 0;
+    int32_t MenuWheel = 0;  // wheel counts not yet taken by the Plugins menu
 }
 
 // "Joy But N" in the controls menu

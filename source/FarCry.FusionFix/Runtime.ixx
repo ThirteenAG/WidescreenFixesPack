@@ -262,6 +262,10 @@ export namespace FarCryRuntime
             return device == Device.load() && D3D9Options::frameLimit > 0;
         };
         FarCryWindow::OnFrame = Bind;
+        // The renderer gives up when its device can't be made: with the display off or asleep, or another program
+        // in exclusive fullscreen, CreateDevice reports a lost device; wait for it and make it then
+        D3D9Options::waitForDevice = true;
+        D3D9Options::HookCreation();
         if constexpr (WFP::DeveloperOverlay)
         {
             asi_overlay::Overlay::AddPage("Debug", "Info", [](asi_overlay::OverlayUI& ui)

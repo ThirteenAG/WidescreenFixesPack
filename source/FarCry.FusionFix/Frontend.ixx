@@ -19,6 +19,7 @@ module;
 #include <sstream>
 #include <vector>
 #include "Shared/RWGTA/FixMenu.hpp"
+#include "Shared/RainDroplets.hpp"
 #include <deque>
 #include <memory>
 #include <safetyhook.hpp>
@@ -81,10 +82,11 @@ export namespace FarCryMenu
         if (!Table(globals, objectTable)) return false;
         bool free = true;
         for (const auto* name : {"WFP_Bridge", "WFP_Menu", "WFP_FindScreen", "WFP_FindWidget",
-            "WFP_Identity", "WFP_OwnRow", "WFP_Command", "WFP_Key", "WFP_Focus", "WFP_Hover",
+            "WFP_Identity", "WFP_SlotWidget", "WFP_OwnRow", "WFP_Command", "WFP_Key", "WFP_Focus", "WFP_Hover",
+            "WFP_Selected", "WFP_Arrow", "WFP_Up", "WFP_Tab", "WFP_BackButton", "WFP_Scrolled",
             "WFP_Released", "WFP_Entry", "WFP_Rect", "WFP_RectMatches", "WFP_Constructing",
             "WFP_Prepare", "WFP_Snapshot", "WFP_Commit", "WFP_Enter", "WFP_Select", "WFP_Describe",
-            "WFP_Leave", "WFP_Retire", "g_WFPMenuStatus", "g_WFPMenuSelected", "g_WFPMenuPause", "g_WFPMenuResult"})
+            "WFP_Leave", "WFP_FocusEntry", "WFP_Retire", "g_WFPMenuStatus", "g_WFPMenuSelected", "g_WFPMenuPause", "g_WFPMenuResult"})
         {
             if (Virtual<int>(globals, 40, name) != 0) { free = false; break; }
         }
@@ -258,6 +260,9 @@ export namespace FarCryMenu
             std::abs(actual.width - expected.width) <= 1.0f && std::abs(actual.height - expected.height) <= 1.0f &&
             actual.width > 0 && actual.height > 0;
     }
+    // The page's slots: setting rows show a value box, page and action rows a button
+    constexpr size_t PoolSlots = 6;
+    constexpr float SlotTop = 149, SlotPitch = 35;
     struct NativePool
     {
         void* ui{};
@@ -265,16 +270,21 @@ export namespace FarCryMenu
         void* source{};
         void* page{};
         void* entry{};
-        void* heading{};
         void* description{};
         void* prototype{};
-        std::array<void*, 7> rows{};
+        std::array<void*, PoolSlots> rows{}, buttons{};
         NativeRect entryBounds{};
         bool retired{};
         bool Owns(void* sender) const
         {
-            return sender && (sender == page || sender == entry ||
-                std::find(rows.begin(), rows.end(), sender) != rows.end());
+            return sender && (sender == page || sender == entry || Slot(sender) >= 0);
+        }
+        // The slot of a row control, -1 for none
+        int Slot(void* widget) const
+        {
+            for (size_t i = 0; widget && i < PoolSlots; ++i)
+                if (rows[i] == widget || buttons[i] == widget) return int(i);
+            return -1;
         }
         bool Live(HMODULE game, HMODULE scriptModule) const
         {
@@ -291,13 +301,17 @@ export namespace FarCryMenu
                 return Member(ui, widgetsBeginOffset, object) && Table(object, staticTable) &&
                     Field<void*>(object, widgetUiOffset) == ui;
             };
-            if (!button(entry) || !button(prototype) || !decorative(heading) || !decorative(description) ||
+            if (!button(entry) || !button(prototype) || !decorative(description) ||
                 Field<void*>(entry, widgetScreenOffset) != source || Field<void*>(prototype, widgetScreenOffset) != source ||
-                Field<void*>(heading, widgetScreenOffset) != page || Field<void*>(description, widgetScreenOffset) != page ||
-                !Rect(entry, entryBounds) || !Rect(heading, {220, 152, 540, 32}) ||
-                !Rect(description, {220, 470, 540, 56})) return false;
-            for (size_t i = 0; i < rows.size(); ++i)
-                if (!button(rows[i]) || Field<void*>(rows[i], widgetScreenOffset) != page || !Rect(rows[i], {220, 200 + static_cast<float>(i) * 36, 540, 32})) return false;
+                Field<void*>(description, widgetScreenOffset) != page ||
+                !Rect(entry, entryBounds) || !Rect(description, {208, 362, 564, 90})) return false;
+            for (size_t i = 0; i < PoolSlots; ++i)
+            {
+                const auto top = SlotTop + static_cast<float>(i) * SlotPitch;
+                if (!button(rows[i]) || Field<void*>(rows[i], widgetScreenOffset) != page || !Rect(rows[i], {530, top, 180, 28}) ||
+                    !button(buttons[i]) || Field<void*>(buttons[i], widgetScreenOffset) != page || !Rect(buttons[i], {330, top, 320, 28}))
+                    return false;
+            }
             return true;
         }
         // GetFocusScreen's script wrapper dereferences this optional field.
@@ -305,7 +319,8 @@ export namespace FarCryMenu
         bool Modal() const { return Field<void*>(ui, modalOffset) != nullptr; }
         bool Selected(size_t index) const
         {
-            return index < rows.size() && Field<void*>(ui, focusOffset) == rows[index];
+            const auto focus = Field<void*>(ui, focusOffset);
+            return index < PoolSlots && focus && (focus == rows[index] || focus == buttons[index]);
         }
     };
 }
@@ -400,7 +415,7 @@ export namespace FarCryMenu
         text.resize(begin);
     }
 
-    inline std::vector<std::string> Wrap(void* service, HMODULE module, const std::string& text, float size = 14)
+    inline std::vector<std::string> Wrap(void* service, HMODULE module, const std::string& text, float size = 14, float width = 524)
     {
         std::vector<std::string> lines;
         std::string line;
@@ -412,7 +427,7 @@ export namespace FarCryMenu
             const auto extent = MeasureLiteral(service, module, candidate, size);
             if (!extent)
                 return {};
-            if (!line.empty() && extent->x > 524)
+            if (!line.empty() && extent->x > width)
             {
                 lines.push_back(std::move(line));
                 line = word;
@@ -421,10 +436,10 @@ export namespace FarCryMenu
                 line = std::move(candidate);
             while (!line.empty())
             {
-                const auto width = MeasureLiteral(service, module, line, size);
-                if (!width)
+                const auto measured = MeasureLiteral(service, module, line, size);
+                if (!measured)
                     return {};
-                if (width->x <= 524)
+                if (measured->x <= width)
                     break;
                 auto prefix = line;
                 do
@@ -433,7 +448,7 @@ export namespace FarCryMenu
                     const auto part = MeasureLiteral(service, module, prefix, size);
                     if (!part)
                         return {};
-                    if (part->x <= 524)
+                    if (part->x <= width)
                         break;
                 } while (!prefix.empty());
                 if (prefix.empty())
@@ -522,12 +537,17 @@ function WFP_Identity(expected)
         WFP_FindScreen("Options")==s.source and
         WFP_FindScreen("WFPAdvancedOptions")==s.private;
 end
+-- The control a slot shows: its value box (setting rows) or its button (pages and actions)
+function WFP_SlotWidget(s,index)
+    if s.kinds[index+1]==1 then return s.rows[index+1] end
+    return s.buttons[index+1];
+end
 function WFP_OwnRow(sender,expected)
     local s=WFP_Menu;
     if not WFP_Identity(expected) or not sender or not sender.user or
         sender.user.epoch~=s.epoch or sender:GetScreen()~=s.private then return nil end
     local index=sender.user.index;
-    return index and s.rows[index+1]==sender and index>=0 and index<s.count;
+    return index and index>=0 and index<s.count and WFP_SlotWidget(s,index)==sender;
 end
 function WFP_Command(sender)
     local s=WFP_Menu;
@@ -539,9 +559,6 @@ end
 function WFP_Key(sender,key)
     local s=WFP_Menu;
     if WFP_OwnRow(sender,s) and not s.committing and UI:IsScreenActive(s.private)==1 then
-        if key==39 then
-            return 0;
-        end
         if WFP_Bridge:Queue(s.serial,2,sender.user.index,key,sender) then return 0 end
     end
     return 1;
@@ -549,7 +566,7 @@ end
 function WFP_Focus(sender)
     local s=WFP_Menu;
     if not WFP_OwnRow(sender,s) then return 1 end
-    DefOnGotFocusSideButton(sender);
+    if sender==s.rows[sender.user.index+1] then DefOnGotFocus(sender) else DefOnGotFocusButton(sender) end
     if WFP_OwnRow(sender,s) and not s.committing then
         s.selected=sender.user.index;
         WFP_Bridge:Queue(s.serial,3,s.selected,0,sender);
@@ -559,9 +576,70 @@ end
 function WFP_Hover(sender)
     local s=WFP_Menu;
     if not WFP_OwnRow(sender,s) then return 1 end
-    DefOnMouseEnterSideButton(sender);
+    if sender==s.rows[sender.user.index+1] then DefOnMouseEnter(sender) end
+    -- The row under the moving mouse is the selected one
+    if WFP_OwnRow(sender,s) and not s.committing and UI:IsScreenActive(s.private)==1 and UI:GetFocus()~=sender then
+        UI:SetFocus(sender);
+    end
     if WFP_OwnRow(sender,s) and not s.committing then
         WFP_Bridge:Queue(s.serial,4,sender.user.index,0,sender);
+    end
+    return 1;
+end
+-- Clicks on the page's own buttons act on the selected row: its arrows change it, the tabs and Back leave levels
+function WFP_Selected(s)
+    if not WFP_Identity(s) or s.committing or UI:IsScreenActive(s.private)~=1 or
+        s.selected<0 or s.selected>=s.count then return nil end
+    local widget=WFP_SlotWidget(s,s.selected);
+    if UI:GetFocus()~=widget then UI:SetFocus(widget) end
+    if not WFP_Identity(s) or UI:GetFocus()~=widget then return nil end
+    return widget;
+end
+function WFP_Arrow(sender)
+    local s=WFP_Menu;
+    if not WFP_Identity(s) or s.committing or not sender.user or sender.user.epoch~=s.epoch then return 1 end
+    local index=sender.user.index;
+    if not index or index<0 or index>=s.count or s.kinds[index+1]~=1 or UI:IsScreenActive(s.private)~=1 then return 1 end
+    s.selected=index;
+    local row=WFP_Selected(s);
+    if row then
+        if sender.user.step<0 then WFP_Bridge:Queue(s.serial,2,index,15,row) else WFP_Bridge:Queue(s.serial,2,index,17,row) end
+    end
+    return 1;
+end
+function WFP_Up(s,levels)
+    local widget=WFP_Selected(s);
+    if widget and levels>0 then WFP_Bridge:Queue(s.serial,9,s.selected,levels,widget) end
+end
+function WFP_Tab(sender)
+    local s=WFP_Menu;
+    if WFP_Identity(s) and sender.user and sender.user.epoch==s.epoch and sender.user.level then
+        WFP_Up(s,s.depth-1-sender.user.level);
+    end
+    return 1;
+end
+function WFP_BackButton(sender)
+    local s=WFP_Menu;
+    if WFP_Identity(s) and sender==s.back then WFP_Up(s,1) end
+    return 1;
+end
+function WFP_Scrolled(sender)
+    local s=WFP_Menu;
+    if not WFP_Identity(s) or s.committing or sender~=s.scroll or not s.total then return 1 end
+    local range=s.total-s.slots;
+    if range<1 then return 1 end
+    local value=tonumber(sender:GetValue());
+    if not value then return 1 end
+    local target=floor(value*range+0.5);
+    -- An arrow click smaller than a row still moves the list by one
+    if target==s.first then
+        if value>s.first/range+0.001 then target=s.first+1 elseif value<s.first/range-0.001 then target=s.first-1 end
+    end
+    if target<0 then target=0 end
+    if target>range then target=range end
+    if target~=s.first then
+        local widget=WFP_Selected(s);
+        if widget then WFP_Bridge:Queue(s.serial,10,s.selected,target,widget) end
     end
     return 1;
 end
@@ -569,8 +647,8 @@ function WFP_Released(sender)
     local s=WFP_Menu;
     local owned=s and (sender==s.private or sender==s.entry);
     if s and not owned then
-        for i=1,7 do
-            if sender==s.rows[i] then owned=1 end
+        for i=1,6 do
+            if sender==s.rows[i] or sender==s.buttons[i] then owned=1 end
         end
     end
     if owned and not s.dead then
@@ -606,13 +684,17 @@ function WFP_Constructing(s)
         WFP_FindScreen("Options")==s.source and
         (not s.private or WFP_FindScreen("WFPAdvancedOptions")==s.private);
 end
-function WFP_Prepare(epoch,title,entrySize)
+-- The page is laid out like the game's own option pages: tabs on top, labelled controls in the panel, buttons below
+function WFP_Prepare(epoch,title,entrySize,back)
     g_WFPMenuStatus="source-not-ready";
     if not UI or not UI.GetScreenCount or not UI.CreateScreenFromTable or
         not UI.CreateObjectFromTable or not UI.skins or not UI.skins.SideMenuButton or
-        not UI.skins.MenuStatic or not GotoPage or not DefOnGotFocusSideButton or
-        not DefOnMouseEnterSideButton or not UIFLAG_DEFAULT or not UIFLAG_CANHAVEFOCUS or
-        not UISTYLE_TRANSPARENT or not UIALIGN_LEFT or not UIFLAG_VISIBLE then
+        not UI.skins.TopMenuButton or not UI.skins.BottomMenuButton or not UI.skins.Label or
+        not UI.skins.HScrollBar or not UI.skins.VScrollBar or not AddUISideMenu or not Localize or
+        not GotoPage or not DefOnGotFocus or not DefOnLostFocus or not DefOnMouseEnter or not DefOnMouseLeave or
+        not DefOnGotFocusButton or not UIFLAG_DEFAULT or not UIFLAG_CANHAVEFOCUS or not UIBLEND_ADDITIVE or
+        not UISTYLE_WORDWRAP or not UISTYLE_MULTILINE or not UIALIGN_LEFT or not UIALIGN_CENTER or
+        not UIALIGN_MIDDLE or not UIFLAG_VISIBLE or not UI.szTabAdditiveColor or not UI.szBorderColor then
         g_WFPMenuStatus="source-not-ready:ui-api-or-skin-missing";
         if UI then
             for i,key in {"GetScreenCount","CreateScreenFromTable","CreateObjectFromTable"} do
@@ -633,68 +715,92 @@ function WFP_Prepare(epoch,title,entrySize)
     if not rect or rect[1]<0 or rect[2]<0 or rect[3]<64 or rect[4]<16 or
         rect[1]+rect[3]>800 or rect[2]+2*rect[4]>580 or
         entrySize<8 or entrySize>20 then return nil end
-    WFP_Menu={ui=UI,source=source,epoch=epoch,serial=epoch,rows={},count=0,selected=0,committing=1};
+    WFP_Menu={ui=UI,source=source,epoch=epoch,serial=epoch,rows={},buttons={},labels={},minus={},plus={},tabs={},
+        kinds={},count=0,selected=0,slots=6,depth=1,first=0,total=0,committing=1};
+    local hbar=UI.skins.HScrollBar;
+    local noFocus=UIFLAG_DEFAULT-UIFLAG_CANHAVEFOCUS;
     local page={OnRelease=WFP_Released};
-    page.WFPHeading={skin=UI.skins.MenuStatic,left=220,top=152,width=540,height=32,
-        fontname="default",fonteffect="default",fontsize=24,halign=UIALIGN_LEFT,style=UISTYLE_TRANSPARENT,bordersize=0,
-        flags=UIFLAG_DEFAULT-UIFLAG_CANHAVEFOCUS,text=""};
-    page.WFPDescription={skin=UI.skins.MenuStatic,left=220,top=470,width=540,height=56,
-        fontname="default",fonteffect="default",fontsize=14,halign=UIALIGN_LEFT,style=UISTYLE_TRANSPARENT,bordersize=0,
-        flags=UIFLAG_DEFAULT-UIFLAG_CANHAVEFOCUS,text=""};
-    for i=0,6 do
-        page["WFPRow"..tostring(i)]={skin=UI.skins.SideMenuButton,left=220,top=200+i*36,
-            width=540,height=32,fontname="default",fonteffect="default",fontsize=20,halign=UIALIGN_LEFT,tabstop=200+i,
-            user={epoch=epoch,index=i},text="",OnCommand=WFP_Command,OnKeyDown=WFP_Key,
-            OnGotFocus=WFP_Focus,OnMouseEnter=WFP_Hover,OnRelease=WFP_Released};
+    for i=0,2 do
+        local width=193;
+        if i==2 then width=194 end
+        page["WFPTab"..tostring(i)]={skin=UI.skins.TopMenuButton,left=200+i*193,width=width,
+            greyedcolor=UI.szTabAdditiveColor,greyedblend=UIBLEND_ADDITIVE,flags=noFocus,
+            user={epoch=epoch,level=i},text="",OnCommand=WFP_Tab};
     end
+    page.WFPDescription={classname="static",left=208,top=362,width=564,height=90,
+        fontname="default",fonteffect="default",fontsize=14,halign=UIALIGN_LEFT,valign=UIALIGN_MIDDLE,
+        style=UISTYLE_WORDWRAP+UISTYLE_MULTILINE,color="0 0 0 0",bordersize=1,bordersides="t",bordercolor=UI.szBorderColor,
+        leftspacing=6,flags=noFocus,text=""};
+    page.WFPScroll={skin=UI.skins.VScrollBar,left=752,top=149,width=20,height=203,flags=noFocus,
+        user={epoch=epoch},OnChanged=WFP_Scrolled};
+    page.WFPBack={skin=UI.skins.BottomMenuButton,flags=noFocus,text=back,user={epoch=epoch},OnCommand=WFP_BackButton};
+    for i=0,5 do
+        local y=149+i*35;
+        page["WFPLabel"..tostring(i)]={skin=UI.skins.Label,left=200,top=y,width=300,flags=noFocus,text=""};
+        page["WFPMinus"..tostring(i)]={classname="button",left=500,top=y,width=28,height=28,
+            texture=hbar.minustexture,downtexture=hbar.downminustexture,overtexture=hbar.overminustexture,
+            texrect=hbar.minustexrect,color="255 255 255 255",bordersize=1,bordercolor=UI.szBorderColor,flags=noFocus,
+            user={epoch=epoch,index=i,step=-1},text="",OnCommand=WFP_Arrow};
+        page["WFPPlus"..tostring(i)]={classname="button",left=712,top=y,width=28,height=28,
+            texture=hbar.plustexture,downtexture=hbar.downplustexture,overtexture=hbar.overplustexture,
+            texrect=hbar.plustexrect,color="255 255 255 255",bordersize=1,bordercolor=UI.szBorderColor,flags=noFocus,
+            user={epoch=epoch,index=i,step=1},text="",OnCommand=WFP_Arrow};
+        page["WFPRow"..tostring(i)]={classname="button",left=530,top=y,width=180,height=28,
+            color="0 0 0 255",bordersize=1,bordercolor=UI.szBorderColor,fontname="default",fonteffect="default",
+            halign=UIALIGN_CENTER,tabstop=200+i,user={epoch=epoch,index=i},text="",
+            OnCommand=WFP_Command,OnKeyDown=WFP_Key,OnGotFocus=WFP_Focus,OnLostFocus=DefOnLostFocus,
+            OnMouseEnter=WFP_Hover,OnMouseLeave=DefOnMouseLeave,OnRelease=WFP_Released};
+        page["WFPButton"..tostring(i)]={skin=UI.skins.BottomMenuButton,left=330,top=y,width=320,height=28,
+            bordersides="lrtb",tabstop=210+i,user={epoch=epoch,index=i},text="",
+            OnCommand=WFP_Command,OnKeyDown=WFP_Key,OnGotFocus=WFP_Focus,OnMouseEnter=WFP_Hover,OnRelease=WFP_Released};
+    end
+    AddUISideMenu(page,{{"MainMenu",Localize("MainMenu"),"$MainScreen$",0}});
     local s=WFP_Menu;
     UI:CreateScreenFromTable("WFPAdvancedOptions",page);
     s.private=WFP_FindScreen("WFPAdvancedOptions");
     g_WFPMenuStatus="private-screen-refused";
     if not WFP_Constructing(s) or not s.private then return nil end
-    s.heading=WFP_FindWidget(s.private,"WFPHeading");
-    if not WFP_Constructing(s) then return nil end
     s.description=WFP_FindWidget(s.private,"WFPDescription");
+    s.scroll=WFP_FindWidget(s.private,"WFPScroll");
+    s.back=WFP_FindWidget(s.private,"WFPBack");
     if not WFP_Constructing(s) then return nil end
     g_WFPMenuStatus="private-static-controls-refused";
-    if not s.heading or not s.description or not s.heading.SetText or not s.description.SetText then return nil end
-    for i,item in {{s.heading,24},{s.description,14}} do
-        local widget=item[1];
-        if not WFP_Constructing(s) or not widget.GetFontName or not widget.GetFontEffect or not widget.GetFontSize then return nil end
-        local fontName=widget:GetFontName();
-        if fontName~="default" or not WFP_Constructing(s) then g_WFPMenuStatus="private-static-font:"..tostring(fontName); return nil end
-        local fontEffect=widget:GetFontEffect();
-        if fontEffect~="default" or not WFP_Constructing(s) then g_WFPMenuStatus="private-static-effect:"..tostring(fontEffect); return nil end
-        local fontSize=widget:GetFontSize();
-        if fontSize~=item[2] or not WFP_Constructing(s) then g_WFPMenuStatus="private-static-size:"..tostring(fontSize); return nil end
+    if not s.description or not s.description.SetText or not s.description.GetFontSize or
+        not s.scroll or not s.scroll.SetValue or not s.scroll.GetValue or not s.back or not s.back.SetText then return nil end
+    if s.description:GetFontSize()~=14 or not WFP_Constructing(s) then g_WFPMenuStatus="private-static-size"; return nil end
+    for i=0,2 do
+        s.tabs[i+1]=WFP_FindWidget(s.private,"WFPTab"..tostring(i));
+        if not s.tabs[i+1] or not s.tabs[i+1].SetText or not WFP_Constructing(s) then g_WFPMenuStatus="private-tab-missing"; return nil end
+        UI:HideWidget(s.tabs[i+1]);
     end
-    for i=0,6 do
+    for i=0,5 do
         if not WFP_Constructing(s) then return nil end
-        s.rows[i+1]=WFP_FindWidget(s.private,"WFPRow"..tostring(i));
-        local row=s.rows[i+1];
-        g_WFPMenuStatus="private-row-contract:"..tostring(i);
-        if not row then g_WFPMenuStatus="private-row-missing:"..tostring(i); return nil end
-        for _,key in {"SetText","SetFontSize","GetText","GetFontSize","GetFontName","GetFontEffect","GetScreen"} do
-            if not row[key] then g_WFPMenuStatus="private-row-api:"..key; return nil end
+        local name=tostring(i);
+        s.rows[i+1]=WFP_FindWidget(s.private,"WFPRow"..name);
+        s.buttons[i+1]=WFP_FindWidget(s.private,"WFPButton"..name);
+        s.labels[i+1]=WFP_FindWidget(s.private,"WFPLabel"..name);
+        s.minus[i+1]=WFP_FindWidget(s.private,"WFPMinus"..name);
+        s.plus[i+1]=WFP_FindWidget(s.private,"WFPPlus"..name);
+        g_WFPMenuStatus="private-row-missing:"..name;
+        if not s.rows[i+1] or not s.buttons[i+1] or not s.labels[i+1] or not s.minus[i+1] or not s.plus[i+1] then return nil end
+        for _,widget in {s.rows[i+1],s.buttons[i+1],s.labels[i+1]} do
+            for _,key in {"SetText","SetFontSize","GetText","GetFontSize","GetScreen"} do
+                if not widget[key] then g_WFPMenuStatus="private-row-api:"..key; return nil end
+            end
+            if widget:GetScreen()~=s.private then g_WFPMenuStatus="private-row-owner:"..name; return nil end
         end
-        if row:GetScreen()~=s.private then g_WFPMenuStatus="private-row-owner:"..tostring(i); return nil end
         if not WFP_Constructing(s) then return nil end
-        local fontName=row:GetFontName();
-        if fontName~="default" or not WFP_Constructing(s) then g_WFPMenuStatus="private-row-font:"..tostring(fontName); return nil end
-        local fontEffect=row:GetFontEffect();
-        if fontEffect~="default" or not WFP_Constructing(s) then g_WFPMenuStatus="private-row-effect:"..tostring(fontEffect); return nil end
-        local fontSize=row:GetFontSize();
-        if fontSize~=20 or not WFP_Constructing(s) then g_WFPMenuStatus="private-row-size:"..tostring(fontSize); return nil end
-        if not WFP_Constructing(s) then return nil end
-        local bounds=WFP_Rect(row);
-        if not WFP_Constructing(s) then return nil end
-        if not bounds then g_WFPMenuStatus="private-row-rect-missing"; return nil end
-        if not WFP_RectMatches(bounds,{220,200+i*36,540,32}) then
-            g_WFPMenuStatus="private-row-rect:"..tostring(bounds[1])..","..tostring(bounds[2])..","..tostring(bounds[3])..","..tostring(bounds[4]); return nil
+        if not WFP_RectMatches(WFP_Rect(s.rows[i+1]),{530,149+i*35,180,28}) or
+            not WFP_RectMatches(WFP_Rect(s.buttons[i+1]),{330,149+i*35,320,28}) then
+            g_WFPMenuStatus="private-row-rect:"..name; return nil
         end
-        UI:HideWidget(row);
+        for _,widget in {s.rows[i+1],s.buttons[i+1],s.labels[i+1],s.minus[i+1],s.plus[i+1]} do UI:HideWidget(widget) end
         if not WFP_Constructing(s) then return nil end
     end
+    UI:HideWidget(s.scroll);
+    s.labelSize=s.labels[1]:GetFontSize();
+    s.valueSize=s.rows[1]:GetFontSize();
+    s.buttonSize=s.buttons[1]:GetFontSize();
     UI:DeactivateScreen(s.private);
     if not WFP_Constructing(s) then return nil end
     g_WFPMenuStatus="entry-controls-refused";
@@ -711,21 +817,18 @@ function WFP_Prepare(epoch,title,entrySize)
     end
     if s.entry:GetScreen()~=source or not WFP_Constructing(s) then g_WFPMenuStatus="entry-owner"; return nil end
     if WFP_FindWidget(source,"WFPAdvancedEntry")~=s.entry then g_WFPMenuStatus="entry-name"; return nil end
-    local fontName=s.entry:GetFontName();
-    if not WFP_Constructing(s) or fontName~="default" then g_WFPMenuStatus="entry-font:"..tostring(fontName); return nil end
-    local fontEffect=s.entry:GetFontEffect();
-    if not WFP_Constructing(s) or fontEffect~="default" then g_WFPMenuStatus="entry-effect:"..tostring(fontEffect); return nil end
     local fontSize=s.entry:GetFontSize();
     if not WFP_Constructing(s) or fontSize~=entrySize then g_WFPMenuStatus="entry-size:"..tostring(fontSize); return nil end
-    if not WFP_Constructing(s) then return nil end
     UI:HideWidget(s.entry);
     if not WFP_Constructing(s) then return nil end
     local bounds=WFP_Rect(s.entry);
     if not WFP_Constructing(s) then return nil end
     if not WFP_RectMatches(bounds,{rect[1],rect[2]+rect[4],rect[3],rect[4]}) then g_WFPMenuStatus="entry-rect"; return nil end
     if s.entry:GetText()~=title then g_WFPMenuStatus="entry-text"; return nil end
-    if not WFP_Bridge:Bind(epoch,source,s.private,s.entry,s.heading,s.description,prototype,
-        s.rows[1],s.rows[2],s.rows[3],s.rows[4],s.rows[5],s.rows[6],s.rows[7]) then return nil end
+    if not WFP_Bridge:Bind(epoch,source,s.private,s.entry,s.description,prototype,
+        s.rows[1],s.rows[2],s.rows[3],s.rows[4],s.rows[5],s.rows[6],
+        s.buttons[1],s.buttons[2],s.buttons[3],s.buttons[4],s.buttons[5],s.buttons[6],
+        s.labelSize,s.valueSize,s.buttonSize) then return nil end
     if not WFP_Constructing(s) then return nil end
     s.committing=nil;
     UI:ShowWidget(s.entry);
@@ -744,7 +847,7 @@ function WFP_Snapshot()
         g_WFPMenuStatus="private";
         local focus=UI:GetFocus();
         for i=0,s.count-1 do
-            if focus==s.rows[i+1] then g_WFPMenuSelected=tostring(i) end
+            if focus==WFP_SlotWidget(s,i) then g_WFPMenuSelected=tostring(i) end
         end
     elseif UI:IsScreenActive(s.source)==1 then
         g_WFPMenuStatus="options";
@@ -752,36 +855,64 @@ function WFP_Snapshot()
     else g_WFPMenuStatus="covered-or-left" end
     return 1;
 end
-function WFP_Commit(serial,title,items,selected)
+-- items: {kind=1 (setting: label, value box and arrows) or 2 (button), label, value, size, vsize, enabled}
+function WFP_Commit(serial,tabs,items,selected,total,first)
     g_WFPMenuStatus="commit-refused";
-    if not WFP_Identity() or not items or getn(items)<1 or getn(items)>7 then return nil end
+    if not WFP_Identity() or not items or getn(items)<1 or getn(items)>6 or
+        not tabs or getn(tabs)<1 or getn(tabs)>3 then return nil end
     local s=WFP_Menu;
     s.committing=1;
     s.serial=serial;
     s.count=getn(items);
+    s.depth=getn(tabs);
+    s.total=total;
+    s.first=first;
     s.description:SetText("");
     if not WFP_Identity(s) then return nil end
-    s.heading:SetText(title);
-    if not WFP_Identity(s) then return nil end
-    for i=0,6 do
-        if not WFP_Identity(s) then return nil end
-        local row=s.rows[i+1];
-        local item=items[i+1];
-        if item then
-            row:SetText(item.text);
-            if not WFP_Identity(s) then return nil end
-            row:SetFontSize(item.size);
-            if not WFP_Identity(s) then return nil end
-            if row:GetText()~=item.text then return nil end
-            if not WFP_Identity(s) then return nil end
-            if row:GetFontSize()~=item.size then return nil end
-            if not WFP_Identity(s) then return nil end
-            if item.enabled==1 then UI:EnableWidget(row) else UI:DisableWidget(row) end
-            if not WFP_Identity(s) then return nil end
-            UI:ShowWidget(row);
-        else UI:HideWidget(row) end
+    for i=0,2 do
+        local tab=s.tabs[i+1];
+        if tabs[i+1] then
+            tab:SetText(tabs[i+1]);
+            -- The page shown is the active tab, the pages above it lead back
+            if i==s.depth-1 then UI:DisableWidget(tab) else UI:EnableWidget(tab) end
+            UI:ShowWidget(tab);
+        else UI:HideWidget(tab) end
         if not WFP_Identity(s) then return nil end
     end
+    for i=0,5 do
+        if not WFP_Identity(s) then return nil end
+        local item=items[i+1];
+        local row,button,label,minus,plus=s.rows[i+1],s.buttons[i+1],s.labels[i+1],s.minus[i+1],s.plus[i+1];
+        s.kinds[i+1]=item and item.kind;
+        if item and item.kind==1 then
+            label:SetText(item.label);
+            label:SetFontSize(item.size);
+            row:SetText(item.value);
+            row:SetFontSize(item.vsize);
+            if not WFP_Identity(s) or row:GetText()~=item.value or label:GetText()~=item.label then return nil end
+            UI:ShowWidget(label);
+            for _,widget in {row,minus,plus} do
+                if item.enabled==1 then UI:EnableWidget(widget) else UI:DisableWidget(widget) end
+                UI:ShowWidget(widget);
+            end
+            UI:HideWidget(button);
+        elseif item then
+            button:SetText(item.label);
+            button:SetFontSize(item.size);
+            if not WFP_Identity(s) or button:GetText()~=item.label then return nil end
+            if item.enabled==1 then UI:EnableWidget(button) else UI:DisableWidget(button) end
+            UI:ShowWidget(button);
+            for _,widget in {label,row,minus,plus} do UI:HideWidget(widget) end
+        else
+            for _,widget in {label,row,minus,plus,button} do UI:HideWidget(widget) end
+        end
+    end
+    if not WFP_Identity(s) then return nil end
+    -- The game's own scroll bar while the list is longer than the panel
+    if total>s.slots then
+        s.scroll:SetValue(first/(total-s.slots));
+        UI:ShowWidget(s.scroll);
+    else UI:HideWidget(s.scroll) end
     if not WFP_Identity(s) or selected<0 or selected>=s.count then return nil end
     s.selected=selected;
     s.committing=nil;
@@ -800,7 +931,7 @@ function WFP_Enter()
     if not WFP_Identity(s) or UI:IsScreenActive(s.private)~=1 then
         return nil;
     end
-    UI:SetFocus(s.rows[s.selected+1]);
+    UI:SetFocus(WFP_SlotWidget(s,s.selected));
     if not WFP_Identity(s) then return nil end
     return 1;
 end
@@ -808,7 +939,7 @@ function WFP_Select(index)
     local s=WFP_Menu;
     if not WFP_Identity(s) then return nil end
     if index<0 or index>=s.count or UI:IsScreenActive(s.private)~=1 then return nil end
-    UI:SetFocus(s.rows[index+1]);
+    UI:SetFocus(WFP_SlotWidget(s,index));
     if not WFP_Identity(s) then return nil end
     return 1;
 end
@@ -845,6 +976,13 @@ function WFP_Retire(epoch)
     end
     return 1;
 end
+function WFP_FocusEntry()
+    local s=WFP_Menu;
+    if not WFP_Identity(s) or s.committing or UI:IsScreenActive(s.source)~=1 then return nil end
+    UI:SetFocus(s.entry);
+    if not WFP_Identity(s) or UI:GetFocus()~=s.entry then return nil end
+    return 1;
+end
 function WFP_Leave()
     local s=WFP_Menu;
     if not WFP_Identity(s) then return nil end
@@ -867,15 +1005,19 @@ end
 // all native page actions are deferred until complete traversal scopes unwind.
 export namespace FarCryMenu
 {
-    enum class ItemKind { Row, Page, Next, Previous, Back, Text, HelpNext, HelpPrevious, HelpBack, RowNext, RowPrevious };
+    enum class ItemKind { Row, Page };
+    // Rows the panel shows at once; the help box below them holds this many lines at most
+    constexpr size_t Slots = PoolSlots;
+    constexpr float HelpWidth = 540, HelpHeight = 86;
     struct Item
     {
-        ItemKind kind = ItemKind::Back;
+        ItemKind kind = ItemKind::Row;
         RWGTAMenu::Row row{};
         size_t target{};
         std::string label, value, description;
         bool enabled = true;
-        FittedText fitted;
+        bool setting{};             // a value box with arrows; else a button
+        FittedText fitted, fittedValue;
     };
     struct Context
     {
@@ -883,16 +1025,21 @@ export namespace FarCryMenu
         RWGTAMenu::Model model;
         std::string epoch, serial;
         std::vector<Item> items;
-        std::optional<size_t> page;
-        size_t rootOffset{}, selected{};
+        size_t page = RWGTAMenu::Model::RootPage;
+        size_t selected{};
+        MenuList::WheelNotches wheel;
+        MenuList::Repeat pageRepeat;
         bool open{}, retired{}, returnPending{}, pause{};
+        unsigned settle{};          // frames after opening in which the page's activation still moves the focus
+        unsigned returnFocus{};     // the same after going back to Options: its tab's activation can take the focus
         double layoutScaleY{};
         uint32_t lifetime{};
-        bool details{};
-        size_t helpPage{}, helpSelected{};
-        std::string helpTitle;
+        float labelSize = 14, valueSize = 14, buttonSize = 18;
+        // The help box: its wrapped lines, the first one shown and when it moved (long texts scroll through it)
         std::vector<std::string> helpLines;
-        size_t rowOffset{};
+        size_t helpFirst{}, helpShown{}, helpFor = SIZE_MAX;
+        float helpSize = 14;
+        ULONGLONG helpTick{};
     };
     struct Pending
     {
@@ -1032,69 +1179,61 @@ export namespace FarCryMenu
         if (!Table(system, systemTable)) return nullptr;
         return Field<void*>(system, systemFontOffset);
     }
+    // The titles of the page and the pages above it, for the tabs
+    inline std::vector<std::string> Tabs(const std::shared_ptr<Context>& owner)
+    {
+        std::vector<std::string> titles;
+        const auto& pages = owner->model.Pages();
+        for (size_t page = owner->page; page < pages.size() && titles.size() < 8; page = owner->model.Parent(page))
+        {
+            auto title = pages[page].title;
+            titles.insert(titles.begin(), NativeLiteral(title) ? title : owner->model.Text("menu.title"));
+        }
+        if (titles.size() > 3) titles.erase(titles.begin(), titles.end() - 3);
+        return titles;
+    }
     inline bool Build(const std::shared_ptr<Context>& owner)
     {
         if (!Available(owner) || !owner->model.IsOpen()) return false;
         const auto oldSerial = owner->serial;
         const auto current = [&] { return Available(owner) && owner->serial == oldSerial && owner->model.IsOpen(); };
         std::vector<Item> items;
-        if (owner->page && *owner->page >= owner->model.Pages().size()) return false;
-        auto title = owner->page ? owner->model.Pages()[*owner->page].title : owner->model.Text("menu.title");
-        if (!NativeLiteral(title)) title = owner->model.Text("menu.title");
-        if (owner->details)
+        if (owner->page >= owner->model.Pages().size()) return false;
+        // One continuous list per page; Back is the page's own button below the panel
+        std::vector<const RWGTAMenu::Row*> rows;
+        { Depth scope(foreignDepth); rows = owner->model.Shown(owner->page, false); }
+        if (!current() || rows.empty()) return false;
+        for (auto* entry : rows)
         {
-            title = owner->helpTitle;
-            for (size_t i = owner->helpPage * 4; i < owner->helpLines.size() && i < owner->helpPage * 4 + 4; ++i)
-                items.push_back({ItemKind::Text, {}, 0, owner->helpLines[i]});
-            if (owner->helpPage)
-                items.push_back({ItemKind::HelpPrevious, {}, 0, owner->model.Text("menu.previous")});
-            if ((owner->helpPage + 1) * 4 < owner->helpLines.size())
-                items.push_back({ItemKind::HelpNext, {}, 0, owner->model.Text("menu.next")});
-        }
-        else if (!owner->page)
-        {
-            const auto pages = owner->model.Pages();
-            for (size_t i = owner->rootOffset; i < pages.size() && items.size() < 4; ++i)
+            if (!current() || items.size() >= Slots || !entry) return false;
+            const auto row = *entry;
+            if (RWGTAMenu::Model::Opens(row))
             {
-                auto label = pages[i].title;
-                if (!NativeLiteral(label)) label = owner->model.Text("menu.title") + " " + std::to_string(i + 1);
-                items.push_back({ItemKind::Page, {}, i, std::move(label)});
+                auto label = owner->model.Label(row);
+                if (!NativeLiteral(label)) label = owner->model.Text("menu.title");
+                items.push_back({ItemKind::Page, row, row.target, std::move(label)});
+                continue;
             }
-            if (owner->rootOffset) items.push_back({ItemKind::Previous, {}, owner->rootOffset >= 4 ? owner->rootOffset - 4 : 0, owner->model.Text("menu.previous")});
-            if (owner->rootOffset + 4 < pages.size()) items.push_back({ItemKind::Next, {}, owner->rootOffset + 4, owner->model.Text("menu.next")});
-        }
-        else
-        {
-            std::vector<const RWGTAMenu::Row*> rows;
-            { Depth scope(foreignDepth); rows = owner->model.VisibleRows(*owner->page); }
+            Item item{ItemKind::Row, row};
+            { Depth scope(foreignDepth); item.enabled = owner->model.Enabled(row, owner->pause); }
             if (!current()) return false;
-            if (owner->rowOffset >= rows.size())
-                owner->rowOffset = rows.empty() ? 0 : (rows.size() - 1) / 4 * 4;
-            for (size_t index = owner->rowOffset; index < rows.size() && index < owner->rowOffset + 4; ++index)
-            {
-                if (!current() || items.size() >= 6) return false;
-                const auto row = *rows[index];
-                Item item{ItemKind::Row, row};
-                { Depth scope(foreignDepth); item.enabled = owner->model.Enabled(row, owner->pause); }
-                if (!current()) return false;
-                item.label = owner->model.Label(row);
-                if (!current()) return false;
-                { Depth scope(foreignDepth); item.value = owner->model.Value(row); }
-                if (!current()) return false;
-                item.description = owner->model.Help(row);
-                items.push_back(std::move(item));
-            }
-            if (owner->rowOffset)
-                items.push_back({ItemKind::RowPrevious, {}, owner->rowOffset - 4, owner->model.Text("menu.previous")});
-            if (owner->rowOffset + 4 < rows.size())
-                items.push_back({ItemKind::RowNext, {}, owner->rowOffset + 4, owner->model.Text("menu.next")});
+            item.label = owner->model.Label(row);
+            if (!current()) return false;
+            { Depth scope(foreignDepth); item.value = owner->model.Value(row); }
+            if (!current()) return false;
+            item.description = owner->model.Help(row);
+            item.setting = row.kind == RWGTAMenu::RowKind::Setting || row.kind == RWGTAMenu::RowKind::Preset;
+            items.push_back(std::move(item));
         }
-        items.push_back({owner->details ? ItemKind::HelpBack : ItemKind::Back, {}, 0, owner->model.Text("menu.back")});
         const auto service = FontService(owner);
-        if (!service || !NativeLiteral(title)) return false;
+        if (!service) return false;
         const auto scaleY = Field<double>(owner->native.ui, verticalScaleOffset);
         if (!std::isfinite(scaleY) || scaleY <= 0) return false;
         const auto minimum = static_cast<float>(std::max(8.0, std::ceil(8.0 / scaleY)));
+        const auto fit = [&](const std::string& label, const std::string& value, float width, float size)
+        {
+            return FitRow(service, fontModule, label, value, width, 28, size, std::min(minimum, size));
+        };
         for (auto& item : items)
         {
             if (!current()) return false;
@@ -1107,23 +1246,38 @@ export namespace FarCryMenu
                     item.row.setting->key : owner->model.Text("menu.unavailable");
                 item.value = owner->model.Text("menu.unavailable");
             }
-            const auto preferred = item.kind == ItemKind::Text ? 14.0f : 20.0f;
-            const auto fitted = FitRow(service, fontModule, item.label, item.value, 524, 28, preferred, std::min(minimum, preferred));
+            // Settings: the label right-aligned before the value box; pages and actions: the button's caption
+            const auto fitted = item.setting ? fit(item.label, "", 292, owner->labelSize) :
+                fit(item.label, item.value, 304, owner->buttonSize);
             if (!fitted || (!fitted->text.empty() && fitted->extent.y * scaleY < 8)) return false; // Complete, readable values only.
             item.fitted = *fitted;
+            if (item.setting)
+            {
+                const auto value = fit(item.value.empty() ? std::string(" ") : item.value, "", 172, owner->valueSize);
+                if (!value) return false;
+                item.fittedValue = *value;
+            }
         }
-        const auto heading = FitRow(service, fontModule, title, "", 524, 28, 24, 24);
-        if (!heading || heading->extent.y * scaleY < 8 || !current()) return false;
+        const auto tabs = Tabs(owner);
+        if (tabs.empty() || !current()) return false;
         const auto serial = Token();
         if (serial.empty() || !current()) return false;
-        auto selected = std::min(owner->selected, items.size() - 1);
-        if (!items[selected].enabled)
-            for (size_t i = 0; i < items.size(); ++i) if (items[i].enabled) { selected = i; break; }
-        std::string expression = "WFP_Commit(" + Quote(serial) + "," + Quote(heading->text) + ",{ ";
+        const auto& window = owner->model.Window(owner->page);
+        const auto selected = std::min(window.Slot(), items.size() - 1);
+        std::string expression = "WFP_Commit(" + Quote(serial) + ",{ ";
+        for (const auto& tab : tabs)
+        {
+            const auto literal = NativeLiteral(tab);
+            if (!literal) return false;
+            expression += Quote(*literal) + ",";
+        }
+        expression += "},{ ";
         for (const auto& item : items)
-            expression += "{text=" + Quote(item.fitted.text) + ",size=" + std::to_string(static_cast<int>(item.fitted.size)) +
+            expression += "{kind=" + std::string(item.setting ? "1" : "2") + ",label=" + Quote(item.fitted.text) +
+                ",size=" + std::to_string(static_cast<int>(item.fitted.size)) +
+                ",value=" + Quote(item.fittedValue.text) + ",vsize=" + std::to_string(static_cast<int>(item.setting ? item.fittedValue.size : 14)) +
                 ",enabled=" + (item.enabled ? "1" : "0") + "},";
-        expression += "}," + std::to_string(selected) + ")";
+        expression += "}," + std::to_string(selected) + "," + std::to_string(window.Count()) + "," + std::to_string(window.First()) + ")";
         if (!Call(owner, expression) || !current()) return false;
         owner->items = std::move(items);
         owner->serial = serial;
@@ -1156,13 +1310,15 @@ export namespace FarCryMenu
         {
             if (!owner->open || action.serial != owner->serial || action.index < 0 ||
                 static_cast<size_t>(action.index) >= owner->items.size() ||
-                action.sender != owner->native.rows[action.index] || !owner->native.Selected(action.index)) return false;
+                owner->native.Slot(action.sender) != action.index || !owner->native.Selected(action.index)) return false;
             // Supported installed32 and64 GetKeyName non-GUI switch proves
             // Escape9 and arrows15..18. Never rely on GUI string key names.
             if (action.kind == 2 && action.key != 9 && (action.key < 15 || action.key > 18)) return false;
-            if (action.kind == 6 && action.key != 39) return false;
-            const auto back = (action.kind == 2 && action.key == 9) ||
-                (action.kind == 1 && owner->items[action.index].kind == ItemKind::Back);
+            if (action.kind == 8 && (action.key == 0 || std::abs(action.key) > 1000)) return false;
+            if (action.kind == 7 && action.key != -3 && action.key != -2 && action.key != -1 && action.key != 1 && action.key != 2 && action.key != 3) return false;
+            if (action.kind == 9 && (action.key < 1 || action.key > 3)) return false;
+            if (action.kind == 10 && (action.key < 0 || action.key > 4096)) return false;
+            const auto back = (action.kind == 2 && action.key == 9) || action.kind == 9;
             cancelForeign = back && foreignDepth;
         }
         // Admission must finish before logical cancellation. Allocation failure
@@ -1199,9 +1355,9 @@ export namespace FarCryMenu
         owner->retired = false;
         owner->model.Close();
         owner->items.clear();
-        owner->page.reset();
-        owner->details = false;
-        owner->selected = owner->rootOffset = 0;
+        owner->page = RWGTAMenu::Model::RootPage;
+        owner->selected = 0;
+        owner->returnFocus = 8;
         return true;
     }
     inline void Open(const std::shared_ptr<Context>& owner)
@@ -1211,13 +1367,13 @@ export namespace FarCryMenu
         auto language = FixSettings().Get("MAIN.TextLanguage");
         if (language != "en" && language != "fr" && language != "de" && language != "it" && language != "es")
             language = NativeLanguage(owner->native.script);
-        { Depth scope(foreignDepth); owner->model.OpenPlugins(hostModule, language, 5, {}, true); }
+        { Depth scope(foreignDepth); owner->model.OpenMenu(hostModule, language, Slots); }
         if (!Available(owner) || owner->serial != serial || !owner->model.IsOpen() ||
             !Snapshot(owner, "options") || Field<void*>(owner->native.ui, focusOffset) != owner->native.entry) return;
-        owner->page.reset();
-        owner->rowOffset = 0;
-        owner->details = false;
-        owner->selected = owner->rootOffset = 0;
+        owner->page = RWGTAMenu::Model::RootPage;
+        owner->selected = 0;
+        owner->helpFor = SIZE_MAX;
+        owner->wheel.Clear(); FarCryWindow::MenuWheel.Take();
         if (!Build(owner)) { owner->model.Close(); return; }
         if (!Call(owner, "WFP_Enter()") || !Snapshot(owner, "private"))
         {
@@ -1226,141 +1382,191 @@ export namespace FarCryMenu
             return;
         }
         owner->open = true;
+        owner->settle = 8;
+    }
+    // The help box shows the shown lines of the wrapped text
+    inline void ShowHelp(const std::shared_ptr<Context>& owner)
+    {
+        std::string text;
+        for (size_t i = owner->helpFirst; i < owner->helpLines.size() && i < owner->helpFirst + owner->helpShown; ++i)
+            text += (text.empty() ? "" : " ") + owner->helpLines[i];
+        const auto literal = NativeLiteral(text);
+        if (Available(owner)) Call(owner, "WFP_Describe(" + Quote(literal ? *literal : std::string()) + "," +
+            std::to_string(static_cast<int>(owner->helpSize)) + ")");
+        owner->helpTick = GetTickCount64();
+    }
+    // The selected row's whole help text in the box below the list, in the largest size it fits; a text longer
+    // than the box at the smallest size moves through it line by line
+    inline bool Help(const std::shared_ptr<Context>& owner, size_t index, const std::string& description)
+    {
+        if (!Available(owner)) return false;
+        auto service = FontService(owner);
+        const auto scaleY = Field<double>(owner->native.ui, verticalScaleOffset);
+        owner->helpLines.clear();
+        owner->helpFirst = 0;
+        owner->helpShown = 0;
+        owner->helpFor = index;
+        if (std::isfinite(scaleY) && scaleY > 0 && !description.empty())
+        {
+            const auto minimum = static_cast<float>(std::max(10.0, std::ceil(8.0 / scaleY)));
+            for (float size = 14; size >= minimum; size -= 1)
+            {
+                auto lines = Wrap(service, fontModule, description, size, HelpWidth);
+                const auto line = MeasureLiteral(service, fontModule, "Ag", size);
+                if (lines.empty() || !line || line->y <= 0) break;
+                owner->helpLines = std::move(lines);
+                owner->helpSize = size;
+                owner->helpShown = std::max<size_t>(1, static_cast<size_t>(HelpHeight / (line->y + 2)));
+                if (owner->helpLines.size() <= owner->helpShown) break;
+            }
+        }
+        owner->helpShown = std::min(owner->helpShown, owner->helpLines.size());
+        ShowHelp(owner);
+        return description.empty() || !owner->helpLines.empty();
     }
     inline void Describe(const std::shared_ptr<Context>& owner, size_t index)
     {
         if (!Available(owner) || index >= owner->items.size()) return;
-        auto service = FontService(owner);
-        const auto scaleY = Field<double>(owner->native.ui, verticalScaleOffset);
         const auto restart = RestartRequired(owner);
-        auto description = restart ? owner->model.Text("menu.restartwarning") :
-            owner->details ? std::string() : owner->items[index].description;
-        if (!restart && !owner->details && !description.empty())
-            description = owner->model.Text("menu.helpkey") + " | " + description;
-        auto fitted = std::isfinite(scaleY) && scaleY > 0 ?
-            FitRow(service, fontModule, description, "", 524, 52, 14,
-                static_cast<float>(std::max(8.0, std::ceil(8.0 / scaleY)))) : std::optional<FittedText>();
-        if (fitted && !fitted->text.empty() && fitted->extent.y * scaleY < 8) fitted.reset();
-        if (Available(owner)) Call(owner, "WFP_Describe(" + Quote(fitted ? fitted->text : std::string()) + "," +
-            std::to_string(static_cast<int>(fitted ? fitted->size : 14)) + ")");
+        Help(owner, index, restart ? owner->model.Text("menu.restartwarning") : owner->items[index].description);
+    }
+    // A help text longer than its box: the next line after a while, and back to the top after the last
+    inline void ScrollHelp(const std::shared_ptr<Context>& owner)
+    {
+        if (owner->helpFor != owner->selected || owner->helpLines.size() <= owner->helpShown) return;
+        const auto last = owner->helpLines.size() - owner->helpShown;
+        const auto wait = owner->helpFirst == 0 || owner->helpFirst == last ? 4000u : 2000u;
+        if (GetTickCount64() - owner->helpTick < wait) return;
+        owner->helpFirst = owner->helpFirst >= last ? 0 : owner->helpFirst + 1;
+        ShowHelp(owner);
+    }
+    // Up/Down: the next selectable row of the page, wrapping at the ends like the game's own lists
+    inline bool Step(const std::shared_ptr<Context>& owner, int direction)
+    {
+        std::vector<RWGTAMenu::Row> rows;
+        {
+            Depth scope(foreignDepth);
+            for (auto* row : owner->model.ListRows(owner->page, false))
+                rows.push_back(*row);
+        }
+        if (!Available(owner) || rows.empty()) return false;
+        auto& window = owner->model.Window(owner->page);
+        bool moved = false;
+        for (size_t tries = 0; tries < rows.size(); ++tries)
+        {
+            if (!window.Move(direction)) break;
+            moved = true;
+            const auto& row = rows[std::min(window.Selected(), rows.size() - 1)];
+            if (RWGTAMenu::Model::Opens(row)) break;
+            bool enabled;
+            { Depth scope(foreignDepth); enabled = owner->model.Enabled(row, owner->pause); }
+            if (!Available(owner)) return false;
+            if (enabled) break;
+        }
+        return moved;
+    }
+    // The page shown again after a change of page, rows or window; false leaves through the native parent route
+    inline bool Show(const std::shared_ptr<Context>& owner)
+    {
+        if (!Build(owner))
+        {
+            owner->returnPending = true;
+            Retire(owner);
+            return false;
+        }
+        Call(owner, "WFP_Select(" + std::to_string(owner->selected) + ")");
+        Describe(owner, owner->selected);
+        return true;
     }
     inline void Act(const std::shared_ptr<Context>& owner, const Pending& action)
     {
         if (!Available(owner) || action.serial != owner->serial || action.index < 0 ||
             static_cast<size_t>(action.index) >= owner->items.size() || !Snapshot(owner, "private") ||
-            action.sender != owner->native.rows[action.index] || !owner->native.Selected(action.index)) return;
+            owner->native.Slot(action.sender) != action.index || !owner->native.Selected(action.index)) return;
         const auto item = owner->items[action.index];
-        owner->selected = static_cast<size_t>(action.index);
-        if (action.kind == 6)
+        auto& window = owner->model.Window(owner->page);
+        // The page's own activation focuses a row of its choice after it opens: the selection stays
+        if (action.kind == 3 && owner->settle)
         {
-            if (owner->details)
-            {
-                owner->details = false;
-                owner->selected = owner->helpSelected;
-            }
-            else
-            {
-                owner->helpLines = Wrap(FontService(owner), fontModule, item.description);
-                if (owner->helpLines.empty())
-                    return;
-                owner->helpTitle = item.label;
-                owner->helpSelected = owner->selected;
-                owner->helpPage = 0;
-                owner->selected = 0;
-                owner->details = true;
-            }
-            if (!Build(owner))
-            {
-                owner->returnPending = true;
-                Retire(owner);
-            }
-            else
-                Describe(owner, owner->selected);
+            if (static_cast<size_t>(action.index) != owner->selected)
+                Call(owner, "WFP_Select(" + std::to_string(owner->selected) + ")");
             return;
         }
+        window.Point(static_cast<size_t>(action.index));
+        owner->selected = static_cast<size_t>(action.index);
         if (action.kind == 3 || action.kind == 4)
         {
-            owner->selected = action.index;
-            Describe(owner, owner->selected);
+            if (owner->helpFor != owner->selected) Describe(owner, owner->selected);
             return;
         }
-        if (action.kind == 2 && (action.key == 16 || action.key == 18))
+        // The wheel and the scroll bar move the list, the selection stays in it
+        if (action.kind == 8 || action.kind == 10)
         {
-            size_t selected = action.index;
-            for (size_t tries = 0; tries < owner->items.size(); ++tries)
-            {
-                selected = action.key == 16 ? (selected + owner->items.size() - 1) % owner->items.size() :
-                    (selected + 1) % owner->items.size();
-                if (owner->items[selected].enabled) break;
-            }
-            if (Call(owner, "WFP_Select(" + std::to_string(selected) + ")")) owner->selected = selected;
-            Describe(owner, owner->selected);
+            bool moved = false;
+            if (action.kind == 8)
+                for (int left = action.key; left; left += left > 0 ? -1 : 1)
+                    moved |= window.Scroll(left > 0 ? 1 : -1);
+            else
+                while (window.First() != size_t(action.key) && window.Scroll(window.First() < size_t(action.key) ? 1 : -1))
+                    moved = true;
+            if (!moved || !Available(owner)) return;
+            owner->selected = window.Slot();
+            Show(owner);
+            return;
+        }
+        // Up/Down and the list keys
+        const bool step = action.kind == 2 && (action.key == 16 || action.key == 18);
+        if (step || action.kind == 7)
+        {
+            const int direction = step ? (action.key == 16 ? -1 : 1) : (action.key < 0 ? -1 : 1);
+            const int amount = step ? 1 : std::abs(action.key);
+            bool moved = false;
+            if (step) moved = Step(owner, direction);
+            else if (amount == 1) moved = window.Scroll(direction);
+            else if (amount == 2) moved = window.Page(direction);
+            else moved = window.Edge(direction);
+            if (!moved || !Available(owner)) return;
+            owner->selected = window.Slot();
+            Show(owner);
             return;
         }
         const auto accept = action.kind == 1;
-        const auto back = action.kind == 2 && action.key == 9;
+        const auto levels = action.kind == 9 ? action.key : action.kind == 2 && action.key == 9 ? 1 : 0;
         const auto direction = accept ? 0 : action.key == 15 ? -1 : 1;
-        const auto oldPage = owner->page;
-        const auto oldOffset = owner->rootOffset;
-        const auto oldSelection = owner->selected;
-        bool navigation = true;
-        if (owner->details)
+        if (levels)
         {
-            if (back || (accept && item.kind == ItemKind::HelpBack))
+            for (int level = 0; level < levels; ++level)
             {
-                owner->details = false;
-                owner->selected = owner->helpSelected;
+                const auto parent = owner->model.Back(owner->page);
+                if (parent == SIZE_MAX) { Leave(owner); return; }
+                owner->page = parent;
             }
-            else if (accept && item.kind == ItemKind::HelpNext)
-                ++owner->helpPage;
-            else if (accept && item.kind == ItemKind::HelpPrevious && owner->helpPage)
-                --owner->helpPage;
-            else
-                return;
-            if (!Build(owner))
-            {
-                owner->returnPending = true;
-                Retire(owner);
-            }
-            else
-                Describe(owner, owner->selected);
-            return;
-        }
-        if (back || (accept && item.kind == ItemKind::Back))
-        {
-            if (!owner->page) { Leave(owner); return; }
-            owner->page.reset();
         }
         else if (accept && item.kind == ItemKind::Page)
         {
-            if (item.target >= owner->model.Pages().size()) return;
-            owner->page = item.target;
-            owner->rowOffset = 0;
-            owner->model.PageShown(item.target);
+            const auto target = owner->model.Enter(item.row);
+            if (target == SIZE_MAX) return;
+            owner->page = target;
         }
-        else if (accept && (item.kind == ItemKind::Next || item.kind == ItemKind::Previous)) owner->rootOffset = item.target;
-        else if (accept && (item.kind == ItemKind::RowNext || item.kind == ItemKind::RowPrevious))
+        else if (item.kind == ItemKind::Row && (accept || action.kind == 2))
         {
-            owner->rowOffset = item.target;
-            owner->model.PageShown(*owner->page);
-        }
-        else if (item.kind == ItemKind::Row)
-        {
-            navigation = false;
-            if (!owner->page || !item.enabled || (!accept && item.row.kind != RWGTAMenu::RowKind::Setting &&
+            if (!item.enabled || (!accept && item.row.kind != RWGTAMenu::RowKind::Setting &&
                 item.row.kind != RWGTAMenu::RowKind::Preset)) return;
-            const auto rowOffset = owner->rowOffset;
+            const auto oldPage = owner->page;
             const auto current = [&]()
             {
                 return Available(owner) && owner->serial == action.serial && owner->page == oldPage &&
-                    owner->rowOffset == rowOffset && owner->native.Selected(action.index) && Snapshot(owner, "private");
+                    owner->native.Selected(action.index) && Snapshot(owner, "private");
             };
             std::vector<const RWGTAMenu::Row*> rows;
-            { Depth scope(foreignDepth); rows = owner->model.VisibleRows(*oldPage); }
-            const auto index = rowOffset + static_cast<size_t>(action.index);
-            if (!current() || index >= rows.size()) return;
-            const auto row = *rows[index];
-            if (row.plugin != item.row.plugin || row.setting != item.row.setting || row.kind != item.row.kind) return;
+            { Depth scope(foreignDepth); rows = owner->model.VisibleRows(oldPage); }
+            if (!current()) return;
+            const auto found = std::find_if(rows.begin(), rows.end(), [&](const RWGTAMenu::Row* row)
+            {
+                return row->plugin == item.row.plugin && row->setting == item.row.setting && row->kind == item.row.kind;
+            });
+            if (found == rows.end()) return;
+            const auto row = **found;
             bool enabled;
             { Depth scope(foreignDepth); enabled = owner->model.Enabled(row, owner->pause); }
             if (!enabled || !current()) return;
@@ -1368,19 +1574,8 @@ export namespace FarCryMenu
             if (!Available(owner) || owner->serial != action.serial || !Snapshot(owner, "private")) return;
         }
         else return;
-        owner->selected = navigation ? 0 : oldSelection;
-        if (!Build(owner))
-        {
-            owner->page = oldPage;
-            owner->rootOffset = oldOffset;
-            // Failed native/foreign commit never leaves old visible widgets
-            // bound to new navigation. Return through the native parent route.
-            owner->returnPending = true;
-            Retire(owner);
-            return;
-        }
-        Call(owner, "WFP_Select(" + std::to_string(owner->selected) + ")");
-        Describe(owner, owner->selected);
+        owner->selected = owner->model.Window(owner->page).Slot();
+        Show(owner);
     }
     inline void Drain()
     {
@@ -1388,6 +1583,10 @@ export namespace FarCryMenu
         struct Draining { Draining() { draining = true; } ~Draining() { draining = false; } } scope;
         auto owner = context;
         if (!owner) { pending.clear(); return; }
+        // Back from the Plugins list lands on its entry, also when the Options tab's activation moved the focus
+        if (!owner->open && owner->returnFocus && !--owner->returnFocus && NativeCurrent(owner) &&
+            Snapshot(owner, "options") && Field<void*>(owner->native.ui, focusOffset) != owner->native.entry)
+            Call(owner, "WFP_FocusEntry()");
         if (!owner->open && !owner->returnPending && !owner->retired && pending.empty()) return;
         if (!NativeCurrent(owner))
         {
@@ -1415,8 +1614,8 @@ export namespace FarCryMenu
             // foreign settings callback. Drop only the logical session at the
             // safe native boundary; keep the engine-owned pool reusable.
             owner->returnPending = owner->retired = owner->open = false;
-            owner->model.Close(); owner->items.clear(); owner->page.reset();
-            owner->selected = owner->rootOffset = 0;
+            owner->model.Close(); owner->items.clear(); owner->page = RWGTAMenu::Model::RootPage;
+            owner->selected = 0;
             pending.clear();
             return;
         }
@@ -1425,8 +1624,8 @@ export namespace FarCryMenu
             if (!Field<unsigned char>(owner->native.page, screenActiveOffset))
             {
                 owner->returnPending = owner->retired = owner->open = false;
-                owner->model.Close(); owner->items.clear(); owner->page.reset();
-                owner->selected = owner->rootOffset = 0;
+                owner->model.Close(); owner->items.clear(); owner->page = RWGTAMenu::Model::RootPage;
+                owner->selected = 0;
             }
             else Leave(owner);
             pending.clear();
@@ -1446,22 +1645,39 @@ export namespace FarCryMenu
             if (!Build(owner)) { owner->returnPending = true; Retire(owner); }
             else Describe(owner, owner->selected);
         }
+        else if (Available(owner) && owner->open)
+            ScrollHelp(owner);
+        if (Available(owner) && owner->open && owner->settle && !--owner->settle &&
+            !owner->native.Selected(owner->selected))
+            Call(owner, "WFP_Select(" + std::to_string(owner->selected) + ")");
     }
 
     inline void Hotkeys()
     {
-        static bool previous = false;
+        static bool homeDown = false, endDown = false;
         const auto owner = context;
-        const bool down = Available(owner) && owner->open && GetForegroundWindow() == FarCryWindow::Window &&
-            (GetAsyncKeyState(VK_F1) & 0x8000);
-        if (down && !previous)
+        const bool input = Available(owner) && owner->open && GetForegroundWindow() == FarCryWindow::Window;
+        FarCryWindow::PluginsOpen = input;
+        const int wheel = FarCryWindow::MenuWheel.Take();
+        if (!input)
         {
-            const auto focus = Field<void*>(owner->native.ui, focusOffset);
-            const auto row = std::find(owner->native.rows.begin(), owner->native.rows.end(), focus);
-            if (row != owner->native.rows.end())
-                Queue({owner->serial, 6, int(row - owner->native.rows.begin()), 39, focus});
+            homeDown = endDown = false;
+            if (owner) owner->wheel.Clear();
+            return;
         }
-        previous = down;
+        auto key = [](int code) { return (GetAsyncKeyState(code) & 0x8000) != 0; };
+        const auto focus = Field<void*>(owner->native.ui, focusOffset);
+        const int index = owner->native.Slot(focus);
+        if (index < 0) return;
+        // The game's own lists only step through their rows: Page Up/Down, Home/End and the wheel (a row per notch)
+        const int page = key(VK_PRIOR) ? -1 : key(VK_NEXT) ? 1 : FarCryWindow::PluginsPadPage;
+        if (owner->pageRepeat.Step(page != 0, GetTickCount64()) && page) Queue({owner->serial, 7, index, 2 * page, focus});
+        const bool home = key(VK_HOME), end = key(VK_END);
+        if (home && !homeDown) Queue({owner->serial, 7, index, -3, focus});
+        if (end && !endDown) Queue({owner->serial, 7, index, 3, focus});
+        homeDown = home; endDown = end;
+        // All notches of a frame go as one movement (each rebuild starts a new serial)
+        if (const int notches = owner->wheel.Take(wheel)) Queue({owner->serial, 8, index, -notches, focus});
     }
 
 }
@@ -1517,7 +1733,7 @@ export namespace FarCryMenu
         if (!handler) return 0;
         bool accepted = false;
         std::string epoch;
-        if (preparing && !releasing && preparingLifetime == uiLifetime && ParamCount(handler) == 14 &&
+        if (preparing && !releasing && preparingLifetime == uiLifetime && ParamCount(handler) == 21 &&
             String(handler, 1, epoch) && epoch == preparingEpoch && Table(preparingUI, uiTable))
         {
             auto owner = std::make_shared<Context>();
@@ -1526,27 +1742,34 @@ export namespace FarCryMenu
             pool.source = NativeParameter(bridgeScript, handler, 2, scriptModule);
             pool.page = NativeParameter(bridgeScript, handler, 3, scriptModule);
             pool.entry = NativeParameter(bridgeScript, handler, 4, scriptModule);
-            pool.heading = NativeParameter(bridgeScript, handler, 5, scriptModule);
-            pool.description = NativeParameter(bridgeScript, handler, 6, scriptModule);
-            pool.prototype = NativeParameter(bridgeScript, handler, 7, scriptModule);
-            for (size_t i = 0; i < pool.rows.size(); ++i)
-                pool.rows[i] = NativeParameter(bridgeScript, handler, static_cast<int>(8 + i), scriptModule);
+            pool.description = NativeParameter(bridgeScript, handler, 5, scriptModule);
+            pool.prototype = NativeParameter(bridgeScript, handler, 6, scriptModule);
+            for (size_t i = 0; i < PoolSlots; ++i)
+            {
+                pool.rows[i] = NativeParameter(bridgeScript, handler, static_cast<int>(7 + i), scriptModule);
+                pool.buttons[i] = NativeParameter(bridgeScript, handler, static_cast<int>(7 + PoolSlots + i), scriptModule);
+            }
+            int labelSize{}, valueSize{}, buttonSize{};
+            const bool sizes = Integer(handler, 19, labelSize) && Integer(handler, 20, valueSize) && Integer(handler, 21, buttonSize) &&
+                labelSize >= 8 && labelSize <= 32 && valueSize >= 8 && valueSize <= 32 && buttonSize >= 8 && buttonSize <= 32;
+            owner->labelSize = float(labelSize); owner->valueSize = float(valueSize); owner->buttonSize = float(buttonSize);
             const auto prototype = Field<NativeRect>(pool.prototype, widgetRectOffset);
             pool.entryBounds = {prototype.x, prototype.y + prototype.height, prototype.width, prototype.height};
             owner->epoch = owner->serial = epoch;
             owner->lifetime = preparingLifetime;
-            if (preparingLifetime == uiLifetime && !releasing && pool.Live(gameModule, scriptModule) &&
+            if (sizes && preparingLifetime == uiLifetime && !releasing && pool.Live(gameModule, scriptModule) &&
                 prototype.width >= 64 && prototype.height >= 16 && pool.entryBounds.y + pool.entryBounds.height <= 580)
             {
-                std::set<void*> unique{pool.source, pool.page, pool.entry, pool.heading, pool.description, pool.prototype};
+                std::set<void*> unique{pool.source, pool.page, pool.entry, pool.description, pool.prototype};
                 unique.insert(pool.rows.begin(), pool.rows.end());
+                unique.insert(pool.buttons.begin(), pool.buttons.end());
                 auto system = Field<void*>(pool.ui, uiSystemOffset);
                 auto font = Table(system, systemTable) ? Field<void*>(system, systemFontOffset) : nullptr;
                 auto texts = FixSettings().GetTexts(); texts.Select("en");
                 const auto title = texts.Resolve("@menu.title");
                 auto extent = MeasureLiteral(font, fontModule, title, 14);
                 const auto scaleY = Field<double>(pool.ui, verticalScaleOffset);
-                accepted = unique.size() == 13 && extent && extent->x <= prototype.width - 16 &&
+                accepted = unique.size() == 5 + 2 * PoolSlots && extent && extent->x <= prototype.width - 16 &&
                     extent->y <= prototype.height - 4 && std::isfinite(scaleY) && scaleY > 0 && extent->y * scaleY >= 8;
                 if (accepted) context = owner;
             }
@@ -1565,7 +1788,7 @@ export namespace FarCryMenu
         if (accepted)
         {
             action.sender = NativeParameter(bridgeScript, handler, 5, scriptModule);
-            accepted = action.kind >= 0 && action.kind <= 5 && Queue(std::move(action));
+            accepted = ((action.kind >= 0 && action.kind <= 5) || action.kind == 9 || action.kind == 10) && Queue(std::move(action));
         }
         return Return(handler, accepted);
     }
@@ -1618,10 +1841,11 @@ export namespace FarCryMenu
         struct Preparing { Preparing() { preparing = true; } ~Preparing() { preparing = false; preparingUI = nullptr; } } guard;
         auto texts = FixSettings().GetTexts(); texts.Select("en");
         auto title = NativeLiteral(texts.Resolve("@menu.title"));
-        if (!title) return false;
+        auto back = NativeLiteral(texts.Resolve("@menu.back"));
+        if (!title || !back) return false;
         {
             Depth depth(nativeDepth);
-            if (!Execute(script, "WFP_Prepare(" + Quote(preparingEpoch) + "," + Quote(*title) + ",14);"))
+            if (!Execute(script, "WFP_Prepare(" + Quote(preparingEpoch) + "," + Quote(*title) + ",14," + Quote(*back) + ");"))
             { Log("native Lua factory buffer refused"); return false; }
         }
         std::string status;
@@ -1644,6 +1868,8 @@ export namespace FarCryMenu
         if (!ready || nativeDepth || foreignDepth || draining || preparing || releasing || scriptClosing || fontClosing) return;
         if (Tick)
             Tick();
+        // Fusion Rain Droplets keeps its drops off the game's menus
+        RainDroplets::MenuOpen(Table(ui, uiTable) && (Field<unsigned char>(ui, uiFlagsOffset) & 4));
         Hotkeys();
         frameUI = ui;
         if (!context)
@@ -1687,8 +1913,7 @@ export namespace FarCryMenu
             Field<void*>(receiver, scriptOwnerServiceOffset) == owner->native.script &&
             (Field<unsigned char>(owner->native.ui, uiFlagsOffset) & 4) &&
             Field<unsigned char>(owner->native.page, screenActiveOffset) != 0 &&
-            std::find(owner->native.rows.begin(), owner->native.rows.end(),
-                Field<void*>(owner->native.ui, focusOffset)) != owner->native.rows.end();
+            owner->native.Slot(Field<void*>(owner->native.ui, focusOffset)) >= 0;
     }
 #ifdef _WIN64
     inline int CanSwitch(void* receiver, bool in)

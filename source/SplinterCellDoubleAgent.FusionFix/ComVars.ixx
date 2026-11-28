@@ -60,6 +60,8 @@ export bool IsGameForeground()
 }
 export std::atomic<bool> NativeMenuBlocksCinematics{ true };
 export std::function<bool(bool)> NativeWindowsMenuHelp;
+// The native menu takes the wheel's raw delta while its list is on top (true: the game doesn't get it)
+export std::function<bool(int)> NativeWindowsMenuWheel;
 export bool bVideoStartedFromLoadMap = false;
 export std::wstring gCurrentCameraShotName;
 export bool bDisablePreCache = false;

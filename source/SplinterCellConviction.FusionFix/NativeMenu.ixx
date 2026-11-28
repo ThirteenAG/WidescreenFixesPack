@@ -5,6 +5,7 @@ module;
 #include "FixSettings.hpp"
 #include "Shared/RWGTA/FixMenu.hpp"
 #include "Shared/RWGTA/UpdateCheck.hpp"
+#include "Shared/MenuList.hpp"
 #include <charconv>
 #include <set>
 
@@ -30,6 +31,11 @@ export namespace SCCMenu
     inline void (__fastcall* wideDtor)(void*, void*) = nullptr;
     inline uintptr_t invokeAddress = 0;
     inline std::set<std::string> logged;
+    // The movie shows seven rows
+    inline constexpr size_t Slots = 7;
+    inline MenuList::WheelNotches wheel;
+    inline std::atomic<int> wheelDelta{ 0 }, pendingKey{ 0 };
+    inline const std::string Root = "_root.FlashMenu.callbackObject.privateMenu.";
 
     inline void Log(const std::string& message)
     {
@@ -69,6 +75,13 @@ export namespace SCCMenu
         if (value.size() > 4096) { value.resize(4096); if (value.back() >= 0xD800 && value.back() <= 0xDBFF) value.pop_back(); }
         return value;
     }
+    inline std::string Utf8(const std::wstring& text)
+    {
+        int count = WideCharToMultiByte(CP_UTF8, 0, text.data(), int(text.size()), nullptr, 0, nullptr, nullptr);
+        std::string value(size_t(std::max(count, 0)), '\0');
+        if (count) WideCharToMultiByte(CP_UTF8, 0, text.data(), int(text.size()), value.data(), count, nullptr, nullptr);
+        return value;
+    }
     inline bool MovieContract(void* movie)
     {
         return movie && (*reinterpret_cast<uintptr_t**>(movie))[0x38 / 4] == invokeAddress;
@@ -105,7 +118,24 @@ export namespace SCCMenu
         wideDtor(result + 0x20, nullptr); stringDtor(result + 0x0C, nullptr); stringDtor(path, nullptr);
         return result[0] == 4 && (result[4] & 1) && MovieValid(movie);
     }
-    // FlashMovie virtual +7Ch (sub_87081B): sets a variable to a number; +6Ch reads a variable as a string
+    // FlashMovie virtuals: +68h reads a variable as a number, +78h sets a boolean, +7Ch a number, +80h a string
+    inline double GetNumber(void* movie, const std::string& name)
+    {
+        if (!MovieValid(movie)) return NAN;
+        uint8_t path[20] = {};
+        stringCtor(path, nullptr, name.c_str());
+        const auto value = reinterpret_cast<double(__thiscall*)(void*, void*)>((*reinterpret_cast<uintptr_t**>(movie))[0x68 / 4])(movie, path);
+        stringDtor(path, nullptr);
+        return value;
+    }
+    inline void SetBool(void* movie, const std::string& name, bool value)
+    {
+        if (!MovieValid(movie)) return;
+        uint8_t path[20] = {};
+        stringCtor(path, nullptr, name.c_str());
+        reinterpret_cast<void(__thiscall*)(void*, void*, int)>((*reinterpret_cast<uintptr_t**>(movie))[0x78 / 4])(movie, path, value ? 1 : 0);
+        stringDtor(path, nullptr);
+    }
     inline void SetNumber(void* movie, const std::string& name, float value)
     {
         if (!MovieValid(movie)) return;
@@ -114,9 +144,16 @@ export namespace SCCMenu
         reinterpret_cast<void(__thiscall*)(void*, void*, float)>((*reinterpret_cast<uintptr_t**>(movie))[0x7C / 4])(movie, path, value);
         stringDtor(path, nullptr);
     }
+    inline void SetString(void* movie, const std::string& name, const std::string& value)
+    {
+        if (!MovieValid(movie)) return;
+        uint8_t path[20] = {}, text[20] = {};
+        stringCtor(path, nullptr, name.c_str());
+        stringCtor(text, nullptr, value.c_str());
+        reinterpret_cast<void(__thiscall*)(void*, void*, void*)>((*reinterpret_cast<uintptr_t**>(movie))[0x80 / 4])(movie, path, text);
+        stringDtor(text, nullptr); stringDtor(path, nullptr);
+    }
 
-    enum class Kind { Page, Next, Previous, Back, Setting };
-    struct Link { Kind kind; size_t index = 0; RWGTAMenu::Row row; };
     struct Context
     {
         RWGTAMenu::Model model;
@@ -126,10 +163,15 @@ export namespace SCCMenu
         bool opening = false;
         bool committed = false;
         bool details = false, notice = false;
-        int helpIndex = 0;
-        int page = -1;
-        size_t offset = 0, rowOffset = 0;
-        std::vector<Link> links;
+        bool marks = false;
+        size_t helpSlot = 0;
+        size_t page = RWGTAMenu::Model::RootPage;
+        size_t lastSlot = 0;
+        ULONGLONG populated = 0;
+        // When the page was shown: then the movie hovers the row under the mouse, as on its own pages
+        ULONGLONG entered = GetTickCount64();
+        // The rows in the window, as the movie shows them
+        std::vector<RWGTAMenu::Row> rows;
     };
     inline std::shared_ptr<Context> context;
     inline bool Current(const std::shared_ptr<Context>& ctx)
@@ -141,6 +183,26 @@ export namespace SCCMenu
         if (pressed) helpRequested = true;
         return true;
     }
+    inline std::atomic<ULONGLONG> lastMouse{ 0 }, lastKey{ 0 };
+    inline void Input(UINT message)
+    {
+        if (message == WM_KEYDOWN) { lastKey = GetTickCount64(); return; }
+        static POINT last{};
+        POINT now{};
+        if (GetCursorPos(&now) && (now.x != last.x || now.y != last.y)) { last = now; lastMouse = GetTickCount64(); }
+    }
+    inline bool TakeWheel(int delta)
+    {
+        if (!context || !context->committed || context->details || !context->model.IsOpen()) return false;
+        wheelDelta += delta;
+        return true;
+    }
+    inline bool TakeKey(int key)
+    {
+        if (!context || !context->committed || context->details || !context->model.IsOpen()) return false;
+        pendingKey = key;
+        return true;
+    }
     inline void Close()
     {
         helpRequested = false;
@@ -149,63 +211,139 @@ export namespace SCCMenu
         // alive until Open unwinds if that callback retires the source movie.
         if (old && !old->opening) old->model.Close();
     }
-    inline void Populate(const std::shared_ptr<Context>& ctx, int selection = 0)
+    // Scroll marks: two copies of the movie's own row text, beside the first and the last row, showing the font's
+    // plainest arrows while more rows are above or below (it has no triangles)
+    inline void Marks(const std::shared_ptr<Context>& ctx)
+    {
+        if (!Current(ctx)) return;
+        if (ctx->details)
+        {
+            // The help page has no list window
+            if (ctx->marks)
+                for (auto clip : { "FixMarkUp.", "FixMarkDown." })
+                {
+                    SetString(ctx->movie, Root + clip + "MenuItem.txtField.text", "");
+                    SetBool(ctx->movie, Root + clip + "_visible", false);
+                }
+            return;
+        }
+        const auto first = GetNumber(ctx->movie, Root + "Menu0._y"), second = GetNumber(ctx->movie, Root + "Menu1._y");
+        const auto width = GetNumber(ctx->movie, Root + "Menu0.MenuItem.txtField._width");
+        if (!std::isfinite(first) || !std::isfinite(second) || !std::isfinite(width) || second <= first || width < 64) return;
+        if (!ctx->marks)
+        {
+            Invoke(ctx->movie, "privateMenu.Menu0.duplicateMovieClip", "Wi", L"FixMarkUp", 9001);
+            Invoke(ctx->movie, "privateMenu.Menu0.duplicateMovieClip", "Wi", L"FixMarkDown", 9002);
+            if (!Current(ctx)) return;
+            ctx->marks = true;
+        }
+        auto& window = ctx->model.Window(ctx->page);
+        const auto spacing = second - first;
+        const std::pair<const char*, bool> marks[] = { { "FixMarkUp.", window.Above() && !ctx->details },
+            { "FixMarkDown.", window.Below() && !ctx->details } };
+        for (size_t i = 0; i < 2; ++i)
+        {
+            const std::string clip = Root + marks[i].first;
+            SetNumber(ctx->movie, clip + "_y", float(first + spacing * (i ? double(window.Shown() - 1) : 0.0)));
+            SetNumber(ctx->movie, clip + "_x", float(GetNumber(ctx->movie, Root + "Menu0._x") + width + spacing * 0.25));
+            SetBool(ctx->movie, clip + "Background._visible", false);
+            SetBool(ctx->movie, clip + "hitTestDisable", true);
+            SetString(ctx->movie, clip + "MenuItem.txtField.text", marks[i].second ? (i ? "v" : "^") : "");
+            SetBool(ctx->movie, clip + "_visible", marks[i].second);
+        }
+    }
+    // The help under the list: all of it, wrapped, when it fits the space below the rows; else its whole sentences
+    // that do (F1 / Y shows all of it)
+    inline void Describe(const std::shared_ptr<Context>& ctx, size_t slot)
+    {
+        if (!Current(ctx) || ctx->details) return;
+        std::string description;
+        if (slot < ctx->rows.size() && !RWGTAMenu::Model::Opens(ctx->rows[slot])) description = ctx->model.Help(ctx->rows[slot]);
+        if (!Current(ctx)) return;
+        if (ctx->model.RestartRequired())
+        {
+            auto warning = ctx->model.Text("menu.restartwarning");
+            if (!description.empty()) warning += " - " + description;
+            description = std::move(warning);
+        }
+        if (!Invoke(ctx->movie, "describeFixMenu", "W", L"") || !Current(ctx)) return;
+        const std::string field = Root + "FixDescription.MenuItem.txtField";
+        const auto spacing = GetNumber(ctx->movie, Root + "Menu1._y") - GetNumber(ctx->movie, Root + "Menu0._y");
+        if (!std::isfinite(spacing) || spacing <= 0) return;
+        SetBool(ctx->movie, field + ".multiline", true);
+        SetBool(ctx->movie, field + ".wordWrap", true);
+        SetNumber(ctx->movie, field + "._height", float(spacing * 4));
+        const auto text = Utf8(Wide(description));
+        auto shown = text;
+        for (size_t cut = text.size();;)
+        {
+            SetString(ctx->movie, field + ".text", shown);
+            SetNumber(ctx->movie, field + ".scroll", 1);
+            const auto overflow = GetNumber(ctx->movie, field + ".maxscroll");
+            if (!std::isfinite(overflow) || overflow <= 1 || cut == 0) break;
+            cut = text.find_last_of(".!?", cut - 1);
+            if (cut == std::string::npos) { shown.clear(); break; }
+            if (cut + 1 < text.size() && text[cut + 1] != ' ') continue;
+            shown = text.substr(0, cut + 1);
+        }
+        SetBool(ctx->movie, Root + "FixDescription._visible", !shown.empty());
+    }
+    inline void Populate(const std::shared_ptr<Context>& ctx)
     {
         if (!Current(ctx)) return;
         ctx->committed = false;
-        struct RowText { std::string label, value; bool enabled; Link link; };
+        struct RowText { std::string label, value; bool enabled; };
         std::vector<RowText> rows;
-        auto title = ctx->model.Text("menu.plugins");
-        if (ctx->page < 0)
+        if (ctx->page >= ctx->model.Pages().size()) ctx->page = RWGTAMenu::Model::RootPage;
+        auto title = ctx->page == RWGTAMenu::Model::RootPage ? ctx->model.Text("menu.plugins") : ctx->model.Pages()[ctx->page].title;
+        // The game's own lists have no Back row: B / Esc go back a level
+        std::vector<RWGTAMenu::Row> shown;
+        for (auto row : ctx->model.Shown(ctx->page, false))
         {
-            const auto& pages = ctx->model.Pages();
-            for (size_t i = ctx->offset; i < pages.size() && i < ctx->offset + 4; ++i)
-                rows.push_back({pages[i].title, {}, true, {Kind::Page, i, {}}});
-            if (ctx->offset) rows.push_back({ctx->model.Text("menu.previous"), {}, true, {Kind::Previous, 0, {}}});
-            if (ctx->offset + 4 < pages.size()) rows.push_back({ctx->model.Text("menu.next"), {}, true, {Kind::Next, 0, {}}});
-        }
-        else
-        {
-            auto visible = ctx->model.VisibleRows(size_t(ctx->page));
-            if (!Current(ctx)) return;
-            if (size_t(ctx->page) >= ctx->model.Pages().size()) return;
-            title = ctx->model.Pages()[size_t(ctx->page)].title;
-            if (ctx->rowOffset >= visible.size()) ctx->rowOffset = 0;
-            for (size_t i = ctx->rowOffset; i < visible.size() && i < ctx->rowOffset + 4; ++i)
+            if (!row) continue;
+            shown.push_back(*row);
+            if (RWGTAMenu::Model::Opens(*row))
             {
-                auto row = *visible[i];
-                auto label = ctx->model.Label(row);
-                auto enabled = ctx->model.Enabled(row, ctx->pause);
+                auto label = ctx->model.Label(*row);
                 if (!Current(ctx)) return;
-                auto value = ctx->model.Value(row);
-                if (!Current(ctx)) return;
-                if (!enabled) value = ctx->model.Text("menu.unavailable");
-                rows.push_back({std::move(label), std::move(value), enabled, {Kind::Setting, 0, row}});
+                rows.push_back({ std::move(label), {}, true });
+                continue;
             }
-            if (ctx->rowOffset) rows.push_back({ctx->model.Text("menu.previous"), {}, true, {Kind::Previous, 0, {}}});
-            if (ctx->rowOffset + 4 < visible.size()) rows.push_back({ctx->model.Text("menu.next"), {}, true, {Kind::Next, 0, {}}});
+            auto label = ctx->model.Label(*row);
+            auto enabled = ctx->model.Enabled(*row, ctx->pause);
+            if (!Current(ctx)) return;
+            auto value = enabled ? ctx->model.Value(*row) : ctx->model.Text("menu.unavailable");
+            if (!Current(ctx)) return;
+            rows.push_back({ std::move(label), std::move(value), enabled });
         }
-        rows.push_back({ctx->model.Text("menu.back"), {}, true, {Kind::Back, 0, {}}});
-        // Four plugin links or settings, plus previous/next and Back.
-        if (rows.size() > 7) { Log("private row bound rejected"); return; }
+        if (rows.empty() || rows.size() > Slots) { Log("private row bound rejected"); return; }
         if (!Invoke(ctx->movie, "resetFixMenu", "W", Wide(title).c_str()) || !Current(ctx)) return;
-        ctx->links.clear();
+        ctx->rows = std::move(shown);
         for (const auto& row : rows)
         {
             if (!Invoke(ctx->movie, "appendFixMenu", "WWB", Wide(row.label).c_str(), Wide(row.value).c_str(), int(row.enabled)) || !Current(ctx)) return;
-            ctx->links.push_back(row.link);
         }
-        if (!Invoke(ctx->movie, "finishFixMenu", "i", selection) || !Current(ctx))
+        const auto slot = ctx->model.Window(ctx->page).Slot();
+        ctx->lastSlot = slot;
+        if (!Invoke(ctx->movie, "finishFixMenu", "i", int(slot)) || !Current(ctx))
         {
             Log("private page native commit rejected");
             if (context == ctx) { Close(); Invoke(ctx->movie, "leaveFixMenu", ""); }
             return;
         }
         // the list shows all seven row clips, their background bars stayed below a shorter list
-        for (size_t i = rows.size(); i < 7; ++i)
-            SetNumber(ctx->movie, "_root.FlashMenu.callbackObject.privateMenu.Menu" + std::to_string(i) + "._visible", 0.0f);
+        // The copied Settings list brings more row clips than the seven rows; the unused ones stay hidden
+        for (size_t i = 0; i < Slots + 8; ++i)
+        {
+            const auto clip = Root + "Menu" + std::to_string(i);
+            SetBool(ctx->movie, clip + "._visible", i < rows.size());
+            SetBool(ctx->movie, clip + ".Background._visible", i < rows.size());
+        }
+        Marks(ctx);
         RWGTAMenu::Model::Changed() = false;
         ctx->committed = true;
+        ctx->populated = GetTickCount64();
+        Describe(ctx, slot);
     }
     inline int Index(const char* args)
     {
@@ -216,15 +354,65 @@ export namespace SCCMenu
     }
     inline void Details(const std::shared_ptr<Context>& ctx, int index)
     {
-        if (!Current(ctx) || index < 0 || size_t(index) >= ctx->links.size()) return;
-        const auto link = ctx->links[size_t(index)];
-        if (link.kind != Kind::Setting) return;
-        auto help = ctx->model.Help(link.row);
-        if (Invoke(ctx->movie, "showFixDetails", "WW", Wide(ctx->model.Label(link.row)).c_str(), Wide(help).c_str()) && Current(ctx))
+        if (!Current(ctx) || index < 0 || size_t(index) >= ctx->rows.size()) return;
+        const auto row = ctx->rows[size_t(index)];
+        if (RWGTAMenu::Model::Opens(row)) return;
+        auto help = ctx->model.Help(row);
+        if (help.empty() || !Current(ctx)) return;
+        // The movie's help page ends by sending a command of the frame, which moves the callback object off this page:
+        // hide the scroll marks first
+        const bool details = std::exchange(ctx->details, true);
+        Marks(ctx);
+        ctx->details = details;
+        if (Invoke(ctx->movie, "showFixDetails", "WW", Wide(ctx->model.Label(row)).c_str(), Wide(help).c_str()) && Current(ctx))
         {
             ctx->details = true;
-            ctx->helpIndex = index;
+            ctx->helpSlot = size_t(index);
         }
+    }
+    // The movie's list moves within its rows and wraps there; a step off its last row (or its first) moves the window
+    inline bool UnderMouse(const std::shared_ptr<Context>& ctx, size_t slot)
+    {
+        const auto mouse = GetNumber(ctx->movie, Root + "_ymouse"), top = GetNumber(ctx->movie, Root + "Menu0._y");
+        const auto spacing = GetNumber(ctx->movie, Root + "Menu1._y") - top;
+        const auto under = (mouse - top) / spacing;
+        return std::isfinite(under) && spacing > 0 && under > -0.5 &&
+            (size_t(std::max(0.0, std::floor(under))) == slot || size_t(std::max(0.0, std::round(under))) == slot);
+    }
+    // The movie moves the selection within its rows and wraps there. A key or pad step off its last row (or its first)
+    // moves the window instead; the mouse just points at a row
+    inline void Follow(const std::shared_ptr<Context>& ctx, size_t slot)
+    {
+        auto& window = ctx->model.Window(ctx->page);
+        const size_t shown = ctx->rows.size();
+        const size_t first = window.First();
+        const auto now = GetTickCount64();
+        const bool key = now - lastKey < 400, moving = now - lastMouse < 250;
+        const bool pointed = !key && (moving || UnderMouse(ctx, slot));
+        if (pointed && !moving && now - ctx->entered > 1500 && now - ctx->populated < 1000 && slot != window.Slot())
+        {
+            // The movie hovers the row under a resting mouse again when it rebuilds the list: keys don't fight that
+            // mouse, the selection stays
+            Invoke(ctx->movie, "menu.select", "i", int(window.Slot()));
+            ctx->lastSlot = window.Slot();
+            return;
+        }
+        if (!pointed && shown >= 3 && window.Count() > shown && ctx->lastSlot == shown - 1 && slot == 0) window.Move(1);
+        else if (!pointed && shown >= 3 && window.Count() > shown && ctx->lastSlot == 0 && slot == shown - 1) window.Move(-1);
+        else window.Point(slot);
+        ctx->lastSlot = slot;
+        if (window.First() != first || window.Slot() != slot) Populate(ctx);
+        else Describe(ctx, slot);
+    }
+    inline void Navigate(const std::shared_ptr<Context>& ctx, int key, int notches)
+    {
+        auto& window = ctx->model.Window(ctx->page);
+        window.Point(ctx->lastSlot < ctx->rows.size() ? ctx->lastSlot : 0);
+        bool changed = false;
+        for (; notches; notches += notches > 0 ? -1 : 1) changed |= window.Scroll(notches > 0 ? -1 : 1);
+        if (key == VK_PRIOR || key == VK_NEXT) changed |= window.Page(key == VK_NEXT ? 1 : -1);
+        if (key == VK_HOME || key == VK_END) changed |= window.Edge(key == VK_END ? 1 : -1);
+        if (changed) Populate(ctx);
     }
     inline int __fastcall Command(void* manager, void* edx, const char* command, const char* args, void* movie)
     {
@@ -253,11 +441,13 @@ export namespace SCCMenu
             auto ctx = std::make_shared<Context>(); ctx->movie = movie; ctx->manager = manager;
             ctx->pause = args && std::string_view(args) == "pause"; context = ctx;
             ctx->opening = true;
-            ctx->model.OpenPlugins(module, Language(), 4096);
+            ctx->model.OpenMenu(module, Language(), Slots);
             ctx->opening = false;
             if (context != ctx) { ctx->model.Close(); return 1; }
+            wheel.Clear(); wheelDelta = 0; pendingKey = 0;
             if (Current(ctx))
             {
+                ctx->model.Window(ctx->page).Reset();
                 Populate(ctx);
             }
             return 1;
@@ -278,53 +468,52 @@ export namespace SCCMenu
         if (cmd == "FixMenuHelpBack")
         {
             if (ctx->notice) { Close(); Invoke(movie, "leaveFixMenu", ""); }
-            else { ctx->details = false; Populate(ctx, ctx->helpIndex); }
+            else { ctx->details = false; Populate(ctx); }
             return 1;
         }
         if (cmd == "FixMenuHelp") { Details(ctx, Index(args)); return 1; }
         if (cmd == "FixMenuRefresh")
         {
-            if (!ctx->details && helpRequested.exchange(false)) Details(ctx, Index(args));
-            else if (!ctx->details && RWGTAMenu::Model::Changed()) Populate(ctx, Index(args));
+            // F1 opens the help of the row and closes it again
+            if (helpRequested.exchange(false))
+            {
+                if (!ctx->details) Details(ctx, Index(args));
+                else if (!ctx->notice) { ctx->details = false; Populate(ctx); }
+                return 1;
+            }
+            if (ctx->details) return 1;
+            const int notches = wheel.Take(wheelDelta.exchange(0));
+            const int key = pendingKey.exchange(0);
+            if (notches || key) { Navigate(ctx, key, notches); return 1; }
+            if (RWGTAMenu::Model::Changed()) Populate(ctx);
             return 1;
         }
         if (cmd == "FixMenuBack")
         {
-            if (ctx->page >= 0) { ctx->model.PageShown(size_t(ctx->page)); ctx->page = -1; ctx->rowOffset = 0; Populate(ctx); }
-            else { Close(); Invoke(movie, "leaveFixMenu", ""); }
+            const auto parent = ctx->model.Back(ctx->page);
+            if (parent == SIZE_MAX) { Close(); Invoke(movie, "leaveFixMenu", ""); }
+            else { ctx->page = parent; ctx->entered = GetTickCount64(); Populate(ctx); }
             return 1;
         }
         auto index = Index(args);
-        if (index < 0 || size_t(index) >= ctx->links.size()) return 1;
-        auto link = ctx->links[size_t(index)];
-        if (cmd == "FixMenuDescription")
+        if (index < 0 || size_t(index) >= ctx->rows.size()) return 1;
+        if (cmd == "FixMenuDescription") { Follow(ctx, size_t(index)); return 1; }
+        if (cmd != "FixMenuAccept" && cmd != "FixMenuLeft" && cmd != "FixMenuRight") return 1;
+        const auto row = ctx->rows[size_t(index)];
+        ctx->model.Window(ctx->page).Point(size_t(index));
+        if (RWGTAMenu::Model::Opens(row))
         {
-            std::string description;
-            if (link.kind == Kind::Setting) description = ctx->model.Help(link.row);
-            if (ctx->model.RestartRequired())
-            {
-                auto warning = ctx->model.Text("menu.restartwarning");
-                if (!description.empty()) warning += " - " + description;
-                description = std::move(warning);
-            }
-            Invoke(movie, "describeFixMenu", "W", Wide(description).c_str()); return 1;
+            if (cmd != "FixMenuAccept") return 1;
+            const auto page = ctx->model.Enter(row);
+            if (page == SIZE_MAX) return 1;
+            ctx->page = page;
+            ctx->entered = GetTickCount64();
+            Populate(ctx);
+            return 1;
         }
-        if (cmd != "FixMenuBack" && cmd != "FixMenuAccept" && cmd != "FixMenuLeft" && cmd != "FixMenuRight") return 1;
-        if (link.kind != Kind::Setting && cmd != "FixMenuAccept") return 1;
-        if (link.kind == Kind::Back)
-        {
-            if (ctx->page >= 0) { ctx->model.PageShown(size_t(ctx->page)); ctx->page = -1; ctx->rowOffset = 0; Populate(ctx); }
-            else { Close(); Invoke(movie, "leaveFixMenu", ""); }
-        }
-        else if (link.kind == Kind::Page) { ctx->page = int(link.index); ctx->rowOffset = 0; ctx->model.PageShown(link.index); Populate(ctx); }
-        else if (link.kind == Kind::Next) { (ctx->page < 0 ? ctx->offset : ctx->rowOffset) += 4; Populate(ctx); }
-        else if (link.kind == Kind::Previous) { auto& offset = ctx->page < 0 ? ctx->offset : ctx->rowOffset; offset = offset >= 4 ? offset - 4 : 0; Populate(ctx); }
-        else
-        {
-            int direction = cmd == "FixMenuLeft" ? -1 : cmd == "FixMenuRight" ? 1 : 0;
-            ctx->model.Change(link.row, direction, ctx->pause);
-            if (Current(ctx)) Populate(ctx, index);
-        }
+        int direction = cmd == "FixMenuLeft" ? -1 : cmd == "FixMenuRight" ? 1 : 0;
+        ctx->model.Change(row, direction, ctx->pause);
+        if (Current(ctx)) Populate(ctx);
         return 1;
     }
     inline int __fastcall Retire(void* manager, void* edx)

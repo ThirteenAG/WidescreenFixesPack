@@ -28,6 +28,7 @@ export bool bVSync = true;
 export bool wasUsingLeftStick = false;
 export uint32_t gCurrentLevel = 0;
 export std::atomic<uint32_t> gMenuTick = 0;
+export std::atomic<int> nMenuWheel = 0;      // the mouse wheel's movement since the fix's menu last read it
 export void (*SignatureUpdateTick)() = nullptr;
 
 // Input

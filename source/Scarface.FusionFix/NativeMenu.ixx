@@ -187,8 +187,8 @@ export namespace ScarfaceMenu
     inline void Arrows(void* self, int nativeIndex)
     {
         const int index = nativeIndex - 1;
-        const bool shown = index >= 0 && size_t(index) < view.items.size() && view.items[index].kind == View::Kind::Row &&
-            (view.items[index].row.kind == RWGTAMenu::RowKind::Setting || view.items[index].row.kind == RWGTAMenu::RowKind::Preset);
+        // Like the game's own rows: the arrows of the selected row, when it has a value
+        const bool shown = index >= 0 && size_t(index) < view.items.size() && view.items[index].hasValue && size_t(index) == view.selected;
         for (const auto offset : { 60, 64 })
             if (auto arrow = *reinterpret_cast<void**>(static_cast<uint8_t*>(self) + offset))
                 Call(arrow, 17, shown);
@@ -203,7 +203,6 @@ export namespace ScarfaceMenu
         if (row->second > 0 && size_t(row->second - 1) < view.items.size())
         {
             view.selected = size_t(row->second - 1);
-            view.Remember();
         }
         Arrows(self, row->second);
     }
@@ -216,7 +215,9 @@ export namespace ScarfaceMenu
         rowHook.unsafe_thiscall<void>(self, data);
         if (!active || !opened)
             return;
-        Expand(*reinterpret_cast<void**>(static_cast<uint8_t*>(self) + 52));
+        // A label without a value may use the value column too
+        if (index == 0 || size_t(index - 1) >= view.items.size() || !view.items[index - 1].hasValue)
+            Expand(*reinterpret_cast<void**>(static_cast<uint8_t*>(self) + 52));
         Arrows(self, index);
     }
 
@@ -263,14 +264,13 @@ export namespace ScarfaceMenu
                 if (name != "PauseOptionHandleResolutionChange")
                     return "";
                 shownLanguage = Language();
-                model.OpenPlugins(Module(), shownLanguage, 32, {}, true);
+                model.OpenMenu(Module(), shownLanguage, 8);
                 view = {};
                 opened = view.Build(model, true);
             }
             else if (index > 0 && size_t(index - 1) < view.items.size())
             {
                 view.selected = size_t(index - 1);
-                view.Remember();
                 const int direction = name == "PauseIncrementOption" ? (call.find(",true)") != std::string_view::npos ? 1 : -1) : 0;
                 if (!view.Activate(model, true, direction))
                 {
@@ -285,16 +285,26 @@ export namespace ScarfaceMenu
         const View::Item* item = opened && index > 0 && size_t(index - 1) < view.items.size() ? &view.items[index - 1] : nullptr;
         if (name == "PauseOptionIsSelectable")
             return !opened || (item && item->enabled) ? "1" : "0";
-        if (name == "PauseOptionIsIndented" || name == "PauseOptionIsNumeric" || name == "PauseOptionHasRangedValue")
+        // The rows are indented under the list's title like the game's options under their section's
+        if (name == "PauseOptionIsIndented")
+            return opened && item ? "1" : "0";
+        if (name == "PauseOptionIsNumeric")
             return "0";
+        if (name == "PauseOptionHasRangedValue")
+            return item && item->hasValue ? "1" : "0";
         if (name == "PauseOptionGetRangedValue")
-            return "";
+            return item && item->hasValue ? Key(item->value) : "";
         if (name == "PauseGetOptionName")
         {
             if (!opened)
                 return Key(Words("menu.plugins"));
+            // The list's title as a section header, in capitals like the game's
             if (index == 0)
-                return Key(view.page < model.Pages().size() ? asi_settings::text::Widen(model.Pages()[view.page].title) : Words("menu.plugins"));
+            {
+                auto title = view.page < model.Pages().size() ? asi_settings::text::Widen(model.Pages()[view.page].title) : Words("menu.plugins");
+                CharUpperBuffW(title.data(), DWORD(title.size()));
+                return Key(title);
+            }
             return Key(item ? item->text : Words("menu.restartshort"));
         }
         return {};
@@ -334,7 +344,7 @@ export namespace ScarfaceMenu
         if (opened && shownLanguage != Language())
         {
             shownLanguage = Language();
-            model.OpenPlugins(Module(), shownLanguage, 32, {}, true);
+            model.OpenMenu(Module(), shownLanguage, 8);
             view = {};
             refresh = true;
         }

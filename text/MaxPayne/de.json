@@ -19,6 +19,8 @@
   "WFP_PRESET_APPLY": "Voreinstellung anwenden",
   "WFP_PRESET_APPLY_DESCRIPTION": "Setzt die Werte der oben gewählten Voreinstellung",
   "WFP_RESTOREDEFAULTS_DESCRIPTION": "Setzt die Einstellungen dieser Seite auf ihre Standardwerte zurück",
+  "WFP_SETTINGS": "Einstellungen",
+  "WFP_SETTINGS_DESCRIPTION": "Die Einstellungen dieses Plugins",
   "page.widescreen": "Breitbild",
   "page.graphics": "Grafik",
   "page.controls": "Steuerung",

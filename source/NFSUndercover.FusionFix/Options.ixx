@@ -23,9 +23,9 @@ import Input;
 //   sets the fix's settings under it to their defaults.
 // - One "Plugins" entry goes into both lists of option categories (45, and 46 that the options screen shows in some
 //   cases); the pause menu opens the same options. It lists the fix and then every other loaded plugin with settings
-//   in menus; each opens its page: Preset (when it has presets), its settings by the pages of its description (as
-//   sub-categories when they don't fit one list), Restore Defaults. This part of the table is built when Plugins is
-//   opened.
+//   in menus; each opens its page: Preset (when it has presets), its settings or, when they come in several categories
+//   (the pages of its description), a sub-category per category, Restore Defaults. This part of the table is built
+//   when Plugins is opened.
 //
 // Categories need nothing else: the options' "selected" handler lists the children of any entry it doesn't know.
 // Selecting a setting opens the game's page for one option with the state that's left unused (a page with a list of
@@ -51,7 +51,6 @@ namespace
     constexpr int32_t FirstPlacedId = 901;           // the fix's settings next to the game's options
     constexpr int32_t FirstPluginsId = 1000;         // the Plugins part, built when it's opened
     constexpr size_t MaxPluginsEntries = 2048;
-    constexpr size_t MaxListRows = 9;                // a plugin's page larger than this is split by its pages
     constexpr int32_t PageState = 18;                // an option page no menu entry opens
     constexpr int32_t ConfirmState = 50;             // the yes/no dialog of Default Settings
     constexpr int32_t GraphicsMenus[] = { 62, 117, 118 };   // Graphic Preferences and its sub-categories
@@ -591,16 +590,10 @@ namespace
             AddPluginEntry(PluginsId, { 0, Kind::Category, &plugin, nullptr, WFPPlugins::Name(plugin) });
             int32_t pluginId = PluginEntries.back().id;
             auto exclude = plugin.module == FixPlugin.module ? PlacedIds : std::vector<std::string>{};
-            auto sections = WFPPlugins::Sections(plugin, exclude);
-            size_t count = 0;
-            for (auto& section : sections)
-            {
-                std::erase_if(section.rows, [](const WFPPlugins::Row& row) { return !WFPPlugins::Visible(row); });
-                count += section.rows.size();
-            }
-
             auto add = [&](int32_t parent, const WFPPlugins::Row& row)
             {
+                if ((row.kind == WFPPlugins::Row::Kind::Setting || row.kind == WFPPlugins::Row::Kind::Action) && !WFPPlugins::Visible(row))
+                    return;
                 switch (row.kind)
                 {
                     case WFPPlugins::Row::Kind::Preset:
@@ -615,33 +608,21 @@ namespace
                 }
             };
 
-            // One list when it fits, else Preset, a sub-category for each page and Restore Defaults
-            if (sections.size() == 1 || count <= MaxListRows)
+            // Preset, the settings or a sub-category per category (like the game's Graphic Preferences), Restore
+            // Defaults
+            for (auto& row : WFPPlugins::TopRows(plugin, exclude))
             {
-                for (auto& section : sections)
+                if (row.kind != WFPPlugins::Row::Kind::Category)
                 {
-                    for (auto& row : section.rows)
-                        add(pluginId, row);
+                    add(pluginId, row);
+                    continue;
                 }
-                continue;
-            }
-            for (auto& section : sections)
-            {
-                int32_t sectionId = -1;
-                for (auto& row : section.rows)
-                {
-                    if (row.kind != WFPPlugins::Row::Kind::Setting && row.kind != WFPPlugins::Row::Kind::Action)
-                    {
-                        add(pluginId, row);
-                        continue;
-                    }
-                    if (sectionId < 0)
-                    {
-                        AddPluginEntry(pluginId, { 0, Kind::Category, &plugin, nullptr, section.title });
-                        sectionId = PluginEntries.back().id;
-                    }
-                    add(sectionId, row);
-                }
+                if (!WFPPlugins::AnyVisible(plugin, row.category, exclude))
+                    continue;
+                AddPluginEntry(pluginId, { 0, Kind::Category, &plugin, nullptr, row.title });
+                int32_t categoryId = PluginEntries.back().id;
+                for (auto& setting : WFPPlugins::CategoryRows(plugin, row.category, exclude))
+                    add(categoryId, setting);
             }
         }
         SetEntryTexts(PluginEntries);
